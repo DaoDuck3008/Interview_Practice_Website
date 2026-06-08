@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Level {
+  JUNIOR
+  MID
+  SENIOR
+}
+
+// ─── Models ──────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+
+  sessions Session[]
+}
+
+model Topic {
+  id   String @id @default(uuid())
+  slug String @unique // vd: "javascript", "nodejs", "react"
+  name String //         vd: "JavaScript", "Node.js", "React"
+
+  questions Question[]
+}
+
+model Question {
+  id      String @id @default(uuid())
+  topicId String
+  topic   Topic  @relation(fields: [topicId], references: [id])
+
+  content          String // Nội dung câu hỏi
+  answerKeySummary String // Đáp án chuẩn tóm tắt
+  answerKeywords   String[] // Các từ khóa cần đề cập
+
+  level    Level
+  isActive Boolean @default(true)
+
+  sessions Session[]
+}
+
+model Session {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id])
+
+  audioUrl   String // URL file audio trên Cloudflare R2
+  transcript String // Transcript từ Groq Whisper
+  duration   Int //    Thời gian ghi âm (giây)
+
+  createdAt DateTime @default(now())
+
+  score Score?
+}
+
+model Score {
+  id        String  @id @default(uuid())
+  sessionId String  @unique
+  session   Session @relation(fields: [sessionId], references: [id])
+
+  // Điểm chấm bởi DeepSeek (0–10)
+  technicalScore    Int
+  completenessScore Int
+  clarityScore      Int
+  hasExample        Boolean
+
+  feedback String // Nhận xét bằng tiếng Việt
+}

@@ -1,0 +1,17 @@
+{
+  "name": "interview-app",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Interview Practice App — monorepo",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "api:dev": "npm --workspace apps/api run start:dev",
+    "api:build": "npm --workspace apps/api run build",
+    "api:test": "npm --workspace apps/api run test",
+    "web:dev": "npm --workspace apps/web run dev",
+    "web:build": "npm --workspace apps/web run build",
+    "web:test": "npm --workspace apps/web run test"
+  }
+}
