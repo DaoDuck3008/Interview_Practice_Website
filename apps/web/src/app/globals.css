@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@theme {
+  --color-base: #06060c;
+  --color-surface: #0d0d14;
+  --color-elevated: #13131c;
+  --color-border: #1c1c28;
+  --color-text-primary: #f4f4f6;
+  --color-text-secondary: #9898aa;
+  --color-text-muted: #606072;
+  --color-accent: #7c3aed;
+  --color-accent-light: #8b5cf6;
+  --color-success: #22c55e;
+
+  --font-heading: var(--font-be-vietnam), "Be Vietnam Pro", sans-serif;
+  --font-body: var(--font-be-vietnam), "Be Vietnam Pro", sans-serif;
+}
+
+html {
+  color-scheme: dark;
+}
+
+/*
+  Dot grid lives HERE on body — the only reliable layer.
+  A separate div with z-index never shows through sections
+  that inherit the body background-color.
+*/
+body {
+  background-color: #06060c;
+  /* Dot grid pattern */
+  background-image: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.18) 1.5px,
+    transparent 1.5px
+  );
+  background-size: 30px 30px;
+  color: #f4f4f6;
+  font-family: var(--font-be-vietnam), "Be Vietnam Pro", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-be-vietnam), "Be Vietnam Pro", sans-serif;
+}
