@@ -6,11 +6,16 @@ export interface Topic {
   name: string;
 }
 
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  timestamp: string;
+}
+
 export async function getTopics(): Promise<Topic[]> {
   try {
-    const res = await api.get("/topics");
-    if (!res) return FALLBACK_TOPICS;
-    return (res.data as Topic[]) ?? FALLBACK_TOPICS;
+    const res = await api.get<ApiResponse<Topic[]>>("/topics");
+    return res.data.data ?? FALLBACK_TOPICS;
   } catch {
     return FALLBACK_TOPICS;
   }
