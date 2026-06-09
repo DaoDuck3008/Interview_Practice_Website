@@ -53,28 +53,26 @@ export class AuthService {
         secret: this.config.getOrThrow<string>('jwt.refreshSecret'),
       });
 
+      // Đọc lại user từ DB để role luôn cập nhật (vd. vừa được nâng lên ADMIN)
+      const user = await this.usersService.findById(payload.sub);
+      if (!user) throw new UnauthorizedException('Người dùng không tồn tại');
+
+      const newPayload = { sub: user.id, email: user.email, role: user.role };
       const [accessToken, newRefreshToken] = await Promise.all([
-        this.jwtService.signAsync(
-          { sub: payload.sub, email: payload.email },
-          {
-            secret: this.config.get('jwt.accessSecret'),
-            expiresIn: this.config.get('jwt.accessExpiresIn'),
-          },
-        ),
-        this.jwtService.signAsync(
-          { sub: payload.sub, email: payload.email },
-          {
-            secret: this.config.get('jwt.refreshSecret'),
-            expiresIn: this.config.get('jwt.refreshExpiresIn'),
-          },
-        ),
+        this.jwtService.signAsync(newPayload, {
+          secret: this.config.get('jwt.accessSecret'),
+          expiresIn: this.config.get('jwt.accessExpiresIn'),
+        }),
+        this.jwtService.signAsync(newPayload, {
+          secret: this.config.get('jwt.refreshSecret'),
+          expiresIn: this.config.get('jwt.refreshExpiresIn'),
+        }),
       ]);
 
-      const user = await this.usersService.findById(payload.sub);
       return {
         accessToken,
         refreshToken: newRefreshToken,
-        user: { name: user?.name, email: user?.email, role: user?.role },
+        user: { name: user.name, email: user.email, role: user.role },
       };
     } catch (err: any) {
       if (err?.name === 'TokenExpiredError')
