@@ -14,9 +14,12 @@ enum Role {
 }
 
 enum Level {
+  INTERN
+  FRESHER
   JUNIOR
   MID
   SENIOR
+  OTHER
 }
 
 // ─── Models ──────────────────────────────────────────
@@ -46,6 +49,7 @@ model Question {
   topic   Topic  @relation(fields: [topicId], references: [id])
 
   content          String // Nội dung câu hỏi
+  detailAnswerKey  String @default("") // Đáp án chi tiết (markdown)
   answerKeySummary String // Đáp án chuẩn tóm tắt
   answerKeywords   String[] // Các từ khóa cần đề cập
 

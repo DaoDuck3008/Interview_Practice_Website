@@ -9,6 +9,9 @@ export class CreateQuestionDto {
   content: string;
 
   @IsString()
+  detailAnswerKey: string;
+
+  @IsString()
   answerKeySummary: string;
 
   @IsArray()

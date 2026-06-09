@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateQuestionDto } from './dto/create-question.dto';
+import { UpdateQuestionDto } from './dto/update-question.dto';
 import { QueryQuestionDto } from './dto/query-question.dto';
 
 @Injectable()
@@ -40,11 +41,34 @@ export class QuestionsService {
     return results[0] ?? null;
   }
 
+  findAllAdmin() {
+    return this.prisma.question.findMany({
+      include: { topic: true },
+      orderBy: [{ topicId: 'asc' }, { level: 'asc' }],
+    });
+  }
+
+  async findOne(id: string) {
+    const question = await this.prisma.question.findUnique({
+      where: { id },
+      include: { topic: true },
+    });
+    if (!question) throw new NotFoundException('Không tìm thấy câu hỏi');
+    return question;
+  }
+
   create(dto: CreateQuestionDto) {
     return this.prisma.question.create({ data: dto });
   }
 
-  update(id: string, data: Partial<CreateQuestionDto>) {
+  update(id: string, data: UpdateQuestionDto) {
     return this.prisma.question.update({ where: { id }, data });
+  }
+
+  softDelete(id: string) {
+    return this.prisma.question.update({
+      where: { id },
+      data: { isActive: false },
+    });
   }
 }
