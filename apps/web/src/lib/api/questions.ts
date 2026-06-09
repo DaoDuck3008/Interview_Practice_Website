@@ -1,16 +1,65 @@
 import api, { type ApiResponse } from "./api";
 
-export type Level = "JUNIOR" | "MID" | "SENIOR";
+export type Level = "INTERN" | "FRESHER" | "JUNIOR" | "MID" | "SENIOR" | "OTHER";
+
+export const LEVELS: { value: Level; label: string }[] = [
+  { value: "INTERN", label: "Intern" },
+  { value: "FRESHER", label: "Fresher" },
+  { value: "JUNIOR", label: "Junior" },
+  { value: "MID", label: "Mid" },
+  { value: "SENIOR", label: "Senior" },
+  { value: "OTHER", label: "Other" },
+];
 
 export interface Question {
   id: string;
   topicId: string;
   content: string;
+  detailAnswerKey: string;
   answerKeySummary: string;
   answerKeywords: string[];
   level: Level;
   isActive: boolean;
   topic?: { id: string; slug: string; name: string };
+}
+
+export interface QuestionInput {
+  topicId: string;
+  content: string;
+  detailAnswerKey: string;
+  answerKeySummary: string;
+  answerKeywords: string[];
+  level: Level;
+}
+
+/** Admin: list mọi câu hỏi (kể cả đã ẩn) */
+export async function getAllQuestionsAdmin(): Promise<Question[]> {
+  const res = await api.get<ApiResponse<Question[]>>("/questions/all");
+  return res.data.data;
+}
+
+/** Admin: lấy 1 câu hỏi theo id */
+export async function getQuestionAdmin(id: string): Promise<Question> {
+  const res = await api.get<ApiResponse<Question>>(`/questions/${id}`);
+  return res.data.data;
+}
+
+export async function createQuestion(input: QuestionInput): Promise<Question> {
+  const res = await api.post<ApiResponse<Question>>("/questions", input);
+  return res.data.data;
+}
+
+export async function updateQuestion(
+  id: string,
+  input: Partial<QuestionInput> & { isActive?: boolean },
+): Promise<Question> {
+  const res = await api.patch<ApiResponse<Question>>(`/questions/${id}`, input);
+  return res.data.data;
+}
+
+/** Soft-delete (set isActive=false) */
+export async function deleteQuestion(id: string): Promise<void> {
+  await api.delete(`/questions/${id}`);
 }
 
 export async function getQuestionsByTopic(topicSlug: string): Promise<Question[]> {
@@ -37,6 +86,7 @@ const FALLBACK_QUESTIONS: Question[] = [
     answerKeywords: ["call stack", "task queue", "microtask", "Web APIs", "non-blocking"],
     level: "JUNIOR",
     isActive: true,
+    detailAnswerKey: "",
   },
   {
     id: "q-2",
@@ -46,6 +96,7 @@ const FALLBACK_QUESTIONS: Question[] = [
     answerKeywords: ["typeof", "equality", "intentional absence", "uninitialized"],
     level: "JUNIOR",
     isActive: true,
+    detailAnswerKey: "",
   },
   {
     id: "q-3",
@@ -55,6 +106,7 @@ const FALLBACK_QUESTIONS: Question[] = [
     answerKeywords: ["lexical scope", "outer function", "inner function", "data encapsulation"],
     level: "MID",
     isActive: true,
+    detailAnswerKey: "",
   },
   {
     id: "q-4",
@@ -64,6 +116,7 @@ const FALLBACK_QUESTIONS: Question[] = [
     answerKeywords: ["Promise chain", "async/await", "error handling", ".then()", "try/catch"],
     level: "MID",
     isActive: true,
+    detailAnswerKey: "",
   },
   {
     id: "q-5",
@@ -73,6 +126,7 @@ const FALLBACK_QUESTIONS: Question[] = [
     answerKeywords: ["__proto__", "prototype", "Object.create", "constructor function", "class syntax"],
     level: "SENIOR",
     isActive: true,
+    detailAnswerKey: "",
   },
   {
     id: "q-6",
@@ -82,5 +136,6 @@ const FALLBACK_QUESTIONS: Question[] = [
     answerKeywords: ["cache", "pure function", "Map", "performance optimization", "WeakMap"],
     level: "SENIOR",
     isActive: true,
+    detailAnswerKey: "",
   },
 ];

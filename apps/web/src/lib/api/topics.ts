@@ -15,6 +15,26 @@ export async function getTopics(): Promise<Topic[]> {
   }
 }
 
+export async function createTopic(input: {
+  slug: string;
+  name: string;
+}): Promise<Topic> {
+  const res = await api.post<ApiResponse<Topic>>("/topics", input);
+  return res.data.data;
+}
+
+export async function updateTopic(
+  id: string,
+  input: Partial<{ slug: string; name: string }>,
+): Promise<Topic> {
+  const res = await api.patch<ApiResponse<Topic>>(`/topics/${id}`, input);
+  return res.data.data;
+}
+
+export async function deleteTopic(id: string): Promise<void> {
+  await api.delete(`/topics/${id}`);
+}
+
 const FALLBACK_TOPICS: Topic[] = [
   { id: "1", slug: "javascript", name: "JavaScript" },
   { id: "2", slug: "typescript", name: "TypeScript" },

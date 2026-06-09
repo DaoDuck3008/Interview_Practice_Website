@@ -40,7 +40,8 @@ function LoginContent() {
     try {
       const { accessToken, user } = await loginApi(email.trim(), password);
       setAuth(accessToken, user);
-      router.push(redirectTo || "/practice");
+      const fallback = user.role === "ADMIN" ? "/admin" : "/practice";
+      router.push(redirectTo || fallback);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })
         ?.response?.data?.message;
