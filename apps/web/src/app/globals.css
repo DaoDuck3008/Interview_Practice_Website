@@ -48,3 +48,17 @@ h5,
 h6 {
   font-family: var(--font-be-vietnam), "Be Vietnam Pro", sans-serif;
 }
+
+/* Scroll animations */
+.will-animate {
+  opacity: 0;
+  transition: opacity 0.65s ease, transform 0.65s ease;
+}
+.will-animate--fade-up   { transform: translateY(28px); }
+.will-animate--fade-in   { transform: none; }
+.will-animate--fade-left { transform: translateX(-28px); }
+
+.will-animate.is-visible {
+  opacity: 1;
+  transform: none !important;
+}
