@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Be_Vietnam_Pro } from "next/font/google";
 import "./globals.css";
+import AuthHydrator from "@/components/providers/authHydrator";
+import { ToastContainer } from "react-toastify";
 
 const beVietnam = Be_Vietnam_Pro({
   subsets: ["latin", "vietnamese"],
@@ -21,8 +23,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi" className={`${beVietnam.variable} h-full`} suppressHydrationWarning>
-      <body className="min-h-full flex flex-col" suppressHydrationWarning>{children}</body>
+    <html
+      lang="vi"
+      className={`${beVietnam.variable} h-full`}
+      suppressHydrationWarning
+    >
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <AuthHydrator>
+          {children}
+          <ToastContainer />
+        </AuthHydrator>
+      </body>
     </html>
   );
 }
