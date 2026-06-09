@@ -22,7 +22,11 @@ export class AuthService {
 
   async register(dto: RegisterDto) {
     const passwordHash = await bcrypt.hash(dto.password, 10);
-    return this.usersService.create({ name: dto.name, email: dto.email, passwordHash });
+    return this.usersService.create({
+      name: dto.name,
+      email: dto.email,
+      passwordHash,
+    });
   }
 
   async login(user: { id: string; email: string; role: string }) {
@@ -66,10 +70,17 @@ export class AuthService {
         ),
       ]);
 
-      return { accessToken, refreshToken: newRefreshToken };
+      const user = await this.usersService.findById(payload.sub);
+      return {
+        accessToken,
+        refreshToken: newRefreshToken,
+        user: { name: user?.name, email: user?.email, role: user?.role },
+      };
     } catch (err: any) {
       if (err?.name === 'TokenExpiredError')
-        throw new UnauthorizedException('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại');
+        throw new UnauthorizedException(
+          'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại',
+        );
       throw new UnauthorizedException('Refresh token không hợp lệ');
     }
   }

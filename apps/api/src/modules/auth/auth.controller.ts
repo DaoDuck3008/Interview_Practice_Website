@@ -32,7 +32,8 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const user = await this.authService.validateUser(dto.email, dto.password);
-    if (!user) throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+    if (!user)
+      throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
 
     const { accessToken, refreshToken } = await this.authService.login(user);
     res.cookie(REFRESH_COOKIE, refreshToken, this.cookieOptions());
@@ -50,9 +51,10 @@ export class AuthController {
     const token = (req as any).cookies?.[REFRESH_COOKIE] as string | undefined;
     if (!token) throw new UnauthorizedException('Refresh token không tồn tại');
 
-    const { accessToken, refreshToken } = await this.authService.refreshTokens(token);
+    const { accessToken, refreshToken, user } =
+      await this.authService.refreshTokens(token);
     res.cookie(REFRESH_COOKIE, refreshToken, this.cookieOptions());
-    return { accessToken };
+    return { accessToken, user };
   }
 
   @Post('logout')
