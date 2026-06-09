@@ -53,4 +53,10 @@ api.interceptors.response.use(
   }
 );
 
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  timestamp: string;
+}
+
 export default api;

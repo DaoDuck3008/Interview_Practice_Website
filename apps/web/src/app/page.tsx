@@ -1,4 +1,4 @@
-import Navbar from "@/components/layout/Navbar";
+import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import Hero from "@/components/landing/Hero";
 import HowItWorks from "@/components/landing/HowItWorks";
@@ -9,7 +9,7 @@ import CTASection from "@/components/landing/CTASection";
 export default function HomePage() {
   return (
     <>
-      <Navbar />
+      <Header />
       <main className="flex flex-col flex-1">
         <Hero />
         <TopicsPreview />

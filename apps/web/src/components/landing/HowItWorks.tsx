@@ -36,17 +36,6 @@ export default function HowItWorks() {
         aria-hidden="true"
       />
 
-      {/* Ambient glow center */}
-      <div
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[200px] pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(ellipse at top, rgba(88,28,135,0.3) 0%, transparent 70%)",
-          filter: "blur(40px)",
-        }}
-        aria-hidden="true"
-      />
-
       <div className="relative z-10 mx-auto max-w-7xl px-6">
         <div className="text-center mb-16">
           <p className="text-xs font-bold uppercase tracking-widest text-[#a78bfa] mb-3">

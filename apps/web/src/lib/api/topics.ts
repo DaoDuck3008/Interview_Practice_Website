@@ -1,15 +1,9 @@
-import api from "./api";
+import api, { type ApiResponse } from "./api";
 
 export interface Topic {
   id: string;
   slug: string;
   name: string;
-}
-
-interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  timestamp: string;
 }
 
 export async function getTopics(): Promise<Topic[]> {
