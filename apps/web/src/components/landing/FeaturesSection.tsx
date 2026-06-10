@@ -10,13 +10,17 @@ export default function FeaturesSection() {
       {/* Top glow line */}
       <div
         className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-px pointer-events-none"
-        style={{ background: "linear-gradient(to right, transparent, rgba(124,58,237,0.55), transparent)" }}
+        style={{
+          background:
+            "linear-gradient(to right, transparent, rgba(124,58,237,0.55), transparent)",
+        }}
         aria-hidden="true"
       />
       <div
         className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-[160px] pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse at top, rgba(88,28,135,0.22) 0%, transparent 70%)",
+          background:
+            "radial-gradient(ellipse at top, rgba(88,28,135,0.22) 0%, transparent 70%)",
           filter: "blur(30px)",
         }}
         aria-hidden="true"
@@ -126,7 +130,7 @@ export default function FeaturesSection() {
             </div>
             <div>
               <div className="flex gap-1.5 mb-2">
-                {["Junior", "Mid", "Senior"].map((lvl) => (
+                {["Common", "Medium", "Hard"].map((lvl) => (
                   <span
                     key={lvl}
                     className="text-[10px] font-semibold px-2 py-0.5 rounded-full border border-[#1c1c28] bg-[#13131c] text-[#a1a1aa]"
@@ -139,8 +143,7 @@ export default function FeaturesSection() {
                 3 Cấp Độ
               </h3>
               <p className="text-sm text-[#71717a] leading-relaxed">
-                Luyện đúng vị trí bạn đang ứng tuyển. Tiến bộ theo từng cấp
-                độ.
+                Luyện đúng vị trí bạn đang ứng tuyển. Tiến bộ theo từng cấp độ.
               </p>
             </div>
           </div>
@@ -156,8 +159,8 @@ export default function FeaturesSection() {
                   Ghi Âm Giọng Nói
                 </h3>
                 <p className="text-sm text-[#52525b]">
-                  Luyện trả lời bằng giọng nói như phỏng vấn thực sự. AI
-                  chuyển giọng nói thành văn bản và chấm điểm.
+                  Luyện trả lời bằng giọng nói như phỏng vấn thực sự. AI chuyển
+                  giọng nói thành văn bản và chấm điểm.
                 </p>
               </div>
               <span className="flex-shrink-0 text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-[#7c3aed]/30 text-[#8b5cf6] bg-[#7c3aed]/8">

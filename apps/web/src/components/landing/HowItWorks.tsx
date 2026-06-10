@@ -3,7 +3,7 @@ const STEPS = [
     number: "01",
     title: "Chọn Chủ Đề",
     description:
-      "Chọn từ JavaScript, Node.js, React, System Design và nhiều hơn nữa. Lọc theo cấp độ Junior, Mid hay Senior.",
+      "Chọn từ JavaScript, Node.js, React, System Design và nhiều hơn nữa. Lọc theo cấp độ Common, Medium hay Hard.",
   },
   {
     number: "02",

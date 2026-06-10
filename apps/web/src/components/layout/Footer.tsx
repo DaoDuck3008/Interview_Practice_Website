@@ -7,9 +7,9 @@ const FOOTER_LINKS = {
     links: [
       { label: "Luyện tập", href: "/practice" },
       { label: "Chủ đề", href: "/practice" },
-      { label: "Cấp độ Junior", href: "/practice?level=JUNIOR" },
-      { label: "Cấp độ Mid", href: "/practice?level=MID" },
-      { label: "Cấp độ Senior", href: "/practice?level=SENIOR" },
+      { label: "Cấp độ Common", href: "/practice?level=COMMON" },
+      { label: "Cấp độ Medium", href: "/practice?level=MEDIUM" },
+      { label: "Cấp độ Hard", href: "/practice?level=HARD" },
       { label: "Ngẫu nhiên", href: "/practice/random" },
     ],
   },

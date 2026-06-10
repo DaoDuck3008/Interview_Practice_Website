@@ -40,7 +40,7 @@ export default function QuestionForm({
   const [topics, setTopics] = useState<Topic[]>([]);
 
   const [topicId, setTopicId] = useState(initial?.topicId ?? "");
-  const [level, setLevel] = useState<Level>(initial?.level ?? "JUNIOR");
+  const [level, setLevel] = useState<Level>(initial?.level ?? "COMMON");
   const [content, setContent] = useState(initial?.content ?? "");
   const [answerKeySummary, setAnswerKeySummary] = useState(
     initial?.answerKeySummary ?? "",

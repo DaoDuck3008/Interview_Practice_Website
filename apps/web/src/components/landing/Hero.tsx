@@ -111,7 +111,7 @@ export default function Hero() {
 
         {/* Social proof */}
         <p className="text-sm text-[#a78bfa] mt-2 tracking-wide">
-          300+ câu hỏi &nbsp;·&nbsp; 3 cấp độ (Junior / Mid / Senior)
+          300+ câu hỏi &nbsp;·&nbsp; 3 cấp độ (Common / Medium / Hard)
           &nbsp;·&nbsp; Miễn phí
         </p>
       </div>

@@ -1,20 +1,11 @@
 import api, { type ApiResponse } from "./api";
 
-export type Level =
-  | "INTERN"
-  | "FRESHER"
-  | "JUNIOR"
-  | "MID"
-  | "SENIOR"
-  | "OTHER";
+export type Level = "COMMON" | "MEDIUM" | "HARD";
 
 export const LEVELS: { value: Level; label: string }[] = [
-  { value: "INTERN", label: "Intern" },
-  { value: "FRESHER", label: "Fresher" },
-  { value: "JUNIOR", label: "Junior" },
-  { value: "MID", label: "Mid" },
-  { value: "SENIOR", label: "Senior" },
-  { value: "OTHER", label: "Other" },
+  { value: "COMMON", label: "Common" },
+  { value: "MEDIUM", label: "Medium" },
+  { value: "HARD", label: "Hard" },
 ];
 
 export interface Question {
@@ -149,7 +140,7 @@ const FALLBACK_QUESTIONS: Question[] = [
       "Web APIs",
       "non-blocking",
     ],
-    level: "JUNIOR",
+    level: "MEDIUM",
     isActive: true,
     detailAnswerKey: "",
   },
@@ -165,7 +156,7 @@ const FALLBACK_QUESTIONS: Question[] = [
       "intentional absence",
       "uninitialized",
     ],
-    level: "JUNIOR",
+    level: "MEDIUM",
     isActive: true,
     detailAnswerKey: "",
   },
@@ -182,7 +173,7 @@ const FALLBACK_QUESTIONS: Question[] = [
       "inner function",
       "data encapsulation",
     ],
-    level: "MID",
+    level: "MEDIUM",
     isActive: true,
     detailAnswerKey: "",
   },
@@ -200,7 +191,7 @@ const FALLBACK_QUESTIONS: Question[] = [
       ".then()",
       "try/catch",
     ],
-    level: "MID",
+    level: "MEDIUM",
     isActive: true,
     detailAnswerKey: "",
   },
@@ -218,7 +209,7 @@ const FALLBACK_QUESTIONS: Question[] = [
       "constructor function",
       "class syntax",
     ],
-    level: "SENIOR",
+    level: "HARD",
     isActive: true,
     detailAnswerKey: "",
   },
@@ -236,7 +227,7 @@ const FALLBACK_QUESTIONS: Question[] = [
       "performance optimization",
       "WeakMap",
     ],
-    level: "SENIOR",
+    level: "HARD",
     isActive: true,
     detailAnswerKey: "",
   },
