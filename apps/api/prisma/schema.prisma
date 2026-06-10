@@ -14,12 +14,9 @@ enum Role {
 }
 
 enum Level {
-  INTERN
-  FRESHER
-  JUNIOR
-  MID
-  SENIOR
-  OTHER
+  COMMON
+  MEDIUM
+  HARD
 }
 
 // ─── Models ──────────────────────────────────────────

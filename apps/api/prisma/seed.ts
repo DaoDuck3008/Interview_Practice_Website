@@ -18,15 +18,20 @@ async function main() {
         answerKeySummary:
           'Closure là function có khả năng truy cập biến của outer scope ngay cả sau khi outer function đã return.',
         answerKeywords: ['outer scope', 'lexical environment', 'biến tự do'],
-        level: Level.JUNIOR,
+        level: Level.MEDIUM,
       },
       {
         topicId: js.id,
         content: 'Event loop hoạt động như thế nào?',
         answerKeySummary:
           'Event loop liên tục kiểm tra call stack và callback queue, đẩy callback vào stack khi stack rỗng.',
-        answerKeywords: ['call stack', 'callback queue', 'microtask', 'macrotask'],
-        level: Level.MID,
+        answerKeywords: [
+          'call stack',
+          'callback queue',
+          'microtask',
+          'macrotask',
+        ],
+        level: Level.MEDIUM,
       },
     ],
   });
