@@ -31,6 +31,15 @@ export async function getTopics(): Promise<Topic[]> {
   }
 }
 
+export async function getTopicsWithCounts(): Promise<TopicWithCount[]> {
+  try {
+    const res = await api.get<ApiResponse<TopicWithCount[]>>("/topics");
+    return res.data.data ?? FALLBACK_TOPICS_WITH_COUNT;
+  } catch {
+    return FALLBACK_TOPICS_WITH_COUNT;
+  }
+}
+
 /** Admin: list topic (kèm số câu hỏi) với filter + phân trang phía server */
 export async function getTopicsAdmin(
   query: AdminTopicQuery = {},
@@ -78,3 +87,7 @@ const FALLBACK_TOPICS: Topic[] = [
   { id: "7", slug: "databases", name: "Databases" },
   { id: "8", slug: "docker", name: "Docker" },
 ];
+
+const FALLBACK_TOPICS_WITH_COUNT: TopicWithCount[] = FALLBACK_TOPICS.map(
+  (t) => ({ ...t, questionCount: 0 }),
+);

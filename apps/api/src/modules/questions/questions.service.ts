@@ -10,13 +10,34 @@ import { QueryAdminQuestionDto } from './dto/query-admin-question.dto';
 export class QuestionsService {
   constructor(private prisma: PrismaService) {}
 
-  findAll(query: QueryQuestionDto) {
+  async findAll(query: QueryQuestionDto) {
+    const where: Prisma.QuestionWhereInput = {
+      isActive: true,
+      ...(query.topicId && { topicId: query.topicId }),
+      ...(query.level && { level: query.level }),
+      ...(query.search && {
+        content: { contains: query.search, mode: 'insensitive' },
+      }),
+    };
+
+    if (query.page !== undefined || query.limit !== undefined) {
+      const page = query.page ?? 1;
+      const limit = query.limit ?? 30;
+      const [items, total] = await this.prisma.$transaction([
+        this.prisma.question.findMany({
+          where,
+          include: { topic: true },
+          orderBy: [{ topic: { name: 'asc' } }, { level: 'asc' }],
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        this.prisma.question.count({ where }),
+      ]);
+      return { items, total, page, limit, totalPages: Math.ceil(total / limit) || 1 };
+    }
+
     return this.prisma.question.findMany({
-      where: {
-        isActive: true,
-        ...(query.topicId && { topicId: query.topicId }),
-        ...(query.level && { level: query.level }),
-      },
+      where,
       include: { topic: true },
     });
   }

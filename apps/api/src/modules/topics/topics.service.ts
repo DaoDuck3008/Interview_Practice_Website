@@ -8,8 +8,17 @@ import { QueryAdminTopicDto } from './dto/query-admin-topic.dto';
 export class TopicsService {
   constructor(private prisma: PrismaService) {}
 
-  findAll() {
-    return this.prisma.topic.findMany({ orderBy: { name: 'asc' } });
+  async findAll() {
+    const rows = await this.prisma.topic.findMany({
+      orderBy: { name: 'asc' },
+      include: { _count: { select: { questions: true } } },
+    });
+    return rows.map((t) => ({
+      id: t.id,
+      slug: t.slug,
+      name: t.name,
+      questionCount: t._count.questions,
+    }));
   }
 
   async findAllAdmin(query: QueryAdminTopicDto) {

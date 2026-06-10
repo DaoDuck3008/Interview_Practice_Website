@@ -51,6 +51,40 @@ export interface AdminQuestionQuery {
   limit?: number;
 }
 
+export interface PublicQuestionQuery {
+  topicId?: string;
+  level?: Level;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export async function getQuestionsPublic(
+  query: PublicQuestionQuery = {},
+): Promise<Paginated<Question>> {
+  const params: Record<string, string | number> = {};
+  //put all query into params paramater
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== null && value !== "") {
+      params[key] = value as string | number;
+    }
+  }
+  try {
+    const res = await api.get<ApiResponse<Paginated<Question>>>("/questions", {
+      params,
+    });
+    return res.data.data;
+  } catch {
+    return {
+      items: [],
+      total: 0,
+      page: 1,
+      limit: query.limit ?? 30,
+      totalPages: 0,
+    };
+  }
+}
+
 // Admin: list câu hỏi (kể cả đã ẩn) với filter + phân trang phía server
 export async function getAllQuestionsAdmin(
   query: AdminQuestionQuery = {},
