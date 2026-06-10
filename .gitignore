@@ -42,3 +42,6 @@ next-env.d.ts
 
 /Questions
 /images
+
+# Standalone question-importer tooling (kept off git)
+/tools/

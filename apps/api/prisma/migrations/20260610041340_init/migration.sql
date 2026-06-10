@@ -2,7 +2,7 @@
 CREATE TYPE "Role" AS ENUM ('USER', 'ADMIN');
 
 -- CreateEnum
-CREATE TYPE "Level" AS ENUM ('JUNIOR', 'MID', 'SENIOR');
+CREATE TYPE "Level" AS ENUM ('INTERN', 'FRESHER', 'JUNIOR', 'MID', 'SENIOR', 'OTHER');
 
 -- CreateTable
 CREATE TABLE "User" (
@@ -30,6 +30,7 @@ CREATE TABLE "Question" (
     "id" TEXT NOT NULL,
     "topicId" TEXT NOT NULL,
     "content" TEXT NOT NULL,
+    "detailAnswerKey" TEXT NOT NULL DEFAULT '',
     "answerKeySummary" TEXT NOT NULL,
     "answerKeywords" TEXT[],
     "level" "Level" NOT NULL,
