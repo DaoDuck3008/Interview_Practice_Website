@@ -48,7 +48,6 @@ function LoginContent() {
       setError(msg || "Email hoặc mật khẩu không đúng.");
     } finally {
       setIsSubmitting(false);
-      toast.success("Đăng nhập thành công!");
     }
   }
 
@@ -68,7 +67,10 @@ function LoginContent() {
           borderRight: "1px solid #1c1c28",
         }}
       >
-        <div className="absolute inset-0" style={{ background: "rgba(6,6,12,0.88)" }} />
+        <div
+          className="absolute inset-0"
+          style={{ background: "rgba(6,6,12,0.88)" }}
+        />
         <div className="relative z-10 flex flex-col justify-between w-full px-12 py-12">
           <Link
             href="/"
@@ -100,7 +102,9 @@ function LoginContent() {
             </ul>
           </div>
 
-          <p className="font-mono text-xs text-[#3d3d54]">© 2025 InterviewPrep</p>
+          <p className="font-mono text-xs text-[#3d3d54]">
+            © 2025 InterviewPrep
+          </p>
         </div>
       </div>
 
@@ -114,7 +118,10 @@ function LoginContent() {
         }}
       >
         {/* Dark overlay */}
-        <div className="absolute inset-0" style={{ background: "rgba(6,6,12,0.7)" }} />
+        <div
+          className="absolute inset-0"
+          style={{ background: "rgba(6,6,12,0.7)" }}
+        />
 
         <div className="w-full max-w-sm flex flex-col gap-8 relative z-10">
           {/* Back + mobile logo */}

@@ -7,6 +7,7 @@ import { Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
 import { loginApi, registerApi } from "@/lib/api/auth";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 
 const FEATURES = [
   "Ghi âm câu trả lời phỏng vấn thực tế",
@@ -49,6 +50,7 @@ function RegisterContent() {
       await registerApi(name.trim(), email.trim(), password);
       const { accessToken, user } = await loginApi(email.trim(), password);
       setAuth(accessToken, user);
+      toast.success("Đăng ký thành công!");
       router.push(redirectTo || "/practice");
     } catch (err: unknown) {
       const status = (
@@ -94,7 +96,10 @@ function RegisterContent() {
           borderRight: "1px solid #1c1c28",
         }}
       >
-        <div className="absolute inset-0" style={{ background: "rgba(6,6,12,0.88)" }} />
+        <div
+          className="absolute inset-0"
+          style={{ background: "rgba(6,6,12,0.88)" }}
+        />
         <div className="relative z-10 flex flex-col justify-between w-full px-12 py-12">
           <Link
             href="/"
@@ -126,7 +131,9 @@ function RegisterContent() {
             </ul>
           </div>
 
-          <p className="font-mono text-xs text-[#3d3d54]">© 2025 InterviewPrep</p>
+          <p className="font-mono text-xs text-[#3d3d54]">
+            © 2025 InterviewPrep
+          </p>
         </div>
       </div>
 
@@ -140,7 +147,10 @@ function RegisterContent() {
         }}
       >
         {/* Dark overlay */}
-        <div className="absolute inset-0" style={{ background: "rgba(6,6,12,0.7)" }} />
+        <div
+          className="absolute inset-0"
+          style={{ background: "rgba(6,6,12,0.7)" }}
+        />
 
         <div className="w-full max-w-sm flex flex-col gap-8 relative z-10">
           {/* Back + mobile logo */}
