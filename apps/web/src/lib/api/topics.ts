@@ -1,9 +1,25 @@
 import api, { type ApiResponse } from "./api";
+import type { Paginated } from "./questions";
 
 export interface Topic {
   id: string;
   slug: string;
   name: string;
+}
+
+export interface TopicWithCount extends Topic {
+  questionCount: number;
+}
+
+export type TopicSortBy = "name" | "slug" | "questions";
+export type SortOrder = "asc" | "desc";
+
+export interface AdminTopicQuery {
+  search?: string;
+  sortBy?: TopicSortBy;
+  order?: SortOrder;
+  page?: number;
+  limit?: number;
 }
 
 export async function getTopics(): Promise<Topic[]> {
@@ -13,6 +29,23 @@ export async function getTopics(): Promise<Topic[]> {
   } catch {
     return FALLBACK_TOPICS;
   }
+}
+
+/** Admin: list topic (kèm số câu hỏi) với filter + phân trang phía server */
+export async function getTopicsAdmin(
+  query: AdminTopicQuery = {},
+): Promise<Paginated<TopicWithCount>> {
+  const params: Record<string, string | number> = {};
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== null && value !== "") {
+      params[key] = value as string | number;
+    }
+  }
+  const res = await api.get<ApiResponse<Paginated<TopicWithCount>>>(
+    "/topics/all",
+    { params },
+  );
+  return res.data.data;
 }
 
 export async function createTopic(input: {

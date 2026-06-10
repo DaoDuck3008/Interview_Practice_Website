@@ -6,11 +6,13 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { TopicsService } from './topics.service';
 import { CreateTopicDto } from './dto/create-topic.dto';
 import { UpdateTopicDto } from './dto/update-topic.dto';
+import { QueryAdminTopicDto } from './dto/query-admin-topic.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -23,6 +25,13 @@ export class TopicsController {
   @Get()
   findAll() {
     return this.topicsService.findAll();
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Get('all')
+  findAllAdmin(@Query() query: QueryAdminTopicDto) {
+    return this.topicsService.findAllAdmin(query);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

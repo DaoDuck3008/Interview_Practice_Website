@@ -13,12 +13,16 @@ export default function AdminOverviewPage() {
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([getTopics(), getAllQuestionsAdmin()])
-      .then(([topics, questions]) => {
+    Promise.all([
+      getTopics(),
+      getAllQuestionsAdmin({ limit: 1 }),
+      getAllQuestionsAdmin({ status: "active", limit: 1 }),
+    ])
+      .then(([topics, all, active]) => {
         if (!mounted) return;
         setTopicCount(topics.length);
-        setQuestionCount(questions.length);
-        setActiveCount(questions.filter((q) => q.isActive).length);
+        setQuestionCount(all.total);
+        setActiveCount(active.total);
       })
       .catch(() => {
         if (!mounted) return;

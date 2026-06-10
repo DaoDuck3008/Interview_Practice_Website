@@ -1,21 +1,52 @@
 "use client";
 
 import { useEffect, useState, FormEvent } from "react";
-import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Loader2,
+  Search,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
 import { toast } from "react-toastify";
 import {
-  getTopics,
+  getTopicsAdmin,
   createTopic,
   updateTopic,
   deleteTopic,
   type Topic,
+  type TopicWithCount,
+  type TopicSortBy,
+  type SortOrder,
 } from "@/lib/api/topics";
-import { getAllQuestionsAdmin } from "@/lib/api/questions";
+import type { Paginated } from "@/lib/api/questions";
 import Modal from "@/components/admin/Modal";
+import Pagination from "@/components/admin/Pagination";
+import { useStatusModal } from "@/components/ui/useStatusModal";
 
 const inputStyle = { background: "#0d0d14", border: "1px solid #1c1c28" };
 const inputClass =
   "w-full px-4 py-3 rounded-lg text-sm text-[#f4f4f6] placeholder-[#3d3d54] outline-none transition-all";
+
+const controlStyle = { background: "#0d0d14", border: "1px solid #1c1c28" };
+const selectClass =
+  "px-3 py-2 rounded-lg text-sm text-[#f4f4f6] outline-none cursor-pointer";
+
+const SORT_OPTIONS: { value: TopicSortBy; label: string }[] = [
+  { value: "name", label: "Tên" },
+  { value: "slug", label: "Slug" },
+  { value: "questions", label: "Số câu hỏi" },
+];
+
+const EMPTY: Paginated<TopicWithCount> = {
+  items: [],
+  total: 0,
+  page: 1,
+  limit: 30,
+  totalPages: 1,
+};
 
 function onFocus(e: React.FocusEvent<HTMLInputElement>) {
   e.currentTarget.style.borderColor = "#7c3aed";
@@ -27,9 +58,20 @@ function onBlur(e: React.FocusEvent<HTMLInputElement>) {
 }
 
 export default function AdminTopicsPage() {
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [data, setData] = useState<Paginated<TopicWithCount>>(EMPTY);
   const [loading, setLoading] = useState(true);
+
+  const { confirm, statusModal } = useStatusModal();
+
+  // Bộ lọc + sắp xếp
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [sortBy, setSortBy] = useState<TopicSortBy>("name");
+  const [order, setOrder] = useState<SortOrder>("asc");
+
+  // Phân trang
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(30);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Topic | null>(null);
@@ -38,17 +80,33 @@ export default function AdminTopicsPage() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Debounce search, đồng thời reset về trang 1
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
   async function load() {
     setLoading(true);
     try {
-      const [t, questions] = await Promise.all([
-        getTopics(),
-        getAllQuestionsAdmin().catch(() => []),
-      ]);
-      setTopics(t);
-      const c: Record<string, number> = {};
-      for (const q of questions) c[q.topicId] = (c[q.topicId] ?? 0) + 1;
-      setCounts(c);
+      const res = await getTopicsAdmin({
+        search: debouncedSearch || undefined,
+        sortBy,
+        order,
+        page,
+        limit,
+      });
+      // Nếu trang hiện tại trống (vd. vừa xóa item cuối) thì lùi về trang trước
+      if (res.items.length === 0 && res.page > 1) {
+        setPage(res.page - 1);
+        return;
+      }
+      setData(res);
+    } catch {
+      toast.error("Không tải được danh sách chủ đề.");
     } finally {
       setLoading(false);
     }
@@ -56,7 +114,15 @@ export default function AdminTopicsPage() {
 
   useEffect(() => {
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, sortBy, order, page, limit]);
+
+  function resetToFirstPage<T>(setter: (v: T) => void) {
+    return (v: T) => {
+      setter(v);
+      setPage(1);
+    };
+  }
 
   function openCreate() {
     setEditing(null);
@@ -105,8 +171,14 @@ export default function AdminTopicsPage() {
     }
   }
 
-  async function handleDelete(topic: Topic) {
-    if (!confirm(`Xóa chủ đề "${topic.name}"?`)) return;
+  async function handleDelete(topic: TopicWithCount) {
+    const ok = await confirm({
+      type: "error",
+      title: `Xóa chủ đề "${topic.name}"?`,
+      message: "Hành động này không thể hoàn tác.",
+      confirmText: "Xóa",
+    });
+    if (!ok) return;
     try {
       await deleteTopic(topic.id);
       toast.success("Đã xóa chủ đề.");
@@ -142,6 +214,52 @@ export default function AdminTopicsPage() {
         </button>
       </div>
 
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="relative flex-1 min-w-[220px]">
+          <Search
+            size={15}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[#606072] pointer-events-none"
+          />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Tìm theo tên hoặc slug…"
+            className="w-full pl-9 pr-3 py-2 rounded-lg text-sm text-[#f4f4f6] placeholder-[#3d3d54] outline-none"
+            style={controlStyle}
+          />
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm text-[#606072]">Sắp xếp:</span>
+          <select
+            value={sortBy}
+            onChange={(e) =>
+              resetToFirstPage(setSortBy)(e.target.value as TopicSortBy)
+            }
+            className={selectClass}
+            style={controlStyle}
+          >
+            {SORT_OPTIONS.map((s) => (
+              <option key={s.value} value={s.value} className="bg-[#0d0d14]">
+                {s.label}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={() =>
+              resetToFirstPage(setOrder)(order === "asc" ? "desc" : "asc")
+            }
+            className="p-2 rounded-lg text-[#9898aa] hover:text-[#f4f4f6] hover:bg-[#1c1c28] transition-colors cursor-pointer"
+            style={controlStyle}
+            aria-label={order === "asc" ? "Tăng dần" : "Giảm dần"}
+            title={order === "asc" ? "Tăng dần" : "Giảm dần"}
+          >
+            {order === "asc" ? <ArrowUp size={15} /> : <ArrowDown size={15} />}
+          </button>
+        </div>
+      </div>
+
       <div className="rounded-2xl border border-[#1c1c28] bg-[#0d0d14] overflow-hidden">
         <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-4 px-5 py-3 border-b border-[#1c1c28] text-xs font-medium uppercase tracking-wider text-[#606072]">
           <span>Tên</span>
@@ -154,12 +272,12 @@ export default function AdminTopicsPage() {
           <div className="flex items-center justify-center py-16 text-[#606072]">
             <Loader2 size={18} className="animate-spin" />
           </div>
-        ) : topics.length === 0 ? (
+        ) : data.items.length === 0 ? (
           <p className="text-center py-16 text-sm text-[#606072]">
-            Chưa có chủ đề nào.
+            Không có chủ đề nào khớp bộ lọc.
           </p>
         ) : (
-          topics.map((topic) => (
+          data.items.map((topic) => (
             <div
               key={topic.id}
               className="grid grid-cols-[1fr_1fr_auto_auto] gap-4 px-5 py-3.5 border-b border-[#1c1c28] last:border-0 items-center hover:bg-[#13131c] transition-colors duration-150"
@@ -171,7 +289,7 @@ export default function AdminTopicsPage() {
                 {topic.slug}
               </span>
               <span className="text-sm text-[#9898aa] text-right w-20">
-                {counts[topic.id] ?? 0}
+                {topic.questionCount}
               </span>
               <div className="flex items-center justify-end gap-1 w-20">
                 <button
@@ -191,6 +309,20 @@ export default function AdminTopicsPage() {
               </div>
             </div>
           ))
+        )}
+
+        {!loading && data.total > 0 && (
+          <Pagination
+            page={data.page}
+            totalPages={data.totalPages}
+            total={data.total}
+            limit={limit}
+            onPageChange={setPage}
+            onLimitChange={(l) => {
+              setLimit(l);
+              setPage(1);
+            }}
+          />
         )}
       </div>
 
@@ -247,6 +379,8 @@ export default function AdminTopicsPage() {
           </div>
         </form>
       </Modal>
+
+      {statusModal}
     </div>
   );
 }
