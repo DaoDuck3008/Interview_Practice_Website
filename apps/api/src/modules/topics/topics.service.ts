@@ -1,12 +1,22 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { extname } from 'path';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { StorageService } from '../storage/storage.service';
 import { UpdateTopicDto } from './dto/update-topic.dto';
 import { QueryAdminTopicDto } from './dto/query-admin-topic.dto';
 
 @Injectable()
 export class TopicsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private storage: StorageService,
+  ) {}
 
   async findAll() {
     const rows = await this.prisma.topic.findMany({
@@ -17,6 +27,7 @@ export class TopicsService {
       id: t.id,
       slug: t.slug,
       name: t.name,
+      iconUrl: t.iconUrl ?? null,
       questionCount: t._count.questions,
     }));
   }
@@ -64,6 +75,7 @@ export class TopicsService {
       id: t.id,
       slug: t.slug,
       name: t.name,
+      iconUrl: t.iconUrl ?? null,
       questionCount: t._count.questions,
     }));
 
@@ -84,6 +96,23 @@ export class TopicsService {
     return this.prisma.topic.update({ where: { id }, data });
   }
 
+  async uploadIcon(id: string, file: Express.Multer.File): Promise<{ iconUrl: string }> {
+    const topic = await this.prisma.topic.findUnique({ where: { id } });
+    if (!topic) throw new NotFoundException('Topic không tồn tại.');
+
+    // Xóa icon cũ nếu có
+    if (topic.iconUrl) {
+      await this.storage.delete(this.storage.keyFromUrl(topic.iconUrl));
+    }
+
+    const ext = extname(file.originalname).toLowerCase() || '.jpg';
+    const key = `images/topics/${id}/${randomUUID()}${ext}`;
+    const iconUrl = await this.storage.upload(key, file.buffer, file.mimetype);
+
+    await this.prisma.topic.update({ where: { id }, data: { iconUrl } });
+    return { iconUrl };
+  }
+
   async remove(id: string) {
     const count = await this.prisma.question.count({ where: { topicId: id } });
     if (count > 0) {
@@ -91,6 +120,12 @@ export class TopicsService {
         'Chủ đề còn câu hỏi, không thể xóa. Hãy xóa hoặc chuyển các câu hỏi trước.',
       );
     }
+
+    const topic = await this.prisma.topic.findUnique({ where: { id } });
+    if (topic?.iconUrl) {
+      await this.storage.delete(this.storage.keyFromUrl(topic.iconUrl));
+    }
+
     return this.prisma.topic.delete({ where: { id } });
   }
 }

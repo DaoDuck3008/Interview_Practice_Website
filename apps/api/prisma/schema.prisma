@@ -33,9 +33,10 @@ model User {
 }
 
 model Topic {
-  id   String @id @default(uuid())
-  slug String @unique // vd: "javascript", "nodejs", "react"
-  name String //         vd: "JavaScript", "Node.js", "React"
+  id      String  @id @default(uuid())
+  slug    String  @unique // vd: "javascript", "nodejs", "react"
+  name    String  //         vd: "JavaScript", "Node.js", "React"
+  iconUrl String? // URL ảnh icon trên Cloudflare R2
 
   questions Question[]
 }

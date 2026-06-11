@@ -16,6 +16,7 @@ import {
   createTopic,
   updateTopic,
   deleteTopic,
+  uploadTopicIcon,
   type Topic,
   type TopicWithCount,
   type TopicSortBy,
@@ -25,6 +26,7 @@ import type { Paginated } from "@/lib/api/questions";
 import Modal from "@/components/admin/Modal";
 import Pagination from "@/components/admin/Pagination";
 import { useStatusModal } from "@/components/ui/useStatusModal";
+import ImageDropzone from "@/components/ui/ImageDropzone";
 
 const inputStyle = { background: "#0d0d14", border: "1px solid #1c1c28" };
 const inputClass =
@@ -77,6 +79,8 @@ export default function AdminTopicsPage() {
   const [editing, setEditing] = useState<Topic | null>(null);
   const [slug, setSlug] = useState("");
   const [name, setName] = useState("");
+  const [iconFile, setIconFile] = useState<File | null>(null);
+  const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -99,7 +103,6 @@ export default function AdminTopicsPage() {
         page,
         limit,
       });
-      // Nếu trang hiện tại trống (vd. vừa xóa item cuối) thì lùi về trang trước
       if (res.items.length === 0 && res.page > 1) {
         setPage(res.page - 1);
         return;
@@ -128,6 +131,8 @@ export default function AdminTopicsPage() {
     setEditing(null);
     setSlug("");
     setName("");
+    setIconFile(null);
+    setIconPreview(null);
     setError("");
     setModalOpen(true);
   }
@@ -136,8 +141,15 @@ export default function AdminTopicsPage() {
     setEditing(topic);
     setSlug(topic.slug);
     setName(topic.name);
+    setIconFile(null);
+    setIconPreview(topic.iconUrl ?? null);
     setError("");
     setModalOpen(true);
+  }
+
+  function handleIconChange(file: File | null, preview: string | null) {
+    setIconFile(file);
+    setIconPreview(preview);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -155,9 +167,11 @@ export default function AdminTopicsPage() {
     try {
       if (editing) {
         await updateTopic(editing.id, { slug: slug.trim(), name: name.trim() });
+        if (iconFile) await uploadTopicIcon(editing.id, iconFile);
         toast.success("Đã cập nhật chủ đề.");
       } else {
-        await createTopic({ slug: slug.trim(), name: name.trim() });
+        const topic = await createTopic({ slug: slug.trim(), name: name.trim() });
+        if (iconFile) await uploadTopicIcon(topic.id, iconFile);
         toast.success("Đã tạo chủ đề.");
       }
       setModalOpen(false);
@@ -261,7 +275,8 @@ export default function AdminTopicsPage() {
       </div>
 
       <div className="rounded-2xl border border-[#1c1c28] bg-[#0d0d14] overflow-hidden">
-        <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-4 px-5 py-3 border-b border-[#1c1c28] text-xs font-medium uppercase tracking-wider text-[#606072]">
+        <div className="grid grid-cols-[auto_1fr_1fr_auto_auto] gap-4 px-5 py-3 border-b border-[#1c1c28] text-xs font-medium uppercase tracking-wider text-[#606072]">
+          <span className="w-8">Icon</span>
           <span>Tên</span>
           <span>Slug</span>
           <span className="text-right w-20">Câu hỏi</span>
@@ -280,8 +295,21 @@ export default function AdminTopicsPage() {
           data.items.map((topic) => (
             <div
               key={topic.id}
-              className="grid grid-cols-[1fr_1fr_auto_auto] gap-4 px-5 py-3.5 border-b border-[#1c1c28] last:border-0 items-center hover:bg-[#13131c] transition-colors duration-150"
+              className="grid grid-cols-[auto_1fr_1fr_auto_auto] gap-4 px-5 py-3.5 border-b border-[#1c1c28] last:border-0 items-center hover:bg-[#13131c] transition-colors duration-150"
             >
+              <div className="w-8 h-8 rounded-md overflow-hidden flex items-center justify-center flex-shrink-0"
+                style={{ background: "#13131c", border: "1px solid #1c1c28" }}>
+                {topic.iconUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={topic.iconUrl}
+                    alt={topic.name}
+                    className="w-full h-full object-contain p-0.5"
+                  />
+                ) : (
+                  <span className="text-[10px] text-[#3d3d54]">—</span>
+                )}
+              </div>
               <span className="text-sm text-[#f4f4f6] truncate">
                 {topic.name}
               </span>
@@ -356,6 +384,12 @@ export default function AdminTopicsPage() {
               onBlur={onBlur}
             />
           </div>
+
+          <ImageDropzone
+            value={iconFile}
+            preview={iconPreview}
+            onChange={handleIconChange}
+          />
 
           {error && <p className="text-sm text-[#ef4444]">{error}</p>}
 

@@ -5,6 +5,7 @@ export interface Topic {
   id: string;
   slug: string;
   name: string;
+  iconUrl: string | null;
 }
 
 export interface TopicWithCount extends Topic {
@@ -77,15 +78,28 @@ export async function deleteTopic(id: string): Promise<void> {
   await api.delete(`/topics/${id}`);
 }
 
+export async function uploadTopicIcon(
+  id: string,
+  file: File,
+): Promise<{ iconUrl: string }> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await api.patch<ApiResponse<{ iconUrl: string }>>(
+    `/topics/${id}/icon`,
+    form,
+  );
+  return res.data.data;
+}
+
 const FALLBACK_TOPICS: Topic[] = [
-  { id: "1", slug: "javascript", name: "JavaScript" },
-  { id: "2", slug: "typescript", name: "TypeScript" },
-  { id: "3", slug: "nodejs", name: "Node.js" },
-  { id: "4", slug: "react", name: "React" },
-  { id: "5", slug: "system-design", name: "System Design" },
-  { id: "6", slug: "data-structures", name: "Data Structures" },
-  { id: "7", slug: "databases", name: "Databases" },
-  { id: "8", slug: "docker", name: "Docker" },
+  { id: "1", slug: "javascript", name: "JavaScript", iconUrl: null },
+  { id: "2", slug: "typescript", name: "TypeScript", iconUrl: null },
+  { id: "3", slug: "nodejs", name: "Node.js", iconUrl: null },
+  { id: "4", slug: "react", name: "React", iconUrl: null },
+  { id: "5", slug: "system-design", name: "System Design", iconUrl: null },
+  { id: "6", slug: "data-structures", name: "Data Structures", iconUrl: null },
+  { id: "7", slug: "databases", name: "Databases", iconUrl: null },
+  { id: "8", slug: "docker", name: "Docker", iconUrl: null },
 ];
 
 const FALLBACK_TOPICS_WITH_COUNT: TopicWithCount[] = FALLBACK_TOPICS.map(
