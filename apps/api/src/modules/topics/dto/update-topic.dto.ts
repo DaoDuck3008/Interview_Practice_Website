@@ -1,4 +1,4 @@
-import { IsOptional, IsString, Matches } from 'class-validator';
+import { IsOptional, IsString, IsUUID, Matches } from 'class-validator';
 
 export class UpdateTopicDto {
   @IsOptional()
@@ -11,4 +11,8 @@ export class UpdateTopicDto {
   @IsOptional()
   @IsString()
   name?: string;
+
+  @IsOptional()
+  @IsUUID()
+  parentId?: string | null;
 }

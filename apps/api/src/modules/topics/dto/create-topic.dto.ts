@@ -1,4 +1,4 @@
-import { IsString, Matches } from 'class-validator';
+import { IsOptional, IsString, IsUUID, Matches } from 'class-validator';
 
 export class CreateTopicDto {
   @IsString()
@@ -9,4 +9,8 @@ export class CreateTopicDto {
 
   @IsString()
   name: string;
+
+  @IsOptional()
+  @IsUUID()
+  parentId?: string;
 }

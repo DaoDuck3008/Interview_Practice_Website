@@ -9,6 +9,7 @@ import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { UpdateTopicDto } from './dto/update-topic.dto';
+import { CreateTopicDto } from './dto/create-topic.dto';
 import { QueryAdminTopicDto } from './dto/query-admin-topic.dto';
 
 @Injectable()
@@ -28,13 +29,14 @@ export class TopicsService {
       slug: t.slug,
       name: t.name,
       iconUrl: t.iconUrl ?? null,
+      parentId: t.parentId ?? null,
       questionCount: t._count.questions,
     }));
   }
 
   async findAllAdmin(query: QueryAdminTopicDto) {
     const page = query.page ?? 1;
-    const limit = query.limit ?? 30;
+    const limit = query.limit ?? 100;
 
     const where: Prisma.TopicWhereInput = query.search
       ? {
@@ -64,7 +66,10 @@ export class TopicsService {
       this.prisma.topic.findMany({
         where,
         orderBy,
-        include: { _count: { select: { questions: true } } },
+        include: {
+          _count: { select: { questions: true } },
+          parent: { select: { id: true, name: true } },
+        },
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -76,6 +81,8 @@ export class TopicsService {
       slug: t.slug,
       name: t.name,
       iconUrl: t.iconUrl ?? null,
+      parentId: t.parentId ?? null,
+      parentName: t.parent?.name ?? null,
       questionCount: t._count.questions,
     }));
 
@@ -88,7 +95,7 @@ export class TopicsService {
     };
   }
 
-  create(data: { slug: string; name: string }) {
+  create(data: CreateTopicDto) {
     return this.prisma.topic.create({ data });
   }
 
@@ -100,7 +107,6 @@ export class TopicsService {
     const topic = await this.prisma.topic.findUnique({ where: { id } });
     if (!topic) throw new NotFoundException('Topic không tồn tại.');
 
-    // Xóa icon cũ nếu có
     if (topic.iconUrl) {
       await this.storage.delete(this.storage.keyFromUrl(topic.iconUrl));
     }
@@ -114,10 +120,19 @@ export class TopicsService {
   }
 
   async remove(id: string) {
-    const count = await this.prisma.question.count({ where: { topicId: id } });
-    if (count > 0) {
+    const [questionCount, childrenCount] = await Promise.all([
+      this.prisma.question.count({ where: { topicId: id } }),
+      this.prisma.topic.count({ where: { parentId: id } }),
+    ]);
+
+    if (questionCount > 0) {
       throw new ConflictException(
         'Chủ đề còn câu hỏi, không thể xóa. Hãy xóa hoặc chuyển các câu hỏi trước.',
+      );
+    }
+    if (childrenCount > 0) {
+      throw new ConflictException(
+        'Chủ đề cha còn topic con, không thể xóa. Hãy xóa các topic con trước.',
       );
     }
 

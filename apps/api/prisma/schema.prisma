@@ -33,10 +33,14 @@ model User {
 }
 
 model Topic {
-  id      String  @id @default(uuid())
-  slug    String  @unique // vd: "javascript", "nodejs", "react"
-  name    String  //         vd: "JavaScript", "Node.js", "React"
-  iconUrl String? // URL ảnh icon trên Cloudflare R2
+  id       String  @id @default(uuid())
+  slug     String  @unique // vd: "javascript", "nodejs", "react"
+  name     String  //         vd: "JavaScript", "Node.js", "React"
+  iconUrl  String? // URL ảnh icon trên Cloudflare R2 (chỉ có ở child topic)
+  parentId String? // null = parent topic (nhóm); non-null = child topic
+
+  parent   Topic?  @relation("TopicHierarchy", fields: [parentId], references: [id])
+  children Topic[] @relation("TopicHierarchy")
 
   questions Question[]
 }
