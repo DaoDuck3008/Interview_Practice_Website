@@ -7,6 +7,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { TopicsModule } from './modules/topics/topics.module';
 import { QuestionsModule } from './modules/questions/questions.module';
+import { StorageModule } from './modules/storage/storage.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 @Module({
@@ -21,6 +22,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
     UsersModule,
     TopicsModule,
     QuestionsModule,
+    StorageModule,
   ],
   providers: [
     {

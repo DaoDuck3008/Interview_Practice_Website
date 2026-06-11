@@ -11,6 +11,11 @@ export const validationSchema = Joi.object({
   JWT_REFRESH_SECRET: Joi.string().required(),
   JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),
   FRONTEND_URL: Joi.string().default('http://localhost:3000'),
+  R2_ACCOUNT_ID: Joi.string().required(),
+  R2_ACCESS_KEY_ID: Joi.string().required(),
+  R2_SECRET_ACCESS_KEY: Joi.string().required(),
+  R2_BUCKET_NAME: Joi.string().required(),
+  R2_PUBLIC_URL: Joi.string().required(),
 });
 
 export default () => ({
@@ -22,4 +27,11 @@ export default () => ({
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? '7d',
   },
   frontendUrl: process.env.FRONTEND_URL,
+  r2: {
+    accountId: process.env.R2_ACCOUNT_ID,
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+    bucketName: process.env.R2_BUCKET_NAME,
+    publicUrl: process.env.R2_PUBLIC_URL,
+  },
 });
