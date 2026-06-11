@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, FormEvent } from "react";
+import { useEffect, useState, useMemo, FormEvent } from "react";
 import {
   Plus,
   Pencil,
@@ -9,6 +9,7 @@ import {
   Search,
   ArrowUp,
   ArrowDown,
+  FolderOpen,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import {
@@ -31,7 +32,6 @@ import ImageDropzone from "@/components/ui/ImageDropzone";
 const inputStyle = { background: "#0d0d14", border: "1px solid #1c1c28" };
 const inputClass =
   "w-full px-4 py-3 rounded-lg text-sm text-[#f4f4f6] placeholder-[#3d3d54] outline-none transition-all";
-
 const controlStyle = { background: "#0d0d14", border: "1px solid #1c1c28" };
 const selectClass =
   "px-3 py-2 rounded-lg text-sm text-[#f4f4f6] outline-none cursor-pointer";
@@ -46,7 +46,7 @@ const EMPTY: Paginated<TopicWithCount> = {
   items: [],
   total: 0,
   page: 1,
-  limit: 30,
+  limit: 100,
   totalPages: 1,
 };
 
@@ -65,26 +65,23 @@ export default function AdminTopicsPage() {
 
   const { confirm, statusModal } = useStatusModal();
 
-  // Bộ lọc + sắp xếp
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortBy, setSortBy] = useState<TopicSortBy>("name");
   const [order, setOrder] = useState<SortOrder>("asc");
-
-  // Phân trang
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(30);
+  const [limit] = useState(100);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Topic | null>(null);
   const [slug, setSlug] = useState("");
   const [name, setName] = useState("");
+  const [parentId, setParentId] = useState<string>("");
   const [iconFile, setIconFile] = useState<File | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Debounce search, đồng thời reset về trang 1
   useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedSearch(search);
@@ -103,10 +100,6 @@ export default function AdminTopicsPage() {
         page,
         limit,
       });
-      if (res.items.length === 0 && res.page > 1) {
-        setPage(res.page - 1);
-        return;
-      }
       setData(res);
     } catch {
       toast.error("Không tải được danh sách chủ đề.");
@@ -120,6 +113,37 @@ export default function AdminTopicsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch, sortBy, order, page, limit]);
 
+  // Parent topics available for the dropdown (no parentId = root topics)
+  const parentTopics = useMemo(
+    () => data.items.filter((t) => t.parentId === null),
+    [data.items],
+  );
+
+  // Build tree-sorted list for rendering: parent row → its children → next parent…
+  const treeItems = useMemo(() => {
+    if (debouncedSearch) return data.items; // flat when searching
+
+    const parents = data.items.filter((t) => t.parentId === null);
+    const childrenByParent: Record<string, TopicWithCount[]> = {};
+    for (const t of data.items) {
+      if (t.parentId) {
+        (childrenByParent[t.parentId] ??= []).push(t);
+      }
+    }
+
+    const result: TopicWithCount[] = [];
+    for (const p of parents) {
+      result.push(p);
+      if (childrenByParent[p.id]) result.push(...childrenByParent[p.id]);
+    }
+    // Orphan children (parent not loaded)
+    const parentIds = new Set(parents.map((p) => p.id));
+    for (const t of data.items) {
+      if (t.parentId && !parentIds.has(t.parentId)) result.push(t);
+    }
+    return result;
+  }, [data.items, debouncedSearch]);
+
   function resetToFirstPage<T>(setter: (v: T) => void) {
     return (v: T) => {
       setter(v);
@@ -131,6 +155,7 @@ export default function AdminTopicsPage() {
     setEditing(null);
     setSlug("");
     setName("");
+    setParentId("");
     setIconFile(null);
     setIconPreview(null);
     setError("");
@@ -141,6 +166,7 @@ export default function AdminTopicsPage() {
     setEditing(topic);
     setSlug(topic.slug);
     setName(topic.name);
+    setParentId(topic.parentId ?? "");
     setIconFile(null);
     setIconPreview(topic.iconUrl ?? null);
     setError("");
@@ -150,6 +176,15 @@ export default function AdminTopicsPage() {
   function handleIconChange(file: File | null, preview: string | null) {
     setIconFile(file);
     setIconPreview(preview);
+  }
+
+  function handleParentChange(val: string) {
+    setParentId(val);
+    // clear icon when switching to parent topic
+    if (!val) {
+      setIconFile(null);
+      setIconPreview(null);
+    }
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -165,13 +200,21 @@ export default function AdminTopicsPage() {
     }
     setSaving(true);
     try {
+      const payload = {
+        slug: slug.trim(),
+        name: name.trim(),
+        parentId: parentId || undefined,
+      };
       if (editing) {
-        await updateTopic(editing.id, { slug: slug.trim(), name: name.trim() });
-        if (iconFile) await uploadTopicIcon(editing.id, iconFile);
+        await updateTopic(editing.id, {
+          ...payload,
+          parentId: parentId || null,
+        });
+        if (iconFile && parentId) await uploadTopicIcon(editing.id, iconFile);
         toast.success("Đã cập nhật chủ đề.");
       } else {
-        const topic = await createTopic({ slug: slug.trim(), name: name.trim() });
-        if (iconFile) await uploadTopicIcon(topic.id, iconFile);
+        const topic = await createTopic(payload);
+        if (iconFile && parentId) await uploadTopicIcon(topic.id, iconFile);
         toast.success("Đã tạo chủ đề.");
       }
       setModalOpen(false);
@@ -189,7 +232,10 @@ export default function AdminTopicsPage() {
     const ok = await confirm({
       type: "error",
       title: `Xóa chủ đề "${topic.name}"?`,
-      message: "Hành động này không thể hoàn tác.",
+      message:
+        topic.parentId === null
+          ? "Chú ý: topic cha sẽ không thể xóa nếu còn topic con. Hành động này không thể hoàn tác."
+          : "Hành động này không thể hoàn tác.",
       confirmText: "Xóa",
     });
     if (!ok) return;
@@ -267,7 +313,6 @@ export default function AdminTopicsPage() {
             className="p-2 rounded-lg text-[#9898aa] hover:text-[#f4f4f6] hover:bg-[#1c1c28] transition-colors cursor-pointer"
             style={controlStyle}
             aria-label={order === "asc" ? "Tăng dần" : "Giảm dần"}
-            title={order === "asc" ? "Tăng dần" : "Giảm dần"}
           >
             {order === "asc" ? <ArrowUp size={15} /> : <ArrowDown size={15} />}
           </button>
@@ -275,6 +320,7 @@ export default function AdminTopicsPage() {
       </div>
 
       <div className="rounded-2xl border border-[#1c1c28] bg-[#0d0d14] overflow-hidden">
+        {/* Table header */}
         <div className="grid grid-cols-[auto_1fr_1fr_auto_auto] gap-4 px-5 py-3 border-b border-[#1c1c28] text-xs font-medium uppercase tracking-wider text-[#606072]">
           <span className="w-8">Icon</span>
           <span>Tên</span>
@@ -287,79 +333,139 @@ export default function AdminTopicsPage() {
           <div className="flex items-center justify-center py-16 text-[#606072]">
             <Loader2 size={18} className="animate-spin" />
           </div>
-        ) : data.items.length === 0 ? (
+        ) : treeItems.length === 0 ? (
           <p className="text-center py-16 text-sm text-[#606072]">
             Không có chủ đề nào khớp bộ lọc.
           </p>
         ) : (
-          data.items.map((topic) => (
-            <div
-              key={topic.id}
-              className="grid grid-cols-[auto_1fr_1fr_auto_auto] gap-4 px-5 py-3.5 border-b border-[#1c1c28] last:border-0 items-center hover:bg-[#13131c] transition-colors duration-150"
-            >
-              <div className="w-8 h-8 rounded-md overflow-hidden flex items-center justify-center flex-shrink-0"
-                style={{ background: "#13131c", border: "1px solid #1c1c28" }}>
-                {topic.iconUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={topic.iconUrl}
-                    alt={topic.name}
-                    className="w-full h-full object-contain p-0.5"
-                  />
-                ) : (
-                  <span className="text-[10px] text-[#3d3d54]">—</span>
-                )}
+          treeItems.map((topic) => {
+            const isParent = topic.parentId === null;
+            return isParent ? (
+              /* Parent row */
+              <div
+                key={topic.id}
+                className="grid grid-cols-[auto_1fr_1fr_auto_auto] gap-4 px-5 py-3 border-b border-[#1c1c28] items-center"
+                style={{ background: "#0b0b13" }}
+              >
+                <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
+                  <FolderOpen size={16} className="text-[#484860]" />
+                </div>
+                <span className="text-sm font-semibold text-[#9898aa]">
+                  {topic.name}
+                </span>
+                <span className="text-sm font-mono text-[#484860] truncate">
+                  {topic.slug}
+                </span>
+                <span className="text-sm text-[#484860] text-right w-20">—</span>
+                <div className="flex items-center justify-end gap-1 w-20">
+                  <button
+                    onClick={() => openEdit(topic)}
+                    className="p-2 rounded-md text-[#606072] hover:text-[#8b5cf6] hover:bg-[#1c1c28] transition-colors cursor-pointer"
+                    aria-label="Sửa"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(topic)}
+                    className="p-2 rounded-md text-[#606072] hover:text-[#ef4444] hover:bg-[#1c1c28] transition-colors cursor-pointer"
+                    aria-label="Xóa"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               </div>
-              <span className="text-sm text-[#f4f4f6] truncate">
-                {topic.name}
-              </span>
-              <span className="text-sm font-mono text-[#9898aa] truncate">
-                {topic.slug}
-              </span>
-              <span className="text-sm text-[#9898aa] text-right w-20">
-                {topic.questionCount}
-              </span>
-              <div className="flex items-center justify-end gap-1 w-20">
-                <button
-                  onClick={() => openEdit(topic)}
-                  className="p-2 rounded-md text-[#606072] hover:text-[#8b5cf6] hover:bg-[#1c1c28] transition-colors cursor-pointer"
-                  aria-label="Sửa"
+            ) : (
+              /* Child row */
+              <div
+                key={topic.id}
+                className="grid grid-cols-[auto_1fr_1fr_auto_auto] gap-4 pl-9 pr-5 py-3 border-b border-[#1c1c28] last:border-0 items-center hover:bg-[#13131c] transition-colors duration-150"
+              >
+                <div
+                  className="w-8 h-8 rounded-md overflow-hidden flex items-center justify-center flex-shrink-0"
+                  style={{ background: "#13131c", border: "1px solid #1c1c28" }}
                 >
-                  <Pencil size={15} />
-                </button>
-                <button
-                  onClick={() => handleDelete(topic)}
-                  className="p-2 rounded-md text-[#606072] hover:text-[#ef4444] hover:bg-[#1c1c28] transition-colors cursor-pointer"
-                  aria-label="Xóa"
-                >
-                  <Trash2 size={15} />
-                </button>
+                  {topic.iconUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={topic.iconUrl}
+                      alt={topic.name}
+                      className="w-full h-full object-contain p-0.5"
+                    />
+                  ) : (
+                    <span className="text-[10px] text-[#3d3d54]">—</span>
+                  )}
+                </div>
+                <span className="text-sm text-[#f4f4f6] truncate">
+                  {topic.name}
+                </span>
+                <span className="text-sm font-mono text-[#9898aa] truncate">
+                  {topic.slug}
+                </span>
+                <span className="text-sm text-[#9898aa] text-right w-20">
+                  {topic.questionCount}
+                </span>
+                <div className="flex items-center justify-end gap-1 w-20">
+                  <button
+                    onClick={() => openEdit(topic)}
+                    className="p-2 rounded-md text-[#606072] hover:text-[#8b5cf6] hover:bg-[#1c1c28] transition-colors cursor-pointer"
+                    aria-label="Sửa"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(topic)}
+                    className="p-2 rounded-md text-[#606072] hover:text-[#ef4444] hover:bg-[#1c1c28] transition-colors cursor-pointer"
+                    aria-label="Xóa"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
 
-        {!loading && data.total > 0 && (
+        {!loading && data.total > data.limit && (
           <Pagination
             page={data.page}
             totalPages={data.totalPages}
             total={data.total}
-            limit={limit}
+            limit={data.limit}
             onPageChange={setPage}
-            onLimitChange={(l) => {
-              setLimit(l);
-              setPage(1);
-            }}
+            onLimitChange={() => {}}
           />
         )}
       </div>
 
+      {/* Create / Edit modal */}
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editing ? "Sửa chủ đề" : "Thêm chủ đề"}
       >
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          {/* Parent select */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-[#9898aa]">
+              Chủ đề cha
+            </label>
+            <select
+              value={parentId}
+              onChange={(e) => handleParentChange(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg text-sm text-[#f4f4f6] outline-none cursor-pointer"
+              style={inputStyle}
+            >
+              <option value="" className="bg-[#0d0d14]">
+                — Không có (đây là chủ đề cha) —
+              </option>
+              {parentTopics.map((p) => (
+                <option key={p.id} value={p.id} className="bg-[#0d0d14]">
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-[#9898aa]">Tên</label>
             <input
@@ -372,6 +478,7 @@ export default function AdminTopicsPage() {
               onBlur={onBlur}
             />
           </div>
+
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-[#9898aa]">Slug</label>
             <input
@@ -385,11 +492,19 @@ export default function AdminTopicsPage() {
             />
           </div>
 
-          <ImageDropzone
-            value={iconFile}
-            preview={iconPreview}
-            onChange={handleIconChange}
-          />
+          {/* Icon chỉ dành cho child topic */}
+          {parentId && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-[#9898aa]">
+                Icon
+              </label>
+              <ImageDropzone
+                value={iconFile}
+                preview={iconPreview}
+                onChange={handleIconChange}
+              />
+            </div>
+          )}
 
           {error && <p className="text-sm text-[#ef4444]">{error}</p>}
 

@@ -6,10 +6,12 @@ export interface Topic {
   slug: string;
   name: string;
   iconUrl: string | null;
+  parentId: string | null;
 }
 
 export interface TopicWithCount extends Topic {
   questionCount: number;
+  parentName?: string | null;
 }
 
 export type TopicSortBy = "name" | "slug" | "questions";
@@ -61,6 +63,7 @@ export async function getTopicsAdmin(
 export async function createTopic(input: {
   slug: string;
   name: string;
+  parentId?: string;
 }): Promise<Topic> {
   const res = await api.post<ApiResponse<Topic>>("/topics", input);
   return res.data.data;
@@ -68,7 +71,7 @@ export async function createTopic(input: {
 
 export async function updateTopic(
   id: string,
-  input: Partial<{ slug: string; name: string }>,
+  input: Partial<{ slug: string; name: string; parentId: string | null }>,
 ): Promise<Topic> {
   const res = await api.patch<ApiResponse<Topic>>(`/topics/${id}`, input);
   return res.data.data;
@@ -92,14 +95,14 @@ export async function uploadTopicIcon(
 }
 
 const FALLBACK_TOPICS: Topic[] = [
-  { id: "1", slug: "javascript", name: "JavaScript", iconUrl: null },
-  { id: "2", slug: "typescript", name: "TypeScript", iconUrl: null },
-  { id: "3", slug: "nodejs", name: "Node.js", iconUrl: null },
-  { id: "4", slug: "react", name: "React", iconUrl: null },
-  { id: "5", slug: "system-design", name: "System Design", iconUrl: null },
-  { id: "6", slug: "data-structures", name: "Data Structures", iconUrl: null },
-  { id: "7", slug: "databases", name: "Databases", iconUrl: null },
-  { id: "8", slug: "docker", name: "Docker", iconUrl: null },
+  { id: "1", slug: "javascript", name: "JavaScript", iconUrl: null, parentId: null },
+  { id: "2", slug: "typescript", name: "TypeScript", iconUrl: null, parentId: null },
+  { id: "3", slug: "nodejs", name: "Node.js", iconUrl: null, parentId: null },
+  { id: "4", slug: "react", name: "React", iconUrl: null, parentId: null },
+  { id: "5", slug: "system-design", name: "System Design", iconUrl: null, parentId: null },
+  { id: "6", slug: "data-structures", name: "Data Structures", iconUrl: null, parentId: null },
+  { id: "7", slug: "databases", name: "Databases", iconUrl: null, parentId: null },
+  { id: "8", slug: "docker", name: "Docker", iconUrl: null, parentId: null },
 ];
 
 const FALLBACK_TOPICS_WITH_COUNT: TopicWithCount[] = FALLBACK_TOPICS.map(
