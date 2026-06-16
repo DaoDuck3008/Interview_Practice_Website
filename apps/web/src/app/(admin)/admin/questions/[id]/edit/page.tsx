@@ -29,6 +29,7 @@ export default function EditQuestionPage({
           answerKeySummary: q.answerKeySummary,
           answerKeywords: q.answerKeywords,
           level: q.level,
+          isFeatured: q.isFeatured,
         }),
       )
       .catch(() => setNotFound(true));

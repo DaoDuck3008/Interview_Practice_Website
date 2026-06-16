@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Plus,
   Pencil,
@@ -51,28 +52,31 @@ const EMPTY: Paginated<Question> = {
 };
 
 export default function AdminQuestionsPage() {
+  const router = useRouter();
+  const sp = useSearchParams();
+
   const [topics, setTopics] = useState<Topic[]>([]);
   const [data, setData] = useState<Paginated<Question>>(EMPTY);
   const [loading, setLoading] = useState(true);
 
   const { confirm, statusModal } = useStatusModal();
 
-  // Bộ lọc
-  const [topicFilter, setTopicFilter] = useState("");
-  const [levelFilter, setLevelFilter] = useState<"" | Level>("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("");
-  const [search, setSearch] = useState("");
+  // Bộ lọc — khởi tạo từ URL search params
+  const [topicFilter, setTopicFilter] = useState(sp.get("topic") ?? "");
+  const [levelFilter, setLevelFilter] = useState<"" | Level>((sp.get("level") ?? "") as "" | Level);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>((sp.get("status") ?? "") as StatusFilter);
+  const [search, setSearch] = useState(sp.get("search") ?? "");
 
   // Giá trị ô text đã debounce
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState(sp.get("search") ?? "");
 
   // Sắp xếp
-  const [sortBy, setSortBy] = useState<QuestionSortBy>("topic");
-  const [order, setOrder] = useState<SortOrder>("asc");
+  const [sortBy, setSortBy] = useState<QuestionSortBy>((sp.get("sortBy") ?? "topic") as QuestionSortBy);
+  const [order, setOrder] = useState<SortOrder>((sp.get("order") ?? "asc") as SortOrder);
 
   // Phân trang
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(30);
+  const [page, setPage] = useState(Number(sp.get("page") ?? "1"));
+  const [limit, setLimit] = useState(Number(sp.get("limit") ?? "30"));
 
   // Tải danh sách topic cho dropdown
   useEffect(() => {
@@ -90,7 +94,22 @@ export default function AdminQuestionsPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  async function load() {
+  // Đồng bộ state → URL để back button giữ lại bộ lọc
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (topicFilter) params.set("topic", topicFilter);
+    if (levelFilter) params.set("level", levelFilter);
+    if (statusFilter) params.set("status", statusFilter);
+    if (debouncedSearch) params.set("search", debouncedSearch);
+    if (sortBy !== "topic") params.set("sortBy", sortBy);
+    if (order !== "asc") params.set("order", order);
+    if (page > 1) params.set("page", String(page));
+    if (limit !== 30) params.set("limit", String(limit));
+    const qs = params.toString();
+    router.replace(`/admin/questions${qs ? `?${qs}` : ""}`, { scroll: false });
+  }, [topicFilter, levelFilter, statusFilter, debouncedSearch, sortBy, order, page, limit]);
+
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await getAllQuestionsAdmin({
@@ -114,7 +133,7 @@ export default function AdminQuestionsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [topicFilter, levelFilter, statusFilter, debouncedSearch, sortBy, order, page, limit]);
 
   useEffect(() => {
     load();

@@ -101,7 +101,7 @@ export default function QuestionForm({
         isFeatured,
       });
       toast.success("Đã lưu câu hỏi.");
-      router.push("/admin/questions");
+      router.back();
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })
         ?.response?.data?.message;
@@ -247,7 +247,7 @@ export default function QuestionForm({
       <div className="flex items-center justify-end gap-3">
         <button
           type="button"
-          onClick={() => router.push("/admin/questions")}
+          onClick={() => router.back()}
           className="px-4 py-2.5 rounded-lg text-sm text-[#9898aa] hover:text-[#f4f4f6] transition-colors cursor-pointer"
         >
           Hủy
