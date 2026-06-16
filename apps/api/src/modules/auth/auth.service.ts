@@ -15,9 +15,10 @@ export class AuthService {
 
   async validateUser(email: string, password: string) {
     const user = await this.usersService.findByEmail(email);
-    if (!user) return null;
-    const isMatch = await bcrypt.compare(password, user.passwordHash);
-    return isMatch ? user : null;
+    // Luôn chạy bcrypt để tránh timing attack (không để lộ email tồn tại qua response time)
+    const hash = user?.passwordHash ?? '$2b$10$invalidhashfortimingprotectionxx';
+    const isMatch = await bcrypt.compare(password, hash);
+    return user && isMatch ? user : null;
   }
 
   async register(dto: RegisterDto) {

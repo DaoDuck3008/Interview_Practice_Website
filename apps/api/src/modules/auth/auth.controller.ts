@@ -59,7 +59,7 @@ export class AuthController {
 
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie(REFRESH_COOKIE);
+    res.clearCookie(REFRESH_COOKIE, { path: '/api/v1/auth' });
     return { message: 'Đăng xuất thành công' };
   }
 
@@ -69,6 +69,7 @@ export class AuthController {
       httpOnly: true,
       secure: isProd,
       sameSite: 'lax' as const,
+      path: '/api/v1/auth',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     };
   }
