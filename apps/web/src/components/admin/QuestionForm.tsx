@@ -4,9 +4,10 @@ import { useEffect, useState, FormEvent, KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { X, Loader2, Crown } from "lucide-react";
 import { toast } from "react-toastify";
-import { getTopics, type Topic } from "@/lib/api/topics";
+import { getTopics } from "@/lib/api/topics";
 import { LEVELS, type Level, type QuestionInput } from "@/lib/api/questions";
 import MarkdownEditor from "@/components/admin/MarkdownEditor";
+import { buildTopicOptions } from "@/lib/utils/topics";
 
 const fieldStyle = { background: "#0d0d14", border: "1px solid #1c1c28" };
 const fieldClass =
@@ -61,8 +62,9 @@ export default function QuestionForm({
   useEffect(() => {
     getTopics().then((t) => {
       setTopics(t);
-      // chọn topic đầu tiên nếu tạo mới mà chưa có
-      setTopicId((cur) => cur || t[0]?.id || "");
+      // chọn topic đầu tiên (leaf) nếu tạo mới mà chưa có
+      const firstLeaf = t.find((x) => x.parentId !== null) ?? t[0];
+      setTopicId((cur) => cur || firstLeaf?.id || "");
     });
   }, []);
 
@@ -123,11 +125,7 @@ export default function QuestionForm({
             onFocus={onFocus}
             onBlur={onBlur}
           >
-            {topics.map((t) => (
-              <option key={t.id} value={t.id} className="bg-[#0d0d14]">
-                {t.name}
-              </option>
-            ))}
+            {buildTopicOptions(topics)}
           </select>
         </div>
 

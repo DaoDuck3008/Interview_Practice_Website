@@ -26,9 +26,10 @@ import {
   type QuestionSortBy,
   type SortOrder,
 } from "@/lib/api/questions";
-import { getTopics, type Topic } from "@/lib/api/topics";
+import { getTopics, Topic } from "@/lib/api/topics";
 import Pagination from "@/components/admin/Pagination";
 import { useStatusModal } from "@/components/ui/useStatusModal";
+import { buildTopicOptions } from "@/lib/utils/topics";
 
 const controlStyle = { background: "#0d0d14", border: "1px solid #1c1c28" };
 const selectClass =
@@ -63,16 +64,26 @@ export default function AdminQuestionsPage() {
 
   // Bộ lọc — khởi tạo từ URL search params
   const [topicFilter, setTopicFilter] = useState(sp.get("topic") ?? "");
-  const [levelFilter, setLevelFilter] = useState<"" | Level>((sp.get("level") ?? "") as "" | Level);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>((sp.get("status") ?? "") as StatusFilter);
+  const [levelFilter, setLevelFilter] = useState<"" | Level>(
+    (sp.get("level") ?? "") as "" | Level,
+  );
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(
+    (sp.get("status") ?? "") as StatusFilter,
+  );
   const [search, setSearch] = useState(sp.get("search") ?? "");
 
   // Giá trị ô text đã debounce
-  const [debouncedSearch, setDebouncedSearch] = useState(sp.get("search") ?? "");
+  const [debouncedSearch, setDebouncedSearch] = useState(
+    sp.get("search") ?? "",
+  );
 
   // Sắp xếp
-  const [sortBy, setSortBy] = useState<QuestionSortBy>((sp.get("sortBy") ?? "topic") as QuestionSortBy);
-  const [order, setOrder] = useState<SortOrder>((sp.get("order") ?? "asc") as SortOrder);
+  const [sortBy, setSortBy] = useState<QuestionSortBy>(
+    (sp.get("sortBy") ?? "topic") as QuestionSortBy,
+  );
+  const [order, setOrder] = useState<SortOrder>(
+    (sp.get("order") ?? "asc") as SortOrder,
+  );
 
   // Phân trang
   const [page, setPage] = useState(Number(sp.get("page") ?? "1"));
@@ -107,7 +118,16 @@ export default function AdminQuestionsPage() {
     if (limit !== 30) params.set("limit", String(limit));
     const qs = params.toString();
     router.replace(`/admin/questions${qs ? `?${qs}` : ""}`, { scroll: false });
-  }, [topicFilter, levelFilter, statusFilter, debouncedSearch, sortBy, order, page, limit]);
+  }, [
+    topicFilter,
+    levelFilter,
+    statusFilter,
+    debouncedSearch,
+    sortBy,
+    order,
+    page,
+    limit,
+  ]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -133,7 +153,16 @@ export default function AdminQuestionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [topicFilter, levelFilter, statusFilter, debouncedSearch, sortBy, order, page, limit]);
+  }, [
+    topicFilter,
+    levelFilter,
+    statusFilter,
+    debouncedSearch,
+    sortBy,
+    order,
+    page,
+    limit,
+  ]);
 
   useEffect(() => {
     load();
@@ -159,7 +188,8 @@ export default function AdminQuestionsPage() {
     const ok = await confirm({
       type: "alert",
       title: "Ẩn câu hỏi?",
-      message: "Câu hỏi sẽ bị ẩn khỏi danh sách luyện tập. Bạn có thể khôi phục lại sau.",
+      message:
+        "Câu hỏi sẽ bị ẩn khỏi danh sách luyện tập. Bạn có thể khôi phục lại sau.",
       confirmText: "Ẩn",
     });
     if (!ok) return;
@@ -254,12 +284,7 @@ export default function AdminQuestionsPage() {
           className={selectClass}
           style={controlStyle}
         >
-          <option value="">Tất cả chủ đề</option>
-          {topics.map((t) => (
-            <option key={t.id} value={t.id} className="bg-[#0d0d14]">
-              {t.name}
-            </option>
-          ))}
+          {buildTopicOptions(topics, "Tất cả chủ đề")}
         </select>
 
         <select
