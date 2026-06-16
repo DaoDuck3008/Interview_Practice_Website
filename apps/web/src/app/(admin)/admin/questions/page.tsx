@@ -11,6 +11,7 @@ import {
   Search,
   ArrowUp,
   ArrowDown,
+  Crown,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import {
@@ -162,6 +163,34 @@ export default function AdminQuestionsPage() {
     }
   }
 
+  async function handleToggleFeatured(q: Question) {
+    const turning0n = !q.isFeatured;
+    const ok = await confirm(
+      turning0n
+        ? {
+            type: "info",
+            title: "Đánh dấu nổi bật?",
+            message:
+              "Câu hỏi sẽ hiển thị ở đầu trang học với biểu tượng Crown vàng.",
+            confirmText: "Đánh dấu",
+          }
+        : {
+            type: "alert",
+            title: "Bỏ đánh dấu nổi bật?",
+            message: "Câu hỏi sẽ trở về vị trí thông thường.",
+            confirmText: "Bỏ đánh dấu",
+          },
+    );
+    if (!ok) return;
+    try {
+      await updateQuestion(q.id, { isFeatured: turning0n });
+      toast.success(turning0n ? "Đã đánh dấu nổi bật." : "Đã bỏ đánh dấu.");
+      await load();
+    } catch {
+      toast.error("Không thể cập nhật trạng thái nổi bật.");
+    }
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -279,7 +308,7 @@ export default function AdminQuestionsPage() {
       </div>
 
       <div className="rounded-2xl border border-[#1c1c28] bg-[#0d0d14] overflow-hidden">
-        <div className="grid grid-cols-[1fr_140px_90px_90px_90px] gap-4 px-5 py-3 border-b border-[#1c1c28] text-xs font-medium uppercase tracking-wider text-[#606072]">
+        <div className="grid grid-cols-[1fr_140px_90px_90px_110px] gap-4 px-5 py-3 border-b border-[#1c1c28] text-xs font-medium uppercase tracking-wider text-[#606072]">
           <span>Nội dung</span>
           <span>Chủ đề</span>
           <span>Cấp độ</span>
@@ -299,7 +328,7 @@ export default function AdminQuestionsPage() {
           data.items.map((q) => (
             <div
               key={q.id}
-              className="grid grid-cols-[1fr_140px_90px_90px_90px] gap-4 px-5 py-3.5 border-b border-[#1c1c28] last:border-0 items-center hover:bg-[#13131c] transition-colors duration-150"
+              className="grid grid-cols-[1fr_140px_90px_90px_110px] gap-4 px-5 py-3.5 border-b border-[#1c1c28] last:border-0 items-center hover:bg-[#13131c] transition-colors duration-150"
             >
               <span
                 className="text-sm text-[#f4f4f6] truncate"
@@ -325,6 +354,19 @@ export default function AdminQuestionsPage() {
                 )}
               </span>
               <div className="flex items-center justify-end gap-1">
+                <button
+                  onClick={() => handleToggleFeatured(q)}
+                  className="p-2 rounded-md transition-colors cursor-pointer hover:bg-[#1c1c28]"
+                  aria-label={q.isFeatured ? "Bỏ nổi bật" : "Đánh dấu nổi bật"}
+                  title={q.isFeatured ? "Bỏ nổi bật" : "Đánh dấu nổi bật"}
+                >
+                  <Crown
+                    size={15}
+                    className={
+                      q.isFeatured ? "text-[#fbbf24]" : "text-[#3d3d54]"
+                    }
+                  />
+                </button>
                 <Link
                   href={`/admin/questions/${q.id}/edit`}
                   className="p-2 rounded-md text-[#606072] hover:text-[#8b5cf6] hover:bg-[#1c1c28] transition-colors cursor-pointer"

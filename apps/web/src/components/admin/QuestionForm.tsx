@@ -2,7 +2,7 @@
 
 import { useEffect, useState, FormEvent, KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, Crown } from "lucide-react";
 import { toast } from "react-toastify";
 import { getTopics, type Topic } from "@/lib/api/topics";
 import { LEVELS, type Level, type QuestionInput } from "@/lib/api/questions";
@@ -53,6 +53,8 @@ export default function QuestionForm({
     initial?.detailAnswerKey ?? "",
   );
 
+  const [isFeatured, setIsFeatured] = useState(initial?.isFeatured ?? false);
+
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -96,6 +98,7 @@ export default function QuestionForm({
         answerKeySummary: answerKeySummary.trim(),
         answerKeywords: keywords,
         detailAnswerKey,
+        isFeatured,
       });
       toast.success("Đã lưu câu hỏi.");
       router.push("/admin/questions");
@@ -109,7 +112,7 @@ export default function QuestionForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6 ">
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-5 sm:grid-cols-3">
         <div className="flex flex-col gap-1.5">
           <Label>Chủ đề</Label>
           <select
@@ -144,6 +147,33 @@ export default function QuestionForm({
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Featured toggle */}
+        <div className="flex-col gap-1.5">
+          <Label>Đánh dấu nổi bật</Label>
+          <div className="flex items-center gap-1.5 mt-1">
+            <button
+              type="button"
+              onClick={() => setIsFeatured((v) => !v)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-150 cursor-pointer"
+              style={{
+                background: isFeatured ? "rgba(251,191,36,0.1)" : "#0d0d14",
+                border: isFeatured
+                  ? "1px solid rgba(251,191,36,0.35)"
+                  : "1px solid #1c1c28",
+                color: isFeatured ? "#fbbf24" : "#606072",
+              }}
+            >
+              <Crown size={14} />
+              {isFeatured ? "Câu hỏi nổi bật" : "Đánh dấu nổi bật"}
+            </button>
+            {isFeatured && (
+              <p className="text-xs text-[#9898aa]">
+                Câu hỏi sẽ hiển thị ở đầu trang học
+              </p>
+            )}
+          </div>
         </div>
       </div>
 

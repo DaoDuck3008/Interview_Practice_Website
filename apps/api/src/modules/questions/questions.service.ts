@@ -27,7 +27,7 @@ export class QuestionsService {
         this.prisma.question.findMany({
           where,
           include: { topic: true },
-          orderBy: [{ topic: { name: 'asc' } }, { level: 'asc' }],
+          orderBy: [{ isFeatured: 'desc' }, { level: 'asc' }],
           skip: (page - 1) * limit,
           take: limit,
         }),

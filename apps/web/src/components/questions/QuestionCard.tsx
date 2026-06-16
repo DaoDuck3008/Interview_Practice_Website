@@ -6,7 +6,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { ChevronDown, ArrowUpRight } from "lucide-react";
+import { ChevronDown, ArrowUpRight, Crown } from "lucide-react";
 import type { Question } from "@/lib/api/questions";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
 
@@ -195,6 +195,11 @@ export default function QuestionCard({
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center gap-4 px-6 py-3.5 text-left cursor-pointer group"
       >
+        {/* Featured crown */}
+        {question.isFeatured && (
+          <Crown size={14} className="flex-shrink-0 text-[#fbbf24]" />
+        )}
+
         {/* Index */}
         <span className="flex-shrink-0 font-mono text-[11px] text-[#606072] w-5 text-right">
           #{index}

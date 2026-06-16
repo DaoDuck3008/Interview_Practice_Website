@@ -37,4 +37,8 @@ export class UpdateQuestionDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isFeatured?: boolean;
 }

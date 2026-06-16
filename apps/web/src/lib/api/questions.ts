@@ -17,6 +17,7 @@ export interface Question {
   answerKeywords: string[];
   level: Level;
   isActive: boolean;
+  isFeatured: boolean;
   topic?: { id: string; slug: string; name: string };
 }
 
@@ -27,6 +28,7 @@ export interface QuestionInput {
   answerKeySummary: string;
   answerKeywords: string[];
   level: Level;
+  isFeatured?: boolean;
 }
 
 export interface Paginated<T> {

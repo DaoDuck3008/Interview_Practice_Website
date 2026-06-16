@@ -55,8 +55,9 @@ model Question {
   answerKeySummary String // Đáp án chuẩn tóm tắt
   answerKeywords   String[] // Các từ khóa cần đề cập
 
-  level    Level
-  isActive Boolean @default(true)
+  level      Level
+  isActive   Boolean @default(true)
+  isFeatured Boolean @default(false)
 
   sessions Session[]
 }
