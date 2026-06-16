@@ -356,7 +356,9 @@ export default function AdminTopicsPage() {
                 <span className="text-sm font-mono text-[#484860] truncate">
                   {topic.slug}
                 </span>
-                <span className="text-sm text-[#484860] text-right w-20">—</span>
+                <span className="text-sm text-[#484860] text-right w-20">
+                  —
+                </span>
                 <div className="flex items-center justify-end gap-1 w-20">
                   <button
                     onClick={() => openEdit(topic)}
@@ -389,7 +391,7 @@ export default function AdminTopicsPage() {
                     <img
                       src={topic.iconUrl}
                       alt={topic.name}
-                      className="w-full h-full object-contain p-0.5"
+                      className="w-full h-full rounded-lg object-contain p-0.5"
                     />
                   ) : (
                     <span className="text-[10px] text-[#3d3d54]">—</span>
@@ -495,9 +497,7 @@ export default function AdminTopicsPage() {
           {/* Icon chỉ dành cho child topic */}
           {parentId && (
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-[#9898aa]">
-                Icon
-              </label>
+              <label className="text-xs font-medium text-[#9898aa]">Icon</label>
               <ImageDropzone
                 value={iconFile}
                 preview={iconPreview}

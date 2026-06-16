@@ -144,13 +144,13 @@ export default function TopicsSidebar({
                         <img
                           src={topic.iconUrl}
                           alt=""
-                          width={16}
-                          height={16}
-                          className="w-4 h-4 object-contain flex-shrink-0"
+                          width={20}
+                          height={20}
+                          className="w-5 h-5 object-contain rounded-md flex-shrink-0"
                         />
                       ) : (
                         <span
-                          className="w-4 h-4 flex-shrink-0 rounded-sm"
+                          className="w-5 h-5 flex-shrink-0 rounded-md"
                           style={{ background: "rgba(255,255,255,0.07)" }}
                         />
                       )}
