@@ -26,7 +26,7 @@ export default async function TopicsPreview() {
             </h2>
           </div>
           <Link
-            href="/practice"
+            href="/learning/javascript/questions"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-[#8b5cf6] hover:text-[#7c3aed] transition-colors duration-200 cursor-pointer flex-shrink-0 pb-1"
           >
             Xem tất cả chủ đề
@@ -34,12 +34,12 @@ export default async function TopicsPreview() {
           </Link>
         </div>
 
-        {/* Topics pills */}
+        {/* Topics pills — chỉ hiển thị child topics (có câu hỏi) */}
         <div className="flex flex-wrap gap-2.5">
-          {topics.map((topic) => (
+          {topics.filter((t) => t.parentId !== null).map((topic) => (
             <Link
               key={topic.id}
-              href={`/practice/${topic.slug}`}
+              href={`/learning/${topic.slug}/questions`}
               className="inline-flex items-center h-9 px-4 rounded-full border border-[#1c1c28] bg-[#0d0d14] text-sm text-[#a1a1aa] hover:text-[#fafafa] hover:border-[#7c3aed]/50 hover:bg-[#13131c] transition-all duration-200 cursor-pointer"
             >
               {topic.name}

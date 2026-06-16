@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { ChevronDown, ArrowUpRight } from "lucide-react";
@@ -67,6 +68,9 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
   pre: ({ children }) => <>{children}</>,
   code: ({ children, className }) => {
     const match = /language-(\w+)/.exec(className ?? "");
+    const codeStr = String(children).replace(/\n$/, "");
+
+    // Block code với language → SyntaxHighlighter
     if (match) {
       return (
         <SyntaxHighlighter
@@ -85,12 +89,34 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
             style: { fontFamily: "var(--font-mono, monospace)" },
           }}
         >
-          {String(children).replace(/\n$/, "")}
+          {codeStr}
         </SyntaxHighlighter>
       );
     }
+
+    // Block code không có language (chứa newline) → giữ pre-formatting
+    if (codeStr.includes("\n")) {
+      return (
+        <pre
+          className="text-xs overflow-x-auto mb-2"
+          style={{
+            background: "#05050d",
+            border: "1px solid #1c1c28",
+            borderRadius: "8px",
+            padding: "12px 14px",
+            fontFamily: "var(--font-mono, monospace)",
+            lineHeight: "1.6",
+            color: "#c4c4d4",
+          }}
+        >
+          <code>{codeStr}</code>
+        </pre>
+      );
+    }
+
+    // Inline code
     return (
-      <code className="bg-[#13131c] text-[#a78bfa] px-1.5 py-0.5 rounded text-xs font-mono">
+      <code className="bg-[#1e1c2e] text-[#a78bfa] px-1.5 py-0.5 rounded text-xs font-mono">
         {children}
       </code>
     );
@@ -98,10 +124,51 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
   strong: ({ children }) => (
     <strong className="text-[#f4f4f6] font-semibold">{children}</strong>
   ),
+  em: ({ children }) => (
+    <em className="text-[#c4c4d4] italic">{children}</em>
+  ),
+  del: ({ children }) => (
+    <del className="text-[#606072] line-through">{children}</del>
+  ),
+  a: ({ children, href }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-[#8b5cf6] hover:text-[#a78bfa] underline underline-offset-2 transition-colors duration-100"
+    >
+      {children}
+    </a>
+  ),
   blockquote: ({ children }) => (
     <blockquote className="border-l-2 border-[#7c3aed]/40 pl-3 text-[#9898aa] italic text-sm my-2">
       {children}
     </blockquote>
+  ),
+  table: ({ children }) => (
+    <div className="overflow-x-auto mb-3">
+      <table className="w-full text-sm border-collapse">{children}</table>
+    </div>
+  ),
+  thead: ({ children }) => (
+    <thead style={{ background: "rgba(124,58,237,0.12)" }}>{children}</thead>
+  ),
+  tbody: ({ children }) => <tbody>{children}</tbody>,
+  tr: ({ children }) => (
+    <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+      {children}
+    </tr>
+  ),
+  th: ({ children }) => (
+    <th
+      className="text-left px-3 py-2 text-xs font-semibold text-[#c4b5fd] uppercase tracking-wide"
+      style={{ borderBottom: "1px solid rgba(124,58,237,0.2)" }}
+    >
+      {children}
+    </th>
+  ),
+  td: ({ children }) => (
+    <td className="px-3 py-2 text-[#c4c4d4]">{children}</td>
   ),
 };
 
@@ -116,10 +183,11 @@ export default function QuestionCard({
 
   return (
     <div
-      className="rounded-xl border overflow-hidden transition-colors duration-150"
+      className="rounded-xl border overflow-hidden transition-all duration-150"
       style={{
-        borderColor: open ? "rgba(124,58,237,0.25)" : "#1c1c28",
-        background: open ? "#0f0e18" : "#0b0b13",
+        borderColor: open ? "rgba(124,58,237,0.3)" : "rgba(255,255,255,0.07)",
+        background: open ? "#1c1a2c" : "#141320",
+        boxShadow: open ? "0 0 20px rgba(124,58,237,0.06)" : "none",
       }}
     >
       {/* Row */}
@@ -166,10 +234,16 @@ export default function QuestionCard({
 
       {/* Expanded answer */}
       {open && (
-        <div className="px-16 pb-5 pt-3 border-t border-[#1c1c28]/60">
+        <div
+          className="px-16 pb-5 pt-3 border-t"
+          style={{ borderColor: "rgba(255,255,255,0.06)" }}
+        >
           {question.detailAnswerKey ? (
             <div className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-              <ReactMarkdown components={mdComponents}>
+              <ReactMarkdown
+                components={mdComponents}
+                remarkPlugins={[remarkGfm]}
+              >
                 {question.detailAnswerKey}
               </ReactMarkdown>
             </div>

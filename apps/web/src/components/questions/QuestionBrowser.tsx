@@ -77,11 +77,17 @@ export default function QuestionBrowser({
       <main className="flex-1 min-w-0 flex flex-col gap-2">
         {/* Header block — rounded */}
         <div
-          className="rounded-2xl border border-[#1c1c28] overflow-hidden mb-2"
-          style={{ background: "#0d0d16" }}
+          className="rounded-2xl overflow-hidden mb-2"
+          style={{
+            background: "#141320",
+            border: "1px solid rgba(255,255,255,0.07)",
+          }}
         >
           {/* Sub-header row */}
-          <div className="flex items-center gap-4 px-5 py-3 border-b border-[#1c1c28]">
+          <div
+            className="flex items-center gap-4 px-5 py-3"
+            style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+          >
             <span className="text-sm font-semibold text-[#f4f4f6] flex-shrink-0">
               {currentTopic?.name ?? currentTopicSlug}
             </span>
@@ -99,10 +105,10 @@ export default function QuestionBrowser({
                   placeholder="Tìm câu hỏi..."
                   className="w-full h-8 pl-8 pr-7 text-sm rounded-full outline-none text-[#f4f4f6] placeholder-[#606072]"
                   style={{
-                    background: "#13131c",
+                    background: "rgba(255,255,255,0.05)",
                     border: searchValue
                       ? "1px solid rgba(124,58,237,0.4)"
-                      : "1px solid #1c1c28",
+                      : "1px solid rgba(255,255,255,0.08)",
                   }}
                 />
                 {searchValue && (
@@ -149,7 +155,8 @@ export default function QuestionBrowser({
                   {lvl.label}
                   {lvl.value === "ALL" && (
                     <span
-                      className={`text-[11px] font-mono px-1.5 py-0.5 rounded ${active ? "bg-[#7c3aed] text-white" : "bg-[#13131c] text-[#606072]"}`}
+                      className={`text-[11px] font-mono px-1.5 py-0.5 rounded ${active ? "bg-[#7c3aed] text-white" : "text-[#606072]"}`}
+                      style={!active ? { background: "rgba(255,255,255,0.06)" } : undefined}
                     >
                       {total}
                     </span>

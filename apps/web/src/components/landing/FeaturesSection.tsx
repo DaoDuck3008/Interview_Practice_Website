@@ -37,16 +37,6 @@ export default function FeaturesSection() {
           </h2>
         </div>
 
-        {/*
-          Bento layout (desktop 3 cols):
-          ┌─────────────────────┬──────────┐
-          │  AI Chấm Điểm       │ 300+ Câu │  row 1
-          │  (2 cols, 2 rows)   ├──────────┤
-          │                     │ 3 Cấp Độ │  row 2
-          ├──────────┬──────────┴──────────┤
-          │ Ghi Âm (3 cols, shorter)       │  row 3
-          └────────────────────────────────┘
-        */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* AI Scoring — prominent, 2 cols wide & 2 rows tall */}
           <div
@@ -130,7 +120,7 @@ export default function FeaturesSection() {
             </div>
             <div>
               <div className="flex gap-1.5 mb-2">
-                {["Common", "Medium", "Hard"].map((lvl) => (
+                {["Easy", "Medium", "Hard"].map((lvl) => (
                   <span
                     key={lvl}
                     className="text-[10px] font-semibold px-2 py-0.5 rounded-full border border-[#1c1c28] bg-[#13131c] text-[#a1a1aa]"

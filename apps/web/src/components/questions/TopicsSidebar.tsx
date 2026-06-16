@@ -55,14 +55,27 @@ export default function TopicsSidebar({
 
   return (
     <aside
-      className="w-60 flex-shrink-0 flex flex-col rounded-2xl border border-[#1c1c28] overflow-hidden sticky top-4 self-start"
-      style={{ background: "#0b0b13", maxHeight: "calc(100vh - 88px)" }}
+      className="w-60 flex-shrink-0 flex flex-col rounded-2xl overflow-hidden sticky top-4 self-start"
+      style={{
+        background: "rgba(16, 15, 26, 0.82)",
+        backdropFilter: "blur(16px)",
+        WebkitBackdropFilter: "blur(16px)",
+        border: "1px solid rgba(255,255,255,0.07)",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.35)",
+        maxHeight: "calc(100vh - 88px)",
+      }}
     >
       {/* Header */}
-      <div className="px-4 pt-4 pb-3 border-b border-[#1c1c28]">
+      <div
+        className="px-4 pt-4 pb-3"
+        style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+      >
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-semibold text-[#f4f4f6]">Tất Cả</span>
-          <span className="text-xs font-mono text-[#606072] bg-[#13131c] px-2 py-0.5 rounded-md">
+          <span
+            className="text-xs font-mono text-[#606072] px-2 py-0.5 rounded-md"
+            style={{ background: "rgba(255,255,255,0.06)" }}
+          >
             {total}
           </span>
         </div>
@@ -78,7 +91,10 @@ export default function TopicsSidebar({
             onChange={(e) => setFilter(e.target.value)}
             placeholder="Lọc danh mục..."
             className="w-full h-7 pl-7 pr-3 text-xs rounded-lg outline-none text-[#f4f4f6] placeholder-[#606072]"
-            style={{ background: "#13131c", border: "1px solid #1c1c28" }}
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.08)",
+            }}
           />
         </div>
       </div>
@@ -99,7 +115,7 @@ export default function TopicsSidebar({
                 </span>
                 <span
                   className="flex-1 h-px"
-                  style={{ background: "#1c1c28" }}
+                  style={{ background: "rgba(255,255,255,0.06)" }}
                 />
               </div>
 
@@ -113,9 +129,14 @@ export default function TopicsSidebar({
                     className={[
                       "flex items-center justify-between gap-2 pl-4 pr-4 py-[7px] text-[13px] transition-colors duration-100",
                       active
-                        ? "bg-[#7c3aed]/15 text-[#f4f4f6]"
-                        : "text-[#9898aa] hover:bg-[#0d0d14] hover:text-[#e4e4f0]",
+                        ? "text-[#f4f4f6]"
+                        : "text-[#9898aa] hover:text-[#e4e4f0]",
                     ].join(" ")}
+                    style={
+                      active
+                        ? { background: "rgba(124,58,237,0.18)" }
+                        : undefined
+                    }
                   >
                     <span className="flex items-center gap-2 min-w-0">
                       {topic.iconUrl ? (
@@ -128,17 +149,23 @@ export default function TopicsSidebar({
                           className="w-4 h-4 object-contain flex-shrink-0"
                         />
                       ) : (
-                        <span className="w-4 h-4 flex-shrink-0 rounded-sm bg-[#1c1c28]" />
+                        <span
+                          className="w-4 h-4 flex-shrink-0 rounded-sm"
+                          style={{ background: "rgba(255,255,255,0.07)" }}
+                        />
                       )}
                       <span className="truncate">{topic.name}</span>
                     </span>
                     <span
-                      className={[
-                        "flex-shrink-0 text-[11px] font-mono min-w-[24px] text-center px-1.5 py-0.5 rounded-md",
+                      className="flex-shrink-0 text-[11px] font-mono min-w-[24px] text-center px-1.5 py-0.5 rounded-md"
+                      style={
                         active
-                          ? "bg-[#7c3aed] text-white"
-                          : "bg-[#13131c] text-[#606072]",
-                      ].join(" ")}
+                          ? { background: "#7c3aed", color: "white" }
+                          : {
+                              background: "rgba(255,255,255,0.06)",
+                              color: "#606072",
+                            }
+                      }
                     >
                       {topic.questionCount}
                     </span>

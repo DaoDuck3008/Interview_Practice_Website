@@ -97,22 +97,28 @@ export default function Hero() {
         {/* CTA */}
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-1">
           <Link
-            href="/practice"
-            className="inline-flex items-center justify-center gap-2 h-12 px-8 bg-[#7c3aed] hover:bg-[#6d28d9] text-white text-base font-bold rounded-xl transition-all duration-200 cursor-pointer"
+            href="/learning/javascript/questions"
+            className="inline-flex items-center justify-center gap-2 h-12 px-8 bg-[#7c3aed] hover:bg-[#6d28d9] hover:-translate-y-1 text-white text-base font-bold rounded-xl transition-all duration-200 cursor-pointer"
             style={{
               boxShadow:
                 "0 0 28px rgba(124,58,237,0.5), 0 1px 0 rgba(167,139,250,0.3) inset",
             }}
           >
-            Bắt Đầu Luyện Tập
+            Bắt Đầu Học
+            <ArrowRight size={16} />
+          </Link>
+          <Link
+            href="/practice"
+            className="inline-flex items-center text-white justify-center gap-2 h-12 px-8 border border-[#2a2a3a] hover:border-[#7c3aed]/50 bg-[#0d0d14]/60 hover:bg-[#13131c] hover:-translate-y-1 text-[#a1a1aa] hover:text-[#f4f4f6] text-base font-semibold rounded-xl transition-all duration-200 cursor-pointer"
+          >
+            Luyện Tập Ngay
             <ArrowRight size={16} />
           </Link>
         </div>
 
         {/* Social proof */}
         <p className="text-sm text-[#a78bfa] mt-2 tracking-wide">
-          300+ câu hỏi &nbsp;·&nbsp; 3 cấp độ (Common / Medium / Hard)
-          &nbsp;·&nbsp; Miễn phí
+          300+ câu hỏi &nbsp;· &nbsp; Miễn phí
         </p>
       </div>
 
