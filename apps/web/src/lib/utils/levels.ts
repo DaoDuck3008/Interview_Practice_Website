@@ -2,8 +2,8 @@ import type { Level } from "@/lib/api/questions";
 
 export const LEVEL_STYLE: Record<Level, { label: string; className: string }> =
   {
-    COMMON: {
-      label: "Common",
+    EASY: {
+      label: "Easy",
       className: "bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/30",
     },
     MEDIUM: {
@@ -17,14 +17,14 @@ export const LEVEL_STYLE: Record<Level, { label: string; className: string }> =
   };
 
 export const LEVEL_DOT: Record<Level, string> = {
-  COMMON: "bg-[#22c55e]",
+  EASY: "bg-[#22c55e]",
   MEDIUM: "bg-[#8b5cf6]",
   HARD: "bg-[#ef4444]",
 };
 
 export const LEVELS: { value: Level | "ALL"; label: string }[] = [
   { value: "ALL", label: "Tất cả" },
-  { value: "COMMON", label: "Common" },
+  { value: "EASY", label: "Easy" },
   { value: "MEDIUM", label: "Medium" },
   { value: "HARD", label: "Hard" },
 ];

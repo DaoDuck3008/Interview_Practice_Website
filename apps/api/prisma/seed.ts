@@ -93,7 +93,7 @@ async function main() {
             answerKeySummary:
               'var có function scope và hoisting; let/const có block scope. const không thể reassign, nhưng object/array vẫn mutatable.',
             answerKeywords: ['scope', 'hoisting', 'temporal dead zone', 'block scope'],
-            level: Level.COMMON,
+            level: Level.EASY,
           },
         ],
       });

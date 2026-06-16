@@ -1,9 +1,9 @@
 import api, { type ApiResponse } from "./api";
 
-export type Level = "COMMON" | "MEDIUM" | "HARD";
+export type Level = "EASY" | "MEDIUM" | "HARD";
 
 export const LEVELS: { value: Level; label: string }[] = [
-  { value: "COMMON", label: "Common" },
+  { value: "EASY", label: "Easy" },
   { value: "MEDIUM", label: "Medium" },
   { value: "HARD", label: "Hard" },
 ];

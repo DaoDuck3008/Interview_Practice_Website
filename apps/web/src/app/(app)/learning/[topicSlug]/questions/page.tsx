@@ -22,7 +22,7 @@ export default async function LearningQuestionsPage({
 
   const page = Math.max(1, parseInt(pageStr ?? "1") || 1);
   const limit = 100;
-  const levelFilter = (["COMMON", "MEDIUM", "HARD"] as Level[]).includes(
+  const levelFilter = (["EASY", "MEDIUM", "HARD"] as Level[]).includes(
     level as Level,
   )
     ? (level as Level)

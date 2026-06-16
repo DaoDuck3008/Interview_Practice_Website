@@ -14,7 +14,7 @@ enum Role {
 }
 
 enum Level {
-  COMMON
+  EASY
   MEDIUM
   HARD
 }
