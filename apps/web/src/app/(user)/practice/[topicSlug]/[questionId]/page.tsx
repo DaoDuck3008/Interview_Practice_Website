@@ -3,10 +3,8 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getQuestionsByTopic } from "@/lib/api/questions";
-import { getSessionsByQuestion } from "@/lib/api/sessions";
 import PracticeSidebar from "@/components/practice/PracticeSidebar";
-import AnswerHistory from "@/components/practice/AnswerHistory";
-import PracticeSession from "@/components/practice/PracticeSession";
+import PracticeContent from "@/components/practice/PracticeContent";
 import PracticeNavFooter from "@/components/practice/PracticeNavFooter";
 import { formatTopicName } from "@/lib/utils/topics";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
@@ -18,10 +16,7 @@ export default async function QuestionPage({
 }) {
   const { topicSlug, questionId } = await params;
 
-  const [questions, sessions] = await Promise.all([
-    getQuestionsByTopic(topicSlug),
-    getSessionsByQuestion(questionId),
-  ]);
+  const questions = await getQuestionsByTopic(topicSlug);
 
   const question = questions.find((q) => q.id === questionId);
   if (!question) notFound();
@@ -80,35 +75,13 @@ export default async function QuestionPage({
             <p className="text-xl sm:text-2xl font-bold text-[#f4f4f6] leading-snug">
               {question.content}
             </p>
-
-            {/* Keywords — revealed after at least one answer */}
-            {sessions.length > 0 && question.answerKeywords.length > 0 && (
-              <div className="flex flex-col gap-2 mt-5">
-                <p className="text-xs text-[#606072] font-mono">$ keywords</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {question.answerKeywords.map((kw) => (
-                    <span
-                      key={kw}
-                      className="font-mono text-xs px-2.5 py-1 rounded-md border"
-                      style={{
-                        background: "rgba(124,58,237,0.08)",
-                        borderColor: "rgba(124,58,237,0.25)",
-                        color: "#a78bfa",
-                      }}
-                    >
-                      {kw}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
           </section>
 
-          {/* Answer history pane */}
-          {sessions.length > 0 && <AnswerHistory sessions={sessions} />}
-
-          {/* Recorder / Transcript / Evaluation panes */}
-          <PracticeSession questionId={questionId} />
+          {/* Keywords (revealed after first answer) + history + recorder/transcript/evaluation */}
+          <PracticeContent
+            questionId={questionId}
+            keywords={question.answerKeywords}
+          />
         </div>
 
         {/* Status bar nav */}

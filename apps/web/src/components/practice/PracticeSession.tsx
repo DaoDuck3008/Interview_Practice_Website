@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import { createSession, scoreSession, improveSession } from "@/lib/api/sessions";
-import type { Score, Improvement } from "@/lib/api/sessions";
+import type { Score, Improvement, Session } from "@/lib/api/sessions";
 import { formatTime } from "@/lib/utils/format";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import TranscriptPanel from "@/components/practice/TranscriptPanel";
@@ -24,9 +24,10 @@ type Phase = "idle" | "processing" | "evaluating" | "evaluated";
 
 interface Props {
   questionId: string;
+  onSessionSaved?: (session: Session) => void;
 }
 
-export default function PracticeSession({ questionId }: Props) {
+export default function PracticeSession({ questionId, onSessionSaved }: Props) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [sessionId, setSessionId] = useState("");
   const [transcript, setTranscript] = useState("");
@@ -41,16 +42,15 @@ export default function PracticeSession({ questionId }: Props) {
     async (blob: Blob, duration: number) => {
       // Bước 1: upload + phiên âm
       setPhase("processing");
-      let newSessionId = "";
+      let createdSession: Session | null = null;
       try {
         const formData = new FormData();
         formData.append("audio", blob, "recording.webm");
         formData.append("questionId", questionId);
         formData.append("duration", String(duration));
-        const session = await createSession(formData);
-        newSessionId = session.id;
-        setSessionId(session.id);
-        setTranscript(session.transcript);
+        createdSession = await createSession(formData);
+        setSessionId(createdSession.id);
+        setTranscript(createdSession.transcript);
         setTranscriptError("");
       } catch (err) {
         // Ưu tiên message tiếng Việt từ backend (vd: hết hạn mức trong ngày)
@@ -69,9 +69,10 @@ export default function PracticeSession({ questionId }: Props) {
       // Bước 2: chấm điểm
       setPhase("evaluating");
       try {
-        const score = await scoreSession(newSessionId);
+        const score = await scoreSession(createdSession.id);
         setEvaluation(score);
         setEvaluationError("");
+        onSessionSaved?.({ ...createdSession, score });
       } catch (err) {
         const serverMsg = axios.isAxiosError(err)
           ? (err.response?.data?.message as string | undefined)
@@ -79,10 +80,11 @@ export default function PracticeSession({ questionId }: Props) {
         setEvaluationError(
           serverMsg ?? "Không thể chấm điểm — vui lòng thử lại.",
         );
+        onSessionSaved?.(createdSession);
       }
       setPhase("evaluated");
     },
-    [questionId],
+    [questionId, onSessionSaved],
   );
 
   const recorder = useAudioRecorder({ onComplete: handleRecordingComplete });
