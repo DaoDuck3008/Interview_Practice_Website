@@ -8,6 +8,7 @@ import { UsersModule } from './modules/users/users.module';
 import { TopicsModule } from './modules/topics/topics.module';
 import { QuestionsModule } from './modules/questions/questions.module';
 import { StorageModule } from './modules/storage/storage.module';
+import { SpeechModule } from './modules/speech/speech.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 @Module({
@@ -23,6 +24,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
     TopicsModule,
     QuestionsModule,
     StorageModule,
+    SpeechModule,
   ],
   providers: [
     {

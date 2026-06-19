@@ -10,9 +10,10 @@ import {
   Play,
   Pause,
 } from "lucide-react";
+import axios from "axios";
 import type WaveSurferType from "wavesurfer.js";
 import type RecordPluginType from "wavesurfer.js/plugins/record";
-import { createSession } from "@/lib/api/sessions";
+import { transcribeAudio } from "@/lib/api/speech";
 import type { Score } from "@/lib/api/sessions";
 import { formatTime } from "@/lib/utils/format";
 
@@ -24,7 +25,6 @@ type RecordingState =
   | "evaluated"
   | "error";
 
-// ── Circular progress (SVG) ──────────────────────────────────────────────────
 function CircularScore({
   score,
   label,
@@ -80,7 +80,6 @@ function CircularScore({
   );
 }
 
-// ── Component ────────────────────────────────────────────────────────────────
 interface Props {
   questionId: string;
 }
@@ -138,11 +137,17 @@ export default function PracticeSession({ questionId }: Props) {
         formData.append("audio", blob, "recording.webm");
         formData.append("questionId", questionId);
         formData.append("duration", String(duration));
-        const session = await createSession(formData);
-        transcriptText = session.transcript ?? "";
+        // const session = await createSession(formData);
+        // transcriptText = session.transcript ?? "";
+        const { transcript } = await transcribeAudio(formData);
+        transcriptText = transcript;
         setErrorMsg("");
-      } catch {
-        setErrorMsg("API chưa sẵn sàng — transcript không có sẵn.");
+      } catch (err) {
+        // Ưu tiên message tiếng Việt từ backend (vd: hết hạn mức trong ngày)
+        const serverMsg = axios.isAxiosError(err)
+          ? (err.response?.data?.message as string | undefined)
+          : undefined;
+        setErrorMsg(serverMsg ?? "Không thể phiên âm — vui lòng thử lại.");
       }
       setTranscript(transcriptText);
       await initPlayback(blob);
@@ -206,11 +211,16 @@ export default function PracticeSession({ questionId }: Props) {
       record.on("record-end", async (blob: Blob) => {
         if (timerRef.current) clearInterval(timerRef.current);
         const duration = elapsedRef.current;
-        // Guard: resetAll may have already destroyed this instance
         if (recordWsRef.current !== ws) return;
-        try { ws.destroy(); } catch { /* AudioContext already closed */ }
         recordWsRef.current = null;
         recordPluginRef.current = null;
+        setTimeout(() => {
+          try {
+            ws.destroy();
+          } catch {
+            /* AudioContext already closed */
+          }
+        }, 0);
         await processAudio(blob, duration);
       });
 
@@ -247,11 +257,19 @@ export default function PracticeSession({ questionId }: Props) {
     recordPluginRef.current?.stopRecording();
     recordPluginRef.current = null;
     if (recordWsRef.current) {
-      try { recordWsRef.current.destroy(); } catch { /* AudioContext already closed */ }
+      try {
+        recordWsRef.current.destroy();
+      } catch {
+        /* AudioContext already closed */
+      }
       recordWsRef.current = null;
     }
     if (playbackWsRef.current) {
-      try { playbackWsRef.current.destroy(); } catch { /* AudioContext already closed */ }
+      try {
+        playbackWsRef.current.destroy();
+      } catch {
+        /* AudioContext already closed */
+      }
       playbackWsRef.current = null;
     }
     setState("idle");
@@ -267,10 +285,18 @@ export default function PracticeSession({ questionId }: Props) {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       if (recordWsRef.current) {
-        try { recordWsRef.current.destroy(); } catch { /* AudioContext already closed */ }
+        try {
+          recordWsRef.current.destroy();
+        } catch {
+          /* AudioContext already closed */
+        }
       }
       if (playbackWsRef.current) {
-        try { playbackWsRef.current.destroy(); } catch { /* AudioContext already closed */ }
+        try {
+          playbackWsRef.current.destroy();
+        } catch {
+          /* AudioContext already closed */
+        }
       }
     };
   }, []);
@@ -412,7 +438,9 @@ export default function PracticeSession({ questionId }: Props) {
             {state === "evaluating" && (
               <div className="flex items-center gap-1.5">
                 <Loader2 size={12} className="animate-spin text-[#7c3aed]" />
-                <span className="font-mono text-[10px] text-[#606072]">evaluating...</span>
+                <span className="font-mono text-[10px] text-[#606072]">
+                  evaluating...
+                </span>
               </div>
             )}
           </div>

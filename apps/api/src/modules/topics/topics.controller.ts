@@ -20,6 +20,7 @@ import { QueryAdminTopicDto } from './dto/query-admin-topic.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { fileUploadOptions } from '../../common/upload/file-upload.options';
 import { Role } from '@prisma/client';
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
@@ -59,16 +60,15 @@ export class TopicsController {
   @Roles(Role.ADMIN)
   @Patch(':id/icon')
   @UseInterceptors(
-    FileInterceptor('file', {
-      limits: { fileSize: MAX_SIZE },
-      fileFilter: (_req, file, cb) => {
-        if (ALLOWED_MIME.includes(file.mimetype)) {
-          cb(null, true);
-        } else {
-          cb(new BadRequestException('Định dạng ảnh không hợp lệ. Chỉ chấp nhận JPEG, PNG, WebP, SVG.'), false);
-        }
-      },
-    }),
+    FileInterceptor(
+      'file',
+      fileUploadOptions({
+        mimeList: ALLOWED_MIME,
+        maxSize: MAX_SIZE,
+        errorMessage:
+          'Định dạng ảnh không hợp lệ. Chỉ chấp nhận JPEG, PNG, WebP, SVG.',
+      }),
+    ),
   )
   uploadIcon(
     @Param('id') id: string,
