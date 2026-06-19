@@ -1,4 +1,4 @@
-# Backend — SKILL.md
+# Backend Rules
 
 NestJS API for an interview-practice platform. Part of an npm-workspaces monorepo (`apps/api` + `apps/web`).
 
