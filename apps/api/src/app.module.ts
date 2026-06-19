@@ -9,6 +9,8 @@ import { TopicsModule } from './modules/topics/topics.module';
 import { QuestionsModule } from './modules/questions/questions.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { SpeechModule } from './modules/speech/speech.module';
+import { ScoreModule } from './modules/scoring/score.module';
+import { SessionsModule } from './modules/sessions/sessions.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 @Module({
@@ -25,6 +27,8 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
     QuestionsModule,
     StorageModule,
     SpeechModule,
+    ScoreModule,
+    SessionsModule,
   ],
   providers: [
     {

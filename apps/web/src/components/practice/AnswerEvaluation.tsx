@@ -62,9 +62,26 @@ export default function AnswerEvaluation({ evaluation }: Props) {
       <blockquote className="border-l-2 border-[#7c3aed] pl-4 flex flex-col gap-1.5">
         <p className="text-xs text-[#606072] font-mono">nhận xét</p>
         <p className="text-sm text-[#9898aa] leading-relaxed">
-          {evaluation.feedback}
+          {evaluation.summary}
         </p>
       </blockquote>
+
+      {evaluation.improvements.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs text-[#606072] font-mono">$ cần cải thiện</p>
+          <ul className="flex flex-col gap-1.5">
+            {evaluation.improvements.map((item, i) => (
+              <li
+                key={i}
+                className="text-sm text-[#9898aa] leading-relaxed flex gap-2"
+              >
+                <span className="text-[#7c3aed] flex-shrink-0">›</span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }

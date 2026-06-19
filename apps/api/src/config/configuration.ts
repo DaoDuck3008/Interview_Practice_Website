@@ -17,6 +17,7 @@ export const validationSchema = Joi.object({
   R2_BUCKET_NAME: Joi.string().required(),
   R2_PUBLIC_URL: Joi.string().required(),
   GROQ_API_KEY: Joi.string().required(),
+  DEEPSEEK_API_KEY: Joi.string().required(),
 });
 
 export default () => ({
@@ -37,5 +38,8 @@ export default () => ({
   },
   groq: {
     apiKey: process.env.GROQ_API_KEY,
+  },
+  deepseek: {
+    apiKey: process.env.DEEPSEEK_API_KEY,
   },
 });

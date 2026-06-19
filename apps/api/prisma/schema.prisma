@@ -89,5 +89,11 @@ model Score {
   clarityScore      Int
   hasExample        Boolean
 
-  feedback String // Nhận xét bằng tiếng Việt
+  matchedKeywords String[] // Keyword đã nhận diện (đã chuẩn hóa, tính cả fuzzy STT)
+  missedKeywords  String[] // Keyword chưa đề cập
+
+  summary      String   // Nhận xét tóm tắt (1 câu) bằng tiếng Việt
+  improvements String[] // Các gợi ý cải thiện cụ thể
+
+  createdAt DateTime @default(now())
 }

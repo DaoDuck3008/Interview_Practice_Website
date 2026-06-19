@@ -5,5 +5,6 @@ import { SpeechController } from './speech.controller';
 @Module({
   providers: [SpeechService],
   controllers: [SpeechController],
+  exports: [SpeechService],
 })
 export class SpeechModule {}

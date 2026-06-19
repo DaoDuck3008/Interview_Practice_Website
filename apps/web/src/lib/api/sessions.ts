@@ -6,7 +6,10 @@ export interface Score {
   completenessScore: number;
   clarityScore: number;
   hasExample: boolean;
-  feedback: string;
+  matchedKeywords: string[];
+  missedKeywords: string[];
+  summary: string;
+  improvements: string[];
 }
 
 export interface Session {
@@ -31,5 +34,10 @@ export async function createSession(formData: FormData): Promise<Session> {
   const res = await api.post<ApiResponse<Session>>("/sessions", formData, {
     headers: { "Content-Type": undefined }, // let browser set multipart/form-data with boundary
   });
+  return res.data.data;
+}
+
+export async function scoreSession(sessionId: string): Promise<Score> {
+  const res = await api.post<ApiResponse<Score>>(`/sessions/${sessionId}/score`);
   return res.data.data;
 }

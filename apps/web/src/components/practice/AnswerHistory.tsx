@@ -96,10 +96,10 @@ function SessionCard({ session, index }: { session: Session; index: number }) {
             </div>
           )}
 
-          {session.score?.feedback && (
+          {session.score?.summary && (
             <blockquote className="border-l-2 border-[#7c3aed] pl-3 flex flex-col gap-1">
               <p className="text-xs text-[#606072] font-mono">nhận xét</p>
-              <p className="text-sm text-[#9898aa] leading-relaxed">{session.score.feedback}</p>
+              <p className="text-sm text-[#9898aa] leading-relaxed">{session.score.summary}</p>
             </blockquote>
           )}
         </div>

@@ -11,7 +11,7 @@ import {
   Pause,
 } from "lucide-react";
 import axios from "axios";
-import { transcribeAudio } from "@/lib/api/speech";
+import { createSession, scoreSession } from "@/lib/api/sessions";
 import type { Score } from "@/lib/api/sessions";
 import { formatTime } from "@/lib/utils/format";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
@@ -29,50 +29,51 @@ export default function PracticeSession({ questionId }: Props) {
   const [transcript, setTranscript] = useState("");
   const [transcriptError, setTranscriptError] = useState("");
   const [evaluation, setEvaluation] = useState<Score | null>(null);
+  const [evaluationError, setEvaluationError] = useState("");
 
   const handleRecordingComplete = useCallback(
     async (blob: Blob, duration: number) => {
+      // Bước 1: upload + phiên âm
       setPhase("processing");
-      let transcriptText = "";
+      let sessionId = "";
       try {
         const formData = new FormData();
         formData.append("audio", blob, "recording.webm");
         formData.append("questionId", questionId);
         formData.append("duration", String(duration));
-        // const session = await createSession(formData);
-        // transcriptText = session.transcript ?? "";
-        const { transcript } = await transcribeAudio(formData);
-        transcriptText = transcript;
+        const session = await createSession(formData);
+        sessionId = session.id;
+        setTranscript(session.transcript);
         setTranscriptError("");
       } catch (err) {
         // Ưu tiên message tiếng Việt từ backend (vd: hết hạn mức trong ngày)
         const serverMsg = axios.isAxiosError(err)
           ? (err.response?.data?.message as string | undefined)
           : undefined;
+        setTranscript("");
         setTranscriptError(
           serverMsg ?? "Không thể phiên âm — vui lòng thử lại.",
         );
+        // Không có session thì không thể chấm điểm, dừng tại transcript
+        setPhase("evaluated");
+        return;
       }
-      setTranscript(transcriptText);
 
-      // Auto-evaluate immediately after processing
+      // Bước 2: chấm điểm
       setPhase("evaluating");
       try {
-        // TODO: POST /sessions/:id/score once backend is ready
-        throw new Error("not implemented");
-      } catch {
-        await new Promise((r) => setTimeout(r, 1800));
-        setEvaluation({
-          id: "mock",
-          technicalScore: 7,
-          completenessScore: 6,
-          clarityScore: 8,
-          hasExample: true,
-          feedback:
-            "Câu trả lời thể hiện hiểu biết tốt về các khái niệm cơ bản và đề cập đúng các điểm chính. Cần bổ sung thêm ví dụ thực tế để tăng tính thuyết phục. Hãy giải thích rõ hơn về cơ chế bên trong để gây ấn tượng với interviewer.",
-        });
-        setPhase("evaluated");
+        const score = await scoreSession(sessionId);
+        setEvaluation(score);
+        setEvaluationError("");
+      } catch (err) {
+        const serverMsg = axios.isAxiosError(err)
+          ? (err.response?.data?.message as string | undefined)
+          : undefined;
+        setEvaluationError(
+          serverMsg ?? "Không thể chấm điểm — vui lòng thử lại.",
+        );
       }
+      setPhase("evaluated");
     },
     [questionId],
   );
@@ -85,13 +86,14 @@ export default function PracticeSession({ questionId }: Props) {
     setTranscript("");
     setTranscriptError("");
     setEvaluation(null);
+    setEvaluationError("");
   }, [recorder]);
 
   const inPostRecording = phase === "evaluating" || phase === "evaluated";
 
   return (
     <div className="flex flex-col divide-y divide-[#1c1c28]">
-      {/* ── Recorder pane ── */}
+      {/* Recorder pane */}
       <section className="px-6 py-6 flex flex-col gap-4">
         {/* IDLE */}
         {recorder.status === "idle" && phase === "idle" && (
@@ -230,6 +232,22 @@ export default function PracticeSession({ questionId }: Props) {
       {/*  Evaluation pane  */}
       {phase === "evaluated" && evaluation && (
         <AnswerEvaluation evaluation={evaluation} />
+      )}
+
+      {/*  Evaluation error  */}
+      {phase === "evaluated" && !evaluation && evaluationError && (
+        <section className="px-6 py-5">
+          <div
+            className="flex items-start gap-2 text-xs text-[#f59e0b] p-3 rounded-lg"
+            style={{
+              background: "rgba(245,158,11,0.05)",
+              border: "1px solid rgba(245,158,11,0.2)",
+            }}
+          >
+            <AlertCircle size={13} className="mt-0.5 flex-shrink-0" />
+            {evaluationError}
+          </div>
+        </section>
       )}
     </div>
   );
