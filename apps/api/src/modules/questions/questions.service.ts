@@ -39,6 +39,7 @@ export class QuestionsService {
     return this.prisma.question.findMany({
       where,
       include: { topic: true },
+      orderBy: [{ isFeatured: 'desc' }, { level: 'asc' }],
     });
   }
 

@@ -1,4 +1,4 @@
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, FileText, Loader2 } from "lucide-react";
 
 interface Props {
   transcript: string;
@@ -14,7 +14,10 @@ export default function TranscriptPanel({
   return (
     <section className="px-6 py-5 flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-[#606072] font-mono">$ transcript</p>
+        <p className="flex items-center gap-1.5 text-xs font-medium text-[#9898aa]">
+          <FileText size={13} className="text-[#606072]" />
+          Phiên âm
+        </p>
         {isEvaluating && (
           <div className="flex items-center gap-1.5">
             <Loader2 size={12} className="animate-spin text-[#7c3aed]" />

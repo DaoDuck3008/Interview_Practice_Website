@@ -1,3 +1,10 @@
+import {
+  ChevronRight,
+  FileText,
+  ListChecks,
+  Sparkles,
+  Wand2,
+} from "lucide-react";
 import type { Improvement } from "@/lib/api/sessions";
 
 interface Props {
@@ -53,13 +60,17 @@ export default function ImprovementPanel({ transcript, improvement }: Props) {
   return (
     <section className="px-6 py-6 flex flex-col gap-5">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-[#606072] font-mono">$ improved answer</p>
+        <p className="flex items-center gap-1.5 text-xs font-medium text-[#9898aa]">
+          <Wand2 size={13} className="text-[#8b5cf6]" />
+          Câu trả lời cải thiện
+        </p>
       </div>
 
       {segments.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <p className="text-xs text-[#606072] font-mono">
-            transcript gốc — di chuột vào phần được tô để xem gợi ý
+          <p className="flex items-center gap-1.5 text-xs text-[#606072]">
+            <FileText size={12} className="flex-shrink-0" />
+            Phiên âm gốc, di chuột vào phần được tô để xem gợi ý
           </p>
           <p className="font-mono text-sm text-[#9898aa] leading-relaxed whitespace-pre-wrap">
             {segments.map((seg, i) =>
@@ -100,7 +111,10 @@ export default function ImprovementPanel({ transcript, improvement }: Props) {
         className="border-l-2 pl-4 flex flex-col gap-1.5"
         style={{ borderColor: "#7c3aed" }}
       >
-        <p className="text-xs text-[#606072] font-mono">phiên bản cải thiện</p>
+        <p className="flex items-center gap-1.5 text-xs font-medium text-[#9898aa]">
+          <Sparkles size={13} className="text-[#8b5cf6]" />
+          Phiên bản cải thiện
+        </p>
         <p className="text-sm text-[#f4f4f6] leading-relaxed whitespace-pre-wrap">
           {improvement.improvedAnswer}
         </p>
@@ -108,11 +122,17 @@ export default function ImprovementPanel({ transcript, improvement }: Props) {
 
       {improvement.keyChanges.length > 0 && (
         <div className="flex flex-col gap-2">
-          <p className="text-xs text-[#606072] font-mono">$ thay đổi chính</p>
+          <p className="flex items-center gap-1.5 text-xs font-medium text-[#9898aa]">
+            <ListChecks size={13} className="text-[#606072]" />
+            Thay đổi chính
+          </p>
           <ul className="flex flex-col gap-1.5">
             {improvement.keyChanges.map((item, i) => (
-              <li key={i} className="text-sm text-[#9898aa] leading-relaxed flex gap-2">
-                <span className="text-[#7c3aed] flex-shrink-0">›</span>
+              <li key={i} className="text-sm text-[#9898aa] leading-relaxed flex gap-1.5">
+                <ChevronRight
+                  size={15}
+                  className="text-[#7c3aed] flex-shrink-0 mt-0.5"
+                />
                 <span>{item}</span>
               </li>
             ))}

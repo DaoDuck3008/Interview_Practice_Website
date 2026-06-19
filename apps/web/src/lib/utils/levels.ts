@@ -18,7 +18,7 @@ export const LEVEL_STYLE: Record<Level, { label: string; className: string }> =
 
 export const LEVEL_DOT: Record<Level, string> = {
   EASY: "bg-[#22c55e]",
-  MEDIUM: "bg-[#8b5cf6]",
+  MEDIUM: "bg-[#f59e0b]",
   HARD: "bg-[#ef4444]",
 };
 

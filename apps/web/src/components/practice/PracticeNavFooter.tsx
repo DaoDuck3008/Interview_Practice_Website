@@ -31,10 +31,10 @@ export default function PracticeNavFooter({
 
   return (
     <div
-      className="flex-shrink-0 flex items-center justify-between px-5 py-2.5 border-t backdrop-blur-sm"
+      className="flex-shrink-0 flex items-center justify-between px-5 py-3 border-t"
       style={{
-        background: "rgba(6,6,12,0.97)",
-        borderColor: "#1c1c28",
+        background: "rgba(255,255,255,0.02)",
+        borderColor: "rgba(255,255,255,0.06)",
       }}
     >
       {/* Prev */}

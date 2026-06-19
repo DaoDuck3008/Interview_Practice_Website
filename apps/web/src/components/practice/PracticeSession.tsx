@@ -12,12 +12,17 @@ import {
   Sparkles,
 } from "lucide-react";
 import axios from "axios";
-import { createSession, scoreSession, improveSession } from "@/lib/api/sessions";
+import {
+  createSession,
+  scoreSession,
+  improveSession,
+} from "@/lib/api/sessions";
 import type { Score, Improvement, Session } from "@/lib/api/sessions";
 import { formatTime } from "@/lib/utils/format";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import TranscriptPanel from "@/components/practice/TranscriptPanel";
 import AnswerEvaluation from "@/components/practice/AnswerEvaluation";
+import EvaluationSkeleton from "@/components/practice/EvaluationSkeleton";
 import ImprovementPanel from "@/components/practice/ImprovementPanel";
 
 type Phase = "idle" | "processing" | "evaluating" | "evaluated";
@@ -122,7 +127,13 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
   const inPostRecording = phase === "evaluating" || phase === "evaluated";
 
   return (
-    <div className="flex flex-col divide-y divide-[#1c1c28]">
+    <div
+      className="flex flex-col divide-y divide-white/[0.06] rounded-2xl overflow-hidden"
+      style={{
+        background: "rgba(255,255,255,0.025)",
+        border: "1px solid rgba(255,255,255,0.06)",
+      }}
+    >
       {/* Recorder pane */}
       <section className="px-6 py-6 flex flex-col gap-4">
         {/* IDLE */}
@@ -258,6 +269,9 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
           isEvaluating={phase === "evaluating"}
         />
       )}
+
+      {/*  Loading — AI đang chấm điểm  */}
+      {phase === "evaluating" && <EvaluationSkeleton />}
 
       {/*  Evaluation pane  */}
       {phase === "evaluated" && evaluation && (

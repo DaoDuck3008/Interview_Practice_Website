@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Tags } from "lucide-react";
 import { getSessionsByQuestion } from "@/lib/api/sessions";
 import type { Session } from "@/lib/api/sessions";
 import AnswerHistory from "@/components/practice/AnswerHistory";
@@ -25,9 +26,18 @@ export default function PracticeContent({ questionId, keywords }: Props) {
   return (
     <>
       {sessions.length > 0 && keywords.length > 0 && (
-        <section className="px-6 py-5">
-          <div className="flex flex-col gap-2">
-            <p className="text-xs text-[#606072] font-mono">$ keywords</p>
+        <section
+          className="rounded-2xl px-5 py-5"
+          style={{
+            background: "rgba(255,255,255,0.025)",
+            border: "1px solid rgba(255,255,255,0.06)",
+          }}
+        >
+          <div className="flex flex-col gap-3">
+            <p className="flex items-center gap-1.5 text-xs font-medium text-[#9898aa]">
+              <Tags size={13} className="text-[#8b5cf6]" />
+              Từ khóa
+            </p>
             <div className="flex flex-wrap gap-1.5">
               {keywords.map((kw) => (
                 <span
