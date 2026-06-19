@@ -9,14 +9,16 @@ import {
   Loader2,
   Play,
   Pause,
+  Sparkles,
 } from "lucide-react";
 import axios from "axios";
-import { createSession, scoreSession } from "@/lib/api/sessions";
-import type { Score } from "@/lib/api/sessions";
+import { createSession, scoreSession, improveSession } from "@/lib/api/sessions";
+import type { Score, Improvement } from "@/lib/api/sessions";
 import { formatTime } from "@/lib/utils/format";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import TranscriptPanel from "@/components/practice/TranscriptPanel";
 import AnswerEvaluation from "@/components/practice/AnswerEvaluation";
+import ImprovementPanel from "@/components/practice/ImprovementPanel";
 
 type Phase = "idle" | "processing" | "evaluating" | "evaluated";
 
@@ -26,23 +28,28 @@ interface Props {
 
 export default function PracticeSession({ questionId }: Props) {
   const [phase, setPhase] = useState<Phase>("idle");
+  const [sessionId, setSessionId] = useState("");
   const [transcript, setTranscript] = useState("");
   const [transcriptError, setTranscriptError] = useState("");
   const [evaluation, setEvaluation] = useState<Score | null>(null);
   const [evaluationError, setEvaluationError] = useState("");
+  const [improvement, setImprovement] = useState<Improvement | null>(null);
+  const [improvementError, setImprovementError] = useState("");
+  const [isImproving, setIsImproving] = useState(false);
 
   const handleRecordingComplete = useCallback(
     async (blob: Blob, duration: number) => {
       // Bước 1: upload + phiên âm
       setPhase("processing");
-      let sessionId = "";
+      let newSessionId = "";
       try {
         const formData = new FormData();
         formData.append("audio", blob, "recording.webm");
         formData.append("questionId", questionId);
         formData.append("duration", String(duration));
         const session = await createSession(formData);
-        sessionId = session.id;
+        newSessionId = session.id;
+        setSessionId(session.id);
         setTranscript(session.transcript);
         setTranscriptError("");
       } catch (err) {
@@ -62,7 +69,7 @@ export default function PracticeSession({ questionId }: Props) {
       // Bước 2: chấm điểm
       setPhase("evaluating");
       try {
-        const score = await scoreSession(sessionId);
+        const score = await scoreSession(newSessionId);
         setEvaluation(score);
         setEvaluationError("");
       } catch (err) {
@@ -80,13 +87,34 @@ export default function PracticeSession({ questionId }: Props) {
 
   const recorder = useAudioRecorder({ onComplete: handleRecordingComplete });
 
+  const handleImprove = useCallback(async () => {
+    setIsImproving(true);
+    try {
+      const result = await improveSession(sessionId);
+      setImprovement(result);
+      setImprovementError("");
+    } catch (err) {
+      const serverMsg = axios.isAxiosError(err)
+        ? (err.response?.data?.message as string | undefined)
+        : undefined;
+      setImprovementError(
+        serverMsg ?? "Không thể tạo bản cải thiện — vui lòng thử lại.",
+      );
+    }
+    setIsImproving(false);
+  }, [sessionId]);
+
   const handleReset = useCallback(() => {
     recorder.reset();
     setPhase("idle");
+    setSessionId("");
     setTranscript("");
     setTranscriptError("");
     setEvaluation(null);
     setEvaluationError("");
+    setImprovement(null);
+    setImprovementError("");
+    setIsImproving(false);
   }, [recorder]);
 
   const inPostRecording = phase === "evaluating" || phase === "evaluated";
@@ -248,6 +276,53 @@ export default function PracticeSession({ questionId }: Props) {
             {evaluationError}
           </div>
         </section>
+      )}
+
+      {/*  Improve action  */}
+      {phase === "evaluated" && evaluation && !improvement && (
+        <section className="px-6 py-5">
+          {isImproving ? (
+            <div className="flex items-center gap-3 py-2">
+              <Loader2
+                size={15}
+                className="text-[#7c3aed] animate-spin flex-shrink-0"
+              />
+              <span className="text-sm text-[#9898aa] font-mono">
+                đang tạo bản cải thiện...
+              </span>
+            </div>
+          ) : (
+            <button
+              onClick={handleImprove}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-[#8b5cf6] transition-all duration-200 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+              style={{
+                background: "rgba(124,58,237,0.08)",
+                border: "1px solid rgba(124,58,237,0.3)",
+              }}
+            >
+              <Sparkles size={15} />
+              Cải thiện câu trả lời
+            </button>
+          )}
+
+          {improvementError && (
+            <div
+              className="flex items-start gap-2 text-xs text-[#f59e0b] p-3 rounded-lg mt-3"
+              style={{
+                background: "rgba(245,158,11,0.05)",
+                border: "1px solid rgba(245,158,11,0.2)",
+              }}
+            >
+              <AlertCircle size={13} className="mt-0.5 flex-shrink-0" />
+              {improvementError}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/*  Improvement pane  */}
+      {improvement && (
+        <ImprovementPanel transcript={transcript} improvement={improvement} />
       )}
     </div>
   );

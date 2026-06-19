@@ -47,18 +47,6 @@ export default function AnswerEvaluation({ evaluation }: Props) {
         />
       </div>
 
-      <div>
-        {evaluation.hasExample ? (
-          <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/30">
-            Có ví dụ minh họa ✓
-          </span>
-        ) : (
-          <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-[#ef4444]/10 text-[#ef4444] border border-[#ef4444]/30">
-            Thiếu ví dụ ✗
-          </span>
-        )}
-      </div>
-
       <blockquote className="border-l-2 border-[#7c3aed] pl-4 flex flex-col gap-1.5">
         <p className="text-xs text-[#606072] font-mono">nhận xét</p>
         <p className="text-sm text-[#9898aa] leading-relaxed">

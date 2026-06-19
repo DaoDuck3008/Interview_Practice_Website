@@ -75,7 +75,8 @@ model Session {
 
   createdAt DateTime @default(now())
 
-  score Score?
+  score       Score?
+  improvement Improvement?
 }
 
 model Score {
@@ -87,13 +88,24 @@ model Score {
   technicalScore    Int
   completenessScore Int
   clarityScore      Int
-  hasExample        Boolean
 
   matchedKeywords String[] // Keyword đã nhận diện (đã chuẩn hóa, tính cả fuzzy STT)
   missedKeywords  String[] // Keyword chưa đề cập
 
   summary      String   // Nhận xét tóm tắt (1 câu) bằng tiếng Việt
   improvements String[] // Các gợi ý cải thiện cụ thể
+
+  createdAt DateTime @default(now())
+}
+
+model Improvement {
+  id        String  @id @default(uuid())
+  sessionId String  @unique
+  session   Session @relation(fields: [sessionId], references: [id])
+
+  improvedAnswer String   // Bản câu trả lời đã được DeepSeek viết lại tốt hơn
+  annotations    Json     // Annotation[]: { originalSegment, issue, suggestion }
+  keyChanges     String[] // Các thay đổi quan trọng, tóm tắt ngắn gọn
 
   createdAt DateTime @default(now())
 }

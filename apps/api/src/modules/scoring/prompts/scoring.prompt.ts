@@ -26,7 +26,6 @@ export interface ScoreResult {
   completenessScore: number;
   clarityScore: number;
   overallScore: number;
-  hasExample: boolean;
   matchedKeywords: string[];
   missedKeywords: string[];
   feedback: {
@@ -69,7 +68,8 @@ Chấm 3 tiêu chí, mỗi tiêu chí thang điểm 0-10:
 
 ### 2. completenessScore (Độ đầy đủ)
 - Đề cập được bao nhiêu keyword quan trọng (tính cả fuzzy match từ lỗi STT)?
-- Có bỏ sót ý chính nào không?
+- KHÔNG yêu cầu đủ 100% keyword mới được điểm tối đa: đề cập được khoảng 80% trở lên các keyword quan trọng đã coi là đầy đủ, chấm điểm tối đa hoặc gần tối đa (8-10).
+- Có bỏ sót ý CHÍNH (cốt lõi, không thể thiếu) nào không? Bỏ sót ý phụ/ý nhỏ chỉ trừ điểm nhẹ.
 
 ### 3. clarityScore (Độ rõ ràng + đúng trọng tâm)
 QUAN TRỌNG: Hỏi gì trả lời nấy.
@@ -87,13 +87,12 @@ Trả về JSON THUẦN (không markdown, không giải thích thêm):
   "technicalScore": <0-10>,
   "completenessScore": <0-10>,
   "clarityScore": <0-10>,
-  "hasExample": <true|false>,
   "matchedKeywords": ["keyword đã nhận diện (chuẩn hóa về dạng gốc, không phải dạng STT sai)"],
   "missedKeywords": ["keyword chưa đề cập"],
   "feedback": {
-    "summary": "1 câu tóm tắt bằng tiếng Việt (tối đa 25 từ)",
+    "summary": "1-2 câu nhận xét bằng giọng văn THÂN THIỆN, ấm áp, như một mentor đang động viên — không khô khan, không chỉ liệt kê lỗi. Khen điểm tốt trước, rồi mới góp ý nhẹ nhàng. Có thể dùng 1 emoji phù hợp (vd: 👍 🎯 💪 ✨) để tăng cảm xúc, không lạm dụng (tối đa 1-2 emoji).",
     "improvements": [
-      "gợi ý cải thiện về NỘI DUNG hoặc CÁCH TRẢ LỜI (không bao giờ về phát âm/transcript)",
+      "gợi ý cải thiện về NỘI DUNG hoặc CÁCH TRẢ LỜI (không bao giờ về phát âm/transcript), giọng văn góp ý nhẹ nhàng, mang tính xây dựng",
       "gợi ý 2",
       "gợi ý 3"
     ]

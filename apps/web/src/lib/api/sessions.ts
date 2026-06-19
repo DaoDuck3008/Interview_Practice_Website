@@ -5,7 +5,6 @@ export interface Score {
   technicalScore: number;
   completenessScore: number;
   clarityScore: number;
-  hasExample: boolean;
   matchedKeywords: string[];
   missedKeywords: string[];
   summary: string;
@@ -19,6 +18,19 @@ export interface Session {
   duration: number;
   createdAt: string;
   score?: Score;
+}
+
+export interface Annotation {
+  originalSegment: string;
+  issue: string;
+  suggestion: string;
+}
+
+export interface Improvement {
+  id: string;
+  improvedAnswer: string;
+  annotations: Annotation[];
+  keyChanges: string[];
 }
 
 export async function getSessionsByQuestion(questionId: string): Promise<Session[]> {
@@ -39,5 +51,10 @@ export async function createSession(formData: FormData): Promise<Session> {
 
 export async function scoreSession(sessionId: string): Promise<Score> {
   const res = await api.post<ApiResponse<Score>>(`/sessions/${sessionId}/score`);
+  return res.data.data;
+}
+
+export async function improveSession(sessionId: string): Promise<Improvement> {
+  const res = await api.post<ApiResponse<Improvement>>(`/sessions/${sessionId}/improve`);
   return res.data.data;
 }

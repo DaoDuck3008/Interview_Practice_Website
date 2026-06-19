@@ -88,11 +88,6 @@ function SessionCard({ session, index }: { session: Session; index: number }) {
               <ScoreBar label="Kỹ thuật" value={session.score.technicalScore} />
               <ScoreBar label="Đầy đủ" value={session.score.completenessScore} />
               <ScoreBar label="Rõ ràng" value={session.score.clarityScore} />
-              {session.score.hasExample && (
-                <span className="self-start text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/30">
-                  Có ví dụ ✓
-                </span>
-              )}
             </div>
           )}
 

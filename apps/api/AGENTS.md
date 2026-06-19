@@ -280,7 +280,8 @@ Key models and their purpose:
 | `Topic` | id, slug (unique), name, iconUrl, parentId (self-ref hierarchy) |
 | `Question` | id, topicId, content, answerKeySummary, answerKeywords[], level (EASY\|MEDIUM\|HARD), isActive, isFeatured, detailAnswerKey |
 | `Session` | id, userId, questionId, audioUrl, transcript, duration — one practice attempt |
-| `Score` | id (1-1 with Session), technicalScore, completenessScore, clarityScore, hasExample, feedback |
+| `Score` | id (1-1 with Session), technicalScore, completenessScore, clarityScore, matchedKeywords, missedKeywords, summary, improvements |
+| `Improvement` | id (1-1 with Session), improvedAnswer, annotations (Json: originalSegment/issue/suggestion), keyChanges |
 
 **Topic hierarchy**: `parentId = null` → parent (group). `parentId = <id>` → child (leaf with iconUrl). Questions always belong to child topics.
 
@@ -332,8 +333,15 @@ Both models exist in `schema.prisma`. Follow the standard module conventions abo
 
 - Triggered automatically after a session is created.
 - Calls DeepSeek API with question + transcript to produce scores.
-- Saves `Score` record: `technicalScore`, `completenessScore`, `clarityScore`, `hasExample` (0–10 scale), `feedback` in Vietnamese.
+- Saves `Score` record: `technicalScore`, `completenessScore`, `clarityScore` (0–10 scale), `summary` + `improvements` in Vietnamese.
 - One `Score` per `Session` (`@unique` on `sessionId`).
+
+### `ImprovementService` (nested under Sessions, `POST /sessions/:id/improve`)
+
+- On-demand (user-triggered, not automatic): requires `Score` to already exist.
+- Calls DeepSeek to rewrite the answer in the user's own voice + produce annotated issues/suggestions tied to exact substrings of the transcript.
+- Result cached as one `Improvement` per `Session` (`@unique` on `sessionId`) — repeat calls return the cached row instead of calling DeepSeek again.
+- Both `ScoringService` and `ImprovementService` share a `DeepSeekClient` (`src/modules/scoring/deepseek.client.ts`) for the fetch/timeout/error-handling boilerplate.
 
 ---
 

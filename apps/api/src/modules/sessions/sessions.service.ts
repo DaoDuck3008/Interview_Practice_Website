@@ -1,9 +1,16 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { SpeechService } from '../speech/speech.service';
 import { ScoringService } from '../scoring/scoring.service';
+import { ImprovementService } from '../scoring/improvement.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 
 @Injectable()
@@ -15,6 +22,7 @@ export class SessionsService {
     private storage: StorageService,
     private speech: SpeechService,
     private scoring: ScoringService,
+    private improvement: ImprovementService,
   ) {}
 
   /** Liệt kê các lần luyện tập của user cho 1 câu hỏi. */
@@ -92,11 +100,58 @@ export class SessionsService {
         technicalScore: result.technicalScore,
         completenessScore: result.completenessScore,
         clarityScore: result.clarityScore,
-        hasExample: result.hasExample,
         matchedKeywords: result.matchedKeywords ?? [],
         missedKeywords: result.missedKeywords ?? [],
         summary: result.feedback.summary,
         improvements: result.feedback.improvements ?? [],
+      },
+    });
+  }
+
+  /**
+   * Bước 3 (on-demand): viết lại câu trả lời tốt hơn. Cần đã chấm điểm trước.
+   * Cache: đã có improvement thì trả luôn, không gọi lại DeepSeek.
+   */
+  async improve(sessionId: string, userId: string) {
+    const session = await this.prisma.session.findFirst({
+      where: { id: sessionId, userId },
+      include: { question: true, score: true, improvement: true },
+    });
+    if (!session) throw new NotFoundException('Session không tồn tại');
+    if (!session.score) {
+      throw new BadRequestException(
+        'Cần chấm điểm trước khi cải thiện câu trả lời.',
+      );
+    }
+    if (session.improvement) return session.improvement;
+
+    const result = await this.improvement.improve(
+      session.transcript,
+      {
+        content: session.question.content,
+        answerKeySummary: session.question.answerKeySummary,
+        answerKeywords: session.question.answerKeywords,
+      },
+      {
+        technicalScore: session.score.technicalScore,
+        completenessScore: session.score.completenessScore,
+        clarityScore: session.score.clarityScore,
+        overallScore: 0,
+        matchedKeywords: session.score.matchedKeywords,
+        missedKeywords: session.score.missedKeywords,
+        feedback: {
+          summary: session.score.summary,
+          improvements: session.score.improvements,
+        },
+      },
+    );
+
+    return this.prisma.improvement.create({
+      data: {
+        sessionId,
+        improvedAnswer: result.improvedAnswer,
+        annotations: result.annotations as unknown as Prisma.InputJsonValue,
+        keyChanges: result.keyChanges ?? [],
       },
     });
   }

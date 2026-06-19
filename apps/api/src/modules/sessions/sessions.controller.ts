@@ -61,4 +61,9 @@ export class SessionsController {
   score(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.sessions.score(id, user.id);
   }
+
+  @Post(':id/improve')
+  improve(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.sessions.improve(id, user.id);
+  }
 }

@@ -281,8 +281,10 @@ interface Topic { id, slug, name, iconUrl, parentId }
 interface TopicWithCount extends Topic { questionCount, parentName? }
 
 // sessions + scores
-interface Score { id, technicalScore, completenessScore, clarityScore, hasExample, feedback }
+interface Score { id, technicalScore, completenessScore, clarityScore, matchedKeywords[], missedKeywords[], summary, improvements[] }
 interface Session { id, questionId, transcript, duration, createdAt, score? }
+interface Annotation { originalSegment, issue, suggestion }
+interface Improvement { id, improvedAnswer, annotations: Annotation[], keyChanges[] }
 ```
 
 ---

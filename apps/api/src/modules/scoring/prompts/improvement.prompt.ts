@@ -9,10 +9,9 @@
  * - `IMPROVEMENT_SYSTEM_PROMPT`: phần CỐ ĐỊNH (nhiệm vụ + nguyên tắc + format) → `system` message.
  * - `buildImprovementUserPrompt(...)`: phần THAY ĐỔI (câu hỏi + transcript + điểm số) → `user` message.
  *
- * Lưu ý khi triển khai service (giai đoạn sau): gọi `https://api.deepseek.com/chat/completions`
- * với `config.get('deepseek.apiKey')`, model `deepseek-v4-flash`, `temperature: 0.5`,
- * `max_tokens: 1500`, `timeout: 15000`, `response_format: { type: 'json_object' }`,
- * messages: [{ role: 'system', content: IMPROVEMENT_SYSTEM_PROMPT }, { role: 'user', content: buildImprovementUserPrompt(...) }].
+ * Service dùng chung `DeepSeekClient` (xem `deepseek.client.ts`, giống `ScoringService`):
+ * model `deepseek-v4-flash`, `temperature: 0.5` (rewrite cần sáng tạo hơn scoring 0.3),
+ * không set `max_tokens`, `timeout: 15000`, `response_format: { type: 'json_object' }`.
  * Sau khi parse, lọc annotations chỉ giữ phần `originalSegment` thực sự có trong transcript.
  */
 
@@ -57,8 +56,8 @@ Trả về JSON THUẦN (không markdown, không giải thích thêm):
   "annotations": [
     {
       "originalSegment": "đoạn TRÍCH NGUYÊN VĂN từ câu trả lời gốc cần sửa (copy chính xác)",
-      "issue": "vấn đề ngắn gọn (1 câu)",
-      "suggestion": "cách sửa cụ thể (1-2 câu)"
+      "issue": "vấn đề ngắn gọn (1 câu), giọng văn nhẹ nhàng — mô tả điểm có thể tốt hơn, không phán xét hay chê bai",
+      "suggestion": "cách sửa cụ thể (1-2 câu), giọng văn mang tính xây dựng như mentor đang chỉ dẫn"
     }
   ],
 
