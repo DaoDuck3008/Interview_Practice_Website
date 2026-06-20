@@ -193,7 +193,7 @@ export default function QuestionCard({
       {/* Row */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-4 px-6 py-3.5 text-left cursor-pointer group"
+        className="w-full flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3.5 text-left cursor-pointer group"
       >
         {/* Featured crown */}
         {question.isFeatured && (
@@ -240,7 +240,7 @@ export default function QuestionCard({
       {/* Expanded answer */}
       {open && (
         <div
-          className="px-16 pb-5 pt-3 border-t"
+          className="px-5 sm:px-10 lg:px-16 pb-5 pt-3 border-t"
           style={{ borderColor: "rgba(255,255,255,0.06)" }}
         >
           {question.detailAnswerKey ? (

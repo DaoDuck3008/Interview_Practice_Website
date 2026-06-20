@@ -50,7 +50,7 @@ function UserDropdown({ name, role }: { name: string; role: string }) {
         {/* Avatar */}
         <div
           className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-          style={{ background: "linear-gradient(135deg, #7c3aed, #6d28d9)" }}
+          style={{ background: "#7c3aed" }}
         >
           {initial}
         </div>
@@ -106,6 +106,8 @@ export default function Header() {
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const router = useRouter();
 
+  const headerRef = useRef<HTMLElement>(null);
+
   async function mobileLogout() {
     setMenuOpen(false);
     try {
@@ -120,15 +122,35 @@ export default function Header() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Đóng menu mobile khi bấm ra ngoài header hoặc nhấn Escape
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onPointer(e: MouseEvent) {
+      if (headerRef.current && !headerRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
+
   return (
     <header
+      ref={headerRef}
       className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled
           ? "bg-[#06060c]/88 backdrop-blur-md border-b border-[#1c1c28]"
           : "bg-transparent"
       }`}
     >
-      <nav className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
+      <nav className="mx-auto max-w-7xl px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link
           href="/"
@@ -187,7 +209,7 @@ export default function Header() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="md:hidden bg-[#06060c]/95 backdrop-blur-md border-b border-[#1c1c28] px-6 pb-6">
+        <div className="md:hidden bg-[#06060c]/95 backdrop-blur-md border-b border-[#1c1c28] px-4 sm:px-6 pb-6">
           <ul className="flex flex-col gap-4 pt-4">
             {NAV_LINKS.map((link) => (
               <li key={link.href}>
@@ -208,10 +230,7 @@ export default function Header() {
                     <div className="flex items-center gap-3 py-1">
                       <div
                         className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
-                        style={{
-                          background:
-                            "linear-gradient(135deg, #7c3aed, #6d28d9)",
-                        }}
+                        style={{ background: "#7c3aed" }}
                       >
                         {user.name.charAt(0).toUpperCase()}
                       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
 import TopicsSidebar from "./TopicsSidebar";
@@ -36,6 +37,11 @@ export default function QuestionBrowser({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentTopic = topics.find((t) => t.slug === currentTopicSlug);
+  const childTopics = topics.filter((t) => t.parentId !== null);
+
+  function topicHref(slug: string) {
+    return `/learning/${slug}/questions${initialLevel ? `?level=${initialLevel}` : ""}`;
+  }
 
   function navigate(updates: {
     page?: number;
@@ -75,6 +81,46 @@ export default function QuestionBrowser({
 
       {/* Main — transparent container */}
       <main className="flex-1 min-w-0 flex flex-col gap-2">
+        {/* Mobile topic switcher — cuộn ngang, thay cho sidebar (ẩn từ md trở lên) */}
+        <div className="md:hidden -mx-4 px-4 flex gap-2 overflow-x-auto pb-1">
+          {childTopics.map((topic) => {
+            const active = topic.slug === currentTopicSlug;
+            return (
+              <Link
+                key={topic.id}
+                href={topicHref(topic.slug)}
+                className="flex items-center gap-1.5 h-8 pl-1.5 pr-3 rounded-full border whitespace-nowrap flex-shrink-0 text-[13px] transition-colors duration-150"
+                style={{
+                  background: active
+                    ? "rgba(124,58,237,0.18)"
+                    : "rgba(255,255,255,0.04)",
+                  borderColor: active
+                    ? "rgba(124,58,237,0.5)"
+                    : "rgba(255,255,255,0.08)",
+                  color: active ? "#f4f4f6" : "#9898aa",
+                }}
+              >
+                {topic.iconUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={topic.iconUrl}
+                    alt=""
+                    width={20}
+                    height={20}
+                    className="w-5 h-5 object-contain rounded flex-shrink-0"
+                  />
+                ) : (
+                  <span className="w-5 h-5 rounded flex-shrink-0 bg-white/[0.07]" />
+                )}
+                {topic.name}
+                <span className="font-mono text-[11px] text-[#606072]">
+                  {topic.questionCount}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+
         {/* Header block — rounded */}
         <div
           className="rounded-2xl overflow-hidden mb-2"
@@ -85,14 +131,14 @@ export default function QuestionBrowser({
         >
           {/* Sub-header row */}
           <div
-            className="flex items-center gap-4 px-5 py-3"
+            className="flex flex-wrap items-center gap-x-4 gap-y-2.5 px-4 sm:px-5 py-3"
             style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
           >
             <span className="text-sm font-semibold text-[#f4f4f6] flex-shrink-0">
               {currentTopic?.name ?? currentTopicSlug}
             </span>
 
-            <div className="flex-1 flex justify-center">
+            <div className="order-last w-full sm:order-none sm:w-auto sm:flex-1 flex justify-center">
               <div className="relative w-full max-w-sm">
                 <Search
                   size={13}
@@ -127,13 +173,13 @@ export default function QuestionBrowser({
               </div>
             </div>
 
-            <span className="text-xs text-[#606072] flex-shrink-0">
+            <span className="hidden sm:block text-xs text-[#606072] flex-shrink-0">
               {total} câu hỏi
             </span>
           </div>
 
           {/* Level tabs */}
-          <div className="flex items-center gap-0 px-5 overflow-x-none">
+          <div className="flex items-center gap-0 px-4 sm:px-5 overflow-x-auto">
             {LEVELS.map((lvl) => {
               const active =
                 lvl.value === "ALL"

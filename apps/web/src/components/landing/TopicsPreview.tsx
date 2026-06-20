@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { getTopics } from "@/lib/api/topics";
+import { AnimateOnScroll } from "@/components/ui/AnimateOnScroll";
 
 export default async function TopicsPreview() {
   const topics = await getTopics();
+  const childTopics = topics.filter((t) => t.parentId !== null);
 
   return (
     <section className="relative py-20 border-t border-[#1c1c28]">
@@ -34,16 +36,32 @@ export default async function TopicsPreview() {
           </Link>
         </div>
 
-        {/* Topics pills — chỉ hiển thị child topics (có câu hỏi) */}
+        {/* Topics pills — chỉ hiển thị child topics  */}
         <div className="flex flex-wrap gap-2.5">
-          {topics.filter((t) => t.parentId !== null).map((topic) => (
-            <Link
+          {childTopics.map((topic, i) => (
+            <AnimateOnScroll
               key={topic.id}
-              href={`/learning/${topic.slug}/questions`}
-              className="inline-flex items-center h-9 px-4 rounded-full border border-[#1c1c28] bg-[#0d0d14] text-sm text-[#a1a1aa] hover:text-[#fafafa] hover:border-[#7c3aed]/50 hover:bg-[#13131c] transition-all duration-200 cursor-pointer"
+              variant="fade-up"
+              delay={Math.min(i * 45, 450)}
             >
-              {topic.name}
-            </Link>
+              <Link
+                href={`/learning/${topic.slug}/questions`}
+                className="group inline-flex items-center gap-2 h-9 pl-2 pr-4 rounded-full border border-[#1c1c28] bg-[#0d0d14] text-sm text-[#a1a1aa] hover:text-[#fafafa] hover:border-[#7c3aed]/60 hover:bg-[#13131c] hover:-translate-y-0.5 hover:shadow-[0_6px_22px_rgba(124,58,237,0.28)] transition-all duration-200 cursor-pointer"
+              >
+                {topic.iconUrl ? (
+                  <img
+                    src={topic.iconUrl}
+                    alt=""
+                    width={20}
+                    height={20}
+                    className="w-5 h-5 object-contain rounded flex-shrink-0 transition-transform duration-200 group-hover:scale-110"
+                  />
+                ) : (
+                  <span className="w-5 h-5 rounded flex-shrink-0 bg-white/[0.07]" />
+                )}
+                {topic.name}
+              </Link>
+            </AnimateOnScroll>
           ))}
         </div>
       </div>

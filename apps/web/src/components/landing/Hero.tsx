@@ -60,7 +60,7 @@ export default function Hero() {
       />
 
       {/* ── Content ── */}
-      <div className="relative z-10 mx-auto max-w-3xl px-6 py-24 flex flex-col items-center text-center gap-7">
+      <div className="relative z-10 mx-auto max-w-3xl px-6 py-20 sm:py-24 flex flex-col items-center text-center gap-6 sm:gap-7">
         {/* Badge */}
         <div
           className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#7c3aed]/20 border border-[#7c3aed]/50"
@@ -76,7 +76,7 @@ export default function Hero() {
         </div>
 
         {/* Headline */}
-        <h1 className="text-5xl sm:text-6xl lg:text-[4.5rem] font-extrabold leading-[1.07] tracking-tight text-[#f4f4f6]">
+        <h1 className="text-[2rem] sm:text-5xl md:text-6xl lg:text-[4.5rem] font-extrabold leading-[1.1] sm:leading-[1.07] tracking-tight text-[#f4f4f6]">
           Chinh Phục Mọi
           <br />
           <span
@@ -89,16 +89,16 @@ export default function Hero() {
         </h1>
 
         {/* Subtitle */}
-        <p className="text-lg sm:text-xl text-[#9898aa] leading-relaxed max-w-xl">
+        <p className=" sm:text-lg md:text-xl text-[#9898aa] leading-relaxed max-w-xl">
           Luyện tập câu hỏi phỏng vấn thực tế theo chủ đề và cấp độ. Nhận điểm
           số &amp; phân tích chi tiết từ AI ngay lập tức bằng Tiếng Việt.
         </p>
 
         {/* CTA */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-1">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-1 w-full sm:w-auto">
           <Link
             href="/learning/javascript/questions"
-            className="inline-flex items-center justify-center gap-2 h-12 px-8 bg-[#7c3aed] hover:bg-[#6d28d9] hover:-translate-y-1 text-white text-base font-bold rounded-xl transition-all duration-200 cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 h-12 px-8 w-full sm:w-auto bg-[#7c3aed] hover:bg-[#6d28d9] hover:-translate-y-1 text-white text-base font-bold rounded-xl transition-all duration-200 cursor-pointer"
             style={{
               boxShadow:
                 "0 0 28px rgba(124,58,237,0.5), 0 1px 0 rgba(167,139,250,0.3) inset",
@@ -109,7 +109,7 @@ export default function Hero() {
           </Link>
           <Link
             href="/practice"
-            className="inline-flex items-center text-white justify-center gap-2 h-12 px-8 border border-[#2a2a3a] hover:border-[#7c3aed]/50 bg-[#0d0d14]/60 hover:bg-[#13131c] hover:-translate-y-1 text-[#a1a1aa] hover:text-[#f4f4f6] text-base font-semibold rounded-xl transition-all duration-200 cursor-pointer"
+            className="inline-flex items-center text-white justify-center gap-2 h-12 px-8 w-full sm:w-auto border border-[#2a2a3a] hover:border-[#7c3aed]/50 bg-[#0d0d14]/60 hover:bg-[#13131c] hover:-translate-y-1 text-[#a1a1aa] hover:text-[#f4f4f6] text-base font-semibold rounded-xl transition-all duration-200 cursor-pointer"
           >
             Luyện Tập Ngay
             <ArrowRight size={16} />
