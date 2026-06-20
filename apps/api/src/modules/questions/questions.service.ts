@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { QueryQuestionDto } from './dto/query-question.dto';
+import { QueryCursorQuestionDto } from './dto/query-cursor-question.dto';
 import { QueryAdminQuestionDto } from './dto/query-admin-question.dto';
 
 @Injectable()
@@ -27,19 +32,25 @@ export class QuestionsService {
         this.prisma.question.findMany({
           where,
           include: { topic: true },
-          orderBy: [{ isFeatured: 'desc' }, { level: 'asc' }],
+          orderBy: [{ isFeatured: 'desc' }, { level: 'asc' }, { id: 'asc' }],
           skip: (page - 1) * limit,
           take: limit,
         }),
         this.prisma.question.count({ where }),
       ]);
-      return { items, total, page, limit, totalPages: Math.ceil(total / limit) || 1 };
+      return {
+        items,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit) || 1,
+      };
     }
 
     return this.prisma.question.findMany({
       where,
       include: { topic: true },
-      orderBy: [{ isFeatured: 'desc' }, { level: 'asc' }],
+      orderBy: [{ isFeatured: 'desc' }, { level: 'asc' }, { id: 'asc' }],
     });
   }
 
@@ -134,6 +145,54 @@ export class QuestionsService {
     });
     if (!question) throw new NotFoundException('Không tìm thấy câu hỏi');
     return question;
+  }
+
+  // Public: chỉ trả về câu hỏi đang active (dùng cho trang practice)
+  async findOnePublic(id: string) {
+    const question = await this.prisma.question.findFirst({
+      where: { id, isActive: true },
+      include: { topic: true },
+    });
+    if (!question) throw new NotFoundException('Không tìm thấy câu hỏi');
+    return question;
+  }
+
+  // Public: danh sách id + level đã sắp xếp của 1 topic (cho nút prev/next + bộ đếm ở trang practice (PracticeNavFooter.tsx))
+  findOrder(topicId: string | undefined) {
+    if (!topicId)
+      throw new BadRequestException('TopicID không được truyền vào');
+    return this.prisma.question.findMany({
+      where: { isActive: true, topicId },
+      select: { id: true, level: true },
+      orderBy: [{ isFeatured: 'desc' }, { level: 'asc' }, { id: 'asc' }],
+    });
+  }
+
+  // Public: cursor pagination cho sidebar (Xem thêm / cuộn vô hạn)
+  async findByCursor(query: QueryCursorQuestionDto) {
+    if (!query.topicId)
+      throw new BadRequestException('TopicID không được truyền vào');
+    const limit = query.limit ?? 15;
+
+    const where: Prisma.QuestionWhereInput = {
+      isActive: true,
+      topicId: query.topicId,
+      ...(query.level && { level: query.level }),
+    };
+
+    // Phải lấy dư 1 phần tử để biết còn trang sau hay không
+    const rows = await this.prisma.question.findMany({
+      where,
+      orderBy: [{ isFeatured: 'desc' }, { level: 'asc' }, { id: 'asc' }],
+      take: limit + 1,
+      ...(query.cursor && { skip: 1, cursor: { id: query.cursor } }),
+    });
+
+    const hasMore = rows.length > limit;
+    const items = hasMore ? rows.slice(0, limit) : rows;
+    const nextCursor = hasMore ? items[items.length - 1].id : null;
+
+    return { items, nextCursor };
   }
 
   create(dto: CreateQuestionDto) {

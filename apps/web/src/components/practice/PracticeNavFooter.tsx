@@ -3,23 +3,23 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { Question, Level } from "@/lib/api/questions";
+import type { QuestionOrderItem, Level } from "@/lib/api/questions";
 
 interface Props {
-  questions: Question[];
+  order: QuestionOrderItem[];
   currentQuestionId: string;
   topicSlug: string;
 }
 
 export default function PracticeNavFooter({
-  questions,
+  order,
   currentQuestionId,
   topicSlug,
 }: Props) {
   const searchParams = useSearchParams();
   const level = searchParams.get("level") as Level | null;
 
-  const filtered = level ? questions.filter((q) => q.level === level) : questions;
+  const filtered = level ? order.filter((q) => q.level === level) : order;
   const currentIdx = filtered.findIndex((q) => q.id === currentQuestionId);
 
   const prev = currentIdx > 0 ? filtered[currentIdx - 1] : null;

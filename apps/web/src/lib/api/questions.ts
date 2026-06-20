@@ -141,6 +141,63 @@ export async function deleteQuestion(id: string): Promise<void> {
   await api.delete(`/questions/${id}`);
 }
 
+export interface QuestionOrderItem {
+  id: string;
+  level: Level;
+}
+
+export interface CursorPage {
+  items: Question[];
+  nextCursor: string | null;
+}
+
+export interface CursorQuery {
+  topicId: string;
+  level?: Level;
+  cursor?: string | null;
+  limit?: number;
+}
+
+// Public: cursor pagination cho sidebar luyện tập
+export async function getQuestionsCursor(
+  query: CursorQuery,
+): Promise<CursorPage> {
+  const params: Record<string, string | number> = { topicId: query.topicId };
+  if (query.level) params.level = query.level;
+  if (query.cursor) params.cursor = query.cursor;
+  if (query.limit) params.limit = query.limit;
+
+  const res = await api.get<ApiResponse<CursorPage>>("/questions/cursor", {
+    params,
+  });
+  return res.data.data;
+}
+
+// Public: 1 câu hỏi active theo id (trang luyện tập)
+export async function getQuestion(id: string): Promise<Question | null> {
+  try {
+    const res = await api.get<ApiResponse<Question>>(`/questions/detail/${id}`);
+    return res.data.data;
+  } catch {
+    return null;
+  }
+}
+
+// Public: danh sách id + level đã sắp xếp của 1 topic (prev/next + bộ đếm)
+export async function getQuestionOrder(
+  topicId: string,
+): Promise<QuestionOrderItem[]> {
+  try {
+    const res = await api.get<ApiResponse<QuestionOrderItem[]>>(
+      "/questions/order",
+      { params: { topicId } },
+    );
+    return res.data.data;
+  } catch {
+    return [];
+  }
+}
+
 export async function getQuestionsByTopic(
   topicSlug: string,
 ): Promise<Question[]> {

@@ -1,10 +1,21 @@
+import { Suspense } from "react";
 import Header from "@/components/layout/Header";
+import PracticeSidebar from "@/components/practice/PracticeSidebar";
+import { getTopicsWithCounts } from "@/lib/api/topics";
+import { formatTopicName } from "@/lib/utils/topics";
 
-export default function PracticeLayout({
+export default async function PracticeLayout({
   children,
+  params,
 }: {
   children: React.ReactNode;
+  params: Promise<{ topicSlug: string }>;
 }) {
+  const { topicSlug } = await params;
+  const topics = await getTopicsWithCounts();
+  const topic = topics.find((t) => t.slug === topicSlug);
+  const topicName = formatTopicName(topicSlug);
+
   return (
     <div
       className="relative h-screen flex flex-col overflow-hidden"
@@ -32,7 +43,21 @@ export default function PracticeLayout({
       />
 
       <Header />
-      <div className="relative flex flex-1 overflow-hidden">{children}</div>
+
+      {/* Sidebar */}
+      <div className="relative flex flex-1 gap-3 p-3 overflow-hidden">
+        {topic && (
+          <Suspense fallback={null}>
+            <PracticeSidebar
+              topicId={topic.id}
+              topicSlug={topicSlug}
+              topicName={topicName}
+              topics={topics}
+            />
+          </Suspense>
+        )}
+        {children}
+      </div>
     </div>
   );
 }

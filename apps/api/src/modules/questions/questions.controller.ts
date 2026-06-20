@@ -13,6 +13,7 @@ import { QuestionsService } from './questions.service';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { QueryQuestionDto } from './dto/query-question.dto';
+import { QueryCursorQuestionDto } from './dto/query-cursor-question.dto';
 import { QueryAdminQuestionDto } from './dto/query-admin-question.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -31,6 +32,21 @@ export class QuestionsController {
   @Get('random')
   findRandom(@Query() query: QueryQuestionDto) {
     return this.questionsService.findRandom(query);
+  }
+
+  @Get('order')
+  findOrder(@Query() query: QueryQuestionDto) {
+    return this.questionsService.findOrder(query.topicId);
+  }
+
+  @Get('cursor')
+  findByCursor(@Query() query: QueryCursorQuestionDto) {
+    return this.questionsService.findByCursor(query);
+  }
+
+  @Get('detail/:id')
+  findOnePublic(@Param('id') id: string) {
+    return this.questionsService.findOnePublic(id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

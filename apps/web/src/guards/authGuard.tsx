@@ -3,6 +3,7 @@
 import { useAuthStore } from "@/stores/auth.store";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { toast } from "react-toastify";
 
 interface Props {
   children: React.ReactNode;
@@ -18,6 +19,7 @@ export default function AuthGuard({ children }: Props) {
 
   useEffect(() => {
     if (hydrated && !user) {
+      toast.warning("Bạn cần đăng nhập để truy cập vào trang này");
       router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
     }
   }, [user, hydrated, router, pathname]);

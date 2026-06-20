@@ -1,24 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { Check, ChevronDown, Search, Star } from "lucide-react";
-import type { Question, Level } from "@/lib/api/questions";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useSearchParams,
+  useRouter,
+  usePathname,
+  useParams,
+} from "next/navigation";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInView } from "react-intersection-observer";
+import { Check, ChevronDown, Loader2, Search, Star } from "lucide-react";
+import { getQuestionsCursor } from "@/lib/api/questions";
+import type { Level } from "@/lib/api/questions";
 import type { TopicWithCount } from "@/lib/api/topics";
 import { LEVELS, LEVEL_DOT } from "@/lib/utils/levels";
 
+const PAGE_SIZE = 15;
+
 interface Props {
-  questions: Question[];
-  currentQuestionId: string;
+  topicId: string;
   topicSlug: string;
   topicName: string;
   topics: TopicWithCount[];
 }
 
 export default function PracticeSidebar({
-  questions,
-  currentQuestionId,
+  topicId,
   topicSlug,
   topicName,
   topics,
@@ -26,28 +34,87 @@ export default function PracticeSidebar({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const params = useParams();
+  const currentQuestionId = (params.questionId as string | undefined) ?? "";
   const activeLevel = searchParams.get("level") as Level | null;
 
-  const filtered = activeLevel
-    ? questions.filter((q) => q.level === activeLevel)
-    : questions;
-
   function setLevel(level: Level | "ALL") {
-    const params = new URLSearchParams(searchParams.toString());
+    const next = new URLSearchParams(searchParams.toString());
     if (level === "ALL") {
-      params.delete("level");
+      next.delete("level");
     } else {
-      params.set("level", level);
+      next.set("level", level);
     }
-    const qs = params.toString();
+    const qs = next.toString();
     router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
   }
 
-  // Cuộn danh sách tới câu hỏi đang mở mỗi khi đổi câu
-  const activeRef = useRef<HTMLAnchorElement>(null);
+  // Cursor pagination qua TanStack Query — cache theo (topicId, level),
+  // không reset khi chuyển câu hỏi nhờ sidebar nằm ở layout
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+  } = useInfiniteQuery({
+    queryKey: ["practice-questions", topicId, activeLevel],
+    queryFn: ({ pageParam }) =>
+      getQuestionsCursor({
+        topicId,
+        level: activeLevel ?? undefined,
+        cursor: pageParam,
+        limit: PAGE_SIZE,
+      }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+  });
+
+  const items = useMemo(
+    () => data?.pages.flatMap((p) => p.items) ?? [],
+    [data],
+  );
+
+  // Tự tải tiếp tới khi câu đang mở xuất hiện (đảm bảo luôn highlight được,
+  // kể cả khi mở thẳng link tới một câu nằm sâu trong danh sách)
   useEffect(() => {
-    activeRef.current?.scrollIntoView({ block: "center" });
-  }, [currentQuestionId, activeLevel]);
+    if (!currentQuestionId || isLoading) return;
+    const hasActive = items.some((q) => q.id === currentQuestionId);
+    if (!hasActive && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [
+    currentQuestionId,
+    items,
+    isLoading,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  ]);
+
+  // Tự tải khi nút "Xem thêm" lọt vào màn hình (cuộn vô hạn)
+  const { ref: sentinelRef, inView } = useInView();
+  useEffect(() => {
+    if (inView && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const topicCount =
+    topics.find((t) => t.id === topicId)?.questionCount ?? items.length;
+
+  // Cuộn tới câu đang mở — chỉ MỘT lần cho mỗi câu (khi đổi câu hoặc khi câu
+  // đó lần đầu được tải). Không cuộn lại khi "Xem thêm" nối thêm câu ở cuối,
+  // tránh việc danh sách bị giật về đầu mỗi lần tải thêm.
+  const activeRef = useRef<HTMLAnchorElement>(null);
+  const scrolledForRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!currentQuestionId) return;
+    if (scrolledForRef.current === currentQuestionId) return;
+    if (!activeRef.current) return; // câu đang mở chưa được tải -> chờ
+    activeRef.current.scrollIntoView({ block: "center" });
+    scrolledForRef.current = currentQuestionId;
+  }, [currentQuestionId, items]);
 
   return (
     <aside
@@ -69,7 +136,7 @@ export default function PracticeSidebar({
           topics={topics}
           currentSlug={topicSlug}
           currentName={topicName}
-          questionCount={questions.length}
+          questionCount={topicCount}
         />
 
         {/* Level filter — segmented control */}
@@ -99,7 +166,7 @@ export default function PracticeSidebar({
 
       {/* Question list */}
       <div className="flex-1 overflow-y-auto px-2 py-2 flex flex-col gap-2">
-        {filtered.map((q, idx) => {
+        {items.map((q, idx) => {
           const isActive = q.id === currentQuestionId;
           const levelParam = activeLevel ? `?level=${activeLevel}` : "";
 
@@ -115,10 +182,10 @@ export default function PracticeSidebar({
                 background: isActive
                   ? "rgba(124,58,237,0.14)"
                   : featured
-                    ? "rgba(245,158,11,0.07)"
+                    ? "rgba(245,158,11,0.10)"
                     : "transparent",
-                boxShadow:
-                  featured && !isActive ? "inset 2px 0 0 #f59e0b" : undefined,
+                // Câu nổi bật: luôn giữ viền amber bên trái, kể cả khi đang mở
+                boxShadow: featured ? "inset 3px 0 0 #f59e0b" : undefined,
               }}
             >
               {/* Level dot */}
@@ -128,15 +195,23 @@ export default function PracticeSidebar({
               />
 
               <div className="flex flex-col gap-1 min-w-0">
-                <span className="flex items-center gap-1 font-mono text-[10px] text-[#606072] tracking-wide">
+                <span className="flex items-center gap-1.5 font-mono text-[10px] text-[#606072] tracking-wide">
                   {String(idx + 1).padStart(2, "0")}
                   {featured && (
-                    <Star
-                      size={11}
-                      className="text-[#f59e0b]"
-                      fill="#f59e0b"
-                      strokeWidth={0}
-                    />
+                    <span
+                      className="flex items-center gap-1 px-1.5 py-0.5 rounded-full"
+                      style={{ background: "rgba(245,158,11,0.15)" }}
+                    >
+                      <Star
+                        size={9}
+                        className="text-[#f59e0b]"
+                        fill="#f59e0b"
+                        strokeWidth={0}
+                      />
+                      <span className="text-[9px] font-semibold tracking-normal text-[#f59e0b]">
+                        Nổi bật
+                      </span>
+                    </span>
                   )}
                 </span>
                 <p
@@ -156,9 +231,46 @@ export default function PracticeSidebar({
           );
         })}
 
-        {filtered.length === 0 && (
+        {/* Xem thêm — đồng thời là sentinel tự tải khi cuộn tới đáy */}
+        {hasNextPage && (
+          <button
+            ref={sentinelRef}
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            className="mt-1 mx-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-semibold text-[#9898aa] transition-colors duration-200 cursor-pointer hover:text-[#f4f4f6] disabled:cursor-default"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.07)",
+            }}
+          >
+            {isFetchingNextPage ? (
+              <>
+                <Loader2 size={13} className="animate-spin" />
+                Đang tải...
+              </>
+            ) : (
+              <>
+                <ChevronDown size={13} />
+                Xem thêm
+              </>
+            )}
+          </button>
+        )}
+
+        {/* Loading lần đầu */}
+        {isLoading && (
+          <div className="flex items-center justify-center gap-2 px-4 py-10 text-xs text-[#606072]">
+            <Loader2 size={14} className="animate-spin" />
+            Đang tải câu hỏi...
+          </div>
+        )}
+
+        {/* Trống */}
+        {!isLoading && items.length === 0 && (
           <p className="px-4 py-10 text-xs text-center text-[#606072]">
-            Không có câu hỏi cho cấp độ này.
+            {activeLevel
+              ? "Không có câu hỏi cho cấp độ này."
+              : "Chưa có câu hỏi nào."}
           </p>
         )}
       </div>
