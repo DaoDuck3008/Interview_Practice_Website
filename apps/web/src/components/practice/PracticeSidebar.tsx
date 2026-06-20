@@ -10,7 +10,7 @@ import {
 } from "next/navigation";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
-import { Check, ChevronDown, Loader2, Search, Star } from "lucide-react";
+import { Check, ChevronDown, List, Loader2, Search, Star } from "lucide-react";
 import { getQuestionsCursor } from "@/lib/api/questions";
 import type { Level } from "@/lib/api/questions";
 import type { TopicWithCount } from "@/lib/api/topics";
@@ -37,6 +37,10 @@ export default function PracticeSidebar({
   const params = useParams();
   const currentQuestionId = (params.questionId as string | undefined) ?? "";
   const activeLevel = searchParams.get("level") as Level | null;
+
+  // Drawer trên mobile (desktop luôn hiện cột tĩnh)
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const closeMobile = () => setMobileOpen(false);
 
   function setLevel(level: Level | "ALL") {
     const next = new URLSearchParams(searchParams.toString());
@@ -117,16 +121,43 @@ export default function PracticeSidebar({
   }, [currentQuestionId, items]);
 
   return (
-    <aside
-      className="hidden md:flex flex-col flex-shrink-0 overflow-hidden rounded-2xl"
-      style={{
-        width: "320px",
-        background: "rgba(16, 15, 26, 0.55)",
-        backdropFilter: "blur(16px)",
-        WebkitBackdropFilter: "blur(16px)",
-        border: "1px solid rgba(255,255,255,0.07)",
-      }}
-    >
+    <>
+      {/* Nút nổi mở danh sách câu hỏi — chỉ hiện trên mobile */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="md:hidden fixed bottom-20 right-4 z-30 flex items-center gap-2 pl-3.5 pr-4 py-3 rounded-full text-[13px] font-semibold text-white cursor-pointer active:scale-95 transition-transform"
+        style={{
+          background: "#7c3aed",
+          boxShadow: "0 8px 24px rgba(124,58,237,0.45)",
+        }}
+        aria-label="Mở danh sách câu hỏi"
+      >
+        <List size={16} />
+        Câu hỏi
+      </button>
+
+      {/* Lớp phủ tối phía sau drawer (mobile) */}
+      {mobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-40"
+          style={{ background: "rgba(0,0,0,0.6)" }}
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar: cột tĩnh trên desktop, drawer trượt từ trái trên mobile */}
+      <aside
+        className={`flex flex-col overflow-hidden transition-transform duration-300
+          fixed inset-y-0 left-0 z-50 w-[85%] max-w-[340px] rounded-r-2xl
+          md:static md:inset-auto md:z-auto md:w-[320px] md:max-w-none md:flex-shrink-0 md:translate-x-0 md:rounded-2xl
+          ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
+        style={{
+          background: "rgba(16, 15, 26, 0.55)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          border: "1px solid rgba(255,255,255,0.07)",
+        }}
+      >
       {/* Header — topic picker + level filter */}
       <div
         className="flex-shrink-0 px-4 pt-4 pb-3.5 flex flex-col gap-3"
@@ -137,6 +168,7 @@ export default function PracticeSidebar({
           currentSlug={topicSlug}
           currentName={topicName}
           questionCount={topicCount}
+          onNavigate={closeMobile}
         />
 
         {/* Level filter — segmented control */}
@@ -177,6 +209,7 @@ export default function PracticeSidebar({
               key={q.id}
               ref={isActive ? activeRef : undefined}
               href={`/practice/${topicSlug}/${q.id}${levelParam}`}
+              onClick={closeMobile}
               className="flex items-start gap-3 px-3 py-2.5 rounded-xl transition-colors duration-200 group cursor-pointer"
               style={{
                 background: isActive
@@ -274,7 +307,8 @@ export default function PracticeSidebar({
           </p>
         )}
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 
@@ -287,11 +321,13 @@ function TopicPicker({
   currentSlug,
   currentName,
   questionCount,
+  onNavigate,
 }: {
   topics: TopicWithCount[];
   currentSlug: string;
   currentName: string;
   questionCount: number;
+  onNavigate?: () => void;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -321,6 +357,7 @@ function TopicPicker({
     setOpen(false);
     setQuery("");
     if (slug === currentSlug) return;
+    onNavigate?.();
     // /practice/[slug] sẽ tự redirect tới câu hỏi đầu tiên của topic
     router.push(`/practice/${slug}`);
   }
