@@ -4,6 +4,7 @@ import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { RefreshTokenStore } from './refresh-token.store';
+import { PrismaService } from '../../prisma/prisma.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -12,6 +13,10 @@ describe('AuthService', () => {
     findByEmail: jest.fn(),
     findById: jest.fn(),
     create: jest.fn(),
+  };
+
+  const mockPrismaService = {
+    user: { create: jest.fn(), update: jest.fn() },
   };
 
   const mockJwtService = {
@@ -24,16 +29,17 @@ describe('AuthService', () => {
     remove: jest.fn(),
   };
 
+  const configMap: Record<string, string> = {
+    'jwt.accessSecret': 'access_secret',
+    'jwt.refreshSecret': 'refresh_secret',
+    'jwt.accessExpiresIn': '15m',
+    'jwt.refreshExpiresIn': '7d',
+    'google.clientId': 'google_client_id',
+  };
+
   const mockConfigService = {
-    get: jest.fn((key: string) => {
-      const map: Record<string, string> = {
-        'jwt.accessSecret': 'access_secret',
-        'jwt.refreshSecret': 'refresh_secret',
-        'jwt.accessExpiresIn': '15m',
-        'jwt.refreshExpiresIn': '7d',
-      };
-      return map[key];
-    }),
+    get: jest.fn((key: string) => configMap[key]),
+    getOrThrow: jest.fn((key: string) => configMap[key]),
   };
 
   beforeEach(async () => {
@@ -44,6 +50,7 @@ describe('AuthService', () => {
         { provide: JwtService, useValue: mockJwtService },
         { provide: ConfigService, useValue: mockConfigService },
         { provide: RefreshTokenStore, useValue: mockRefreshTokenStore },
+        { provide: PrismaService, useValue: mockPrismaService },
       ],
     }).compile();
 

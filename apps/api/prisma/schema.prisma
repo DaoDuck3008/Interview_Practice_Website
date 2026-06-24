@@ -24,9 +24,11 @@ enum Level {
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
-  passwordHash String
+  passwordHash String? //  null nếu tài khoản đăng nhập bằng Google (không có mật khẩu)
   name         String
   role         Role     @default(USER)
+  googleId     String?  @unique // Google "sub" — gắn khi đăng nhập bằng Google
+  avatarUrl    String? //         Ảnh đại diện (lấy từ Google "picture")
   createdAt    DateTime @default(now())
 
   sessions Session[]

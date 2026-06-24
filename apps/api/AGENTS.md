@@ -45,6 +45,7 @@ Defined and validated in `src/config/configuration.ts` via Joi. The API **will n
 DATABASE_URL          (required)
 JWT_ACCESS_SECRET     (required)
 JWT_REFRESH_SECRET    (required)
+GOOGLE_CLIENT_ID      (required)   # OAuth Client ID — audience để verify Google ID token
 R2_ACCOUNT_ID         (required)
 R2_ACCESS_KEY_ID      (required)
 R2_SECRET_ACCESS_KEY  (required)
@@ -55,7 +56,7 @@ PORT                  default 3001
 NODE_ENV              default development
 JWT_ACCESS_EXPIRES_IN  default 15m
 JWT_REFRESH_EXPIRES_IN default 7d
-REDIS_URL             default redis://localhost:6379
+REDIS_URL             default redis://localhost:6380   # host port 6380 → container 6379 (tránh xung đột)
 FRONTEND_URL          default http://localhost:3000
 ```
 
@@ -135,6 +136,8 @@ Two-token pattern built on **Passport** (`@nestjs/passport`). Three strategies l
 - **`LocalStrategy`** (`'local'`) — validates `email`/`password` on login via `AuthService.validateUser`.
 - **`JwtStrategy`** (`'jwt'`) — verifies the Bearer access token. Payload-only: returns `{ id, email, role }` from the JWT without hitting the DB.
 - **`JwtRefreshStrategy`** (`'jwt-refresh'`) — verifies the refresh token read from the `refresh_token` cookie.
+
+**Google login (ID token flow)** — `POST /auth/google` (public, no guard). The frontend uses `@react-oauth/google` to obtain a Google **ID token** (credential) and posts `{ idToken }`. `AuthService.googleLogin` verifies it with `google-auth-library` (`OAuth2Client.verifyIdToken`, audience = `GOOGLE_CLIENT_ID`), then finds-or-creates the user and issues our own access/refresh tokens (same `issueTokens` flow). Account matching is by email: an existing password account is **auto-linked** (its `googleId` is set). No client secret is involved — only the Client ID. Google users have `passwordHash = null`.
 
 Tokens:
 
@@ -294,7 +297,7 @@ Key models and their purpose:
 
 | Model | Purpose |
 |---|---|
-| `User` | id, email (unique), passwordHash, name, role (USER\|ADMIN) |
+| `User` | id, email (unique), passwordHash (nullable — null for Google accounts), name, role (USER\|ADMIN), googleId (unique, nullable), avatarUrl (nullable) |
 | `Topic` | id, slug (unique), name, iconUrl, parentId (self-ref hierarchy) |
 | `Question` | id, topicId, content, answerKeySummary, answerKeywords[], level (EASY\|MEDIUM\|HARD), isActive, isFeatured, detailAnswerKey |
 | `Session` | id, userId, questionId, audioUrl, transcript, duration — one practice attempt |

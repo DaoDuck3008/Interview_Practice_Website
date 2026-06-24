@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { GoogleLoginDto } from './dto/google-login.dto';
 import { ConfigService } from '@nestjs/config';
 import { LocalAuthGuard } from '../../common/guards/local-auth.guard';
 import { JwtRefreshGuard } from '../../common/guards/jwt-refresh.guard';
@@ -27,15 +28,37 @@ export class AuthController {
   async login(
     @Body() _dto: LoginDto,
     @CurrentUser()
-    user: { id: string; email: string; name: string; role: string },
+    user: {
+      id: string;
+      email: string;
+      name: string;
+      role: string;
+      avatarUrl: string | null;
+    },
     @Res({ passthrough: true }) res: Response,
   ) {
     const { accessToken, refreshToken } = await this.authService.login(user);
     res.cookie(REFRESH_COOKIE, refreshToken, this.cookieOptions());
     return {
       accessToken,
-      user: { name: user.name, email: user.email, role: user.role },
+      user: {
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatarUrl: user.avatarUrl,
+      },
     };
+  }
+
+  @Post('google')
+  async google(
+    @Body() dto: GoogleLoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { accessToken, refreshToken, user } =
+      await this.authService.googleLogin(dto.idToken);
+    res.cookie(REFRESH_COOKIE, refreshToken, this.cookieOptions());
+    return { accessToken, user };
   }
 
   @UseGuards(JwtRefreshGuard)

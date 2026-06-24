@@ -10,7 +10,8 @@ export const validationSchema = Joi.object({
   JWT_ACCESS_EXPIRES_IN: Joi.string().default('15m'),
   JWT_REFRESH_SECRET: Joi.string().required(),
   JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),
-  REDIS_URL: Joi.string().default('redis://localhost:6379'),
+  GOOGLE_CLIENT_ID: Joi.string().required(),
+  REDIS_URL: Joi.string().default('redis://localhost:6380'),
   FRONTEND_URL: Joi.string().default('http://localhost:3000'),
   R2_ACCOUNT_ID: Joi.string().required(),
   R2_ACCESS_KEY_ID: Joi.string().required(),
@@ -29,8 +30,11 @@ export default () => ({
     refreshSecret: process.env.JWT_REFRESH_SECRET,
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? '7d',
   },
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+  },
   redis: {
-    url: process.env.REDIS_URL ?? 'redis://localhost:6379',
+    url: process.env.REDIS_URL ?? 'redis://localhost:6380',
   },
   frontendUrl: process.env.FRONTEND_URL,
   r2: {
