@@ -1,5 +1,5 @@
-import { Body, Controller, Post, Res, UseGuards } from '@nestjs/common';
-import { Response } from 'express';
+import { Body, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -25,9 +25,9 @@ export class AuthController {
   @UseGuards(LocalAuthGuard)
   @Post('login')
   async login(
-    // dto giữ lại để ValidationPipe kiểm tra email/password
     @Body() _dto: LoginDto,
-    @CurrentUser() user: { id: string; email: string; name: string; role: string },
+    @CurrentUser()
+    user: { id: string; email: string; name: string; role: string },
     @Res({ passthrough: true }) res: Response,
   ) {
     const { accessToken, refreshToken } = await this.authService.login(user);
@@ -41,17 +41,19 @@ export class AuthController {
   @UseGuards(JwtRefreshGuard)
   @Post('refresh')
   async refresh(
-    @CurrentUser() current: { id: string },
+    @CurrentUser() current: { id: string; jti: string },
     @Res({ passthrough: true }) res: Response,
   ) {
     const { accessToken, refreshToken, user } =
-      await this.authService.refreshTokens(current.id);
+      await this.authService.refreshTokens(current.id, current.jti);
     res.cookie(REFRESH_COOKIE, refreshToken, this.cookieOptions());
     return { accessToken, user };
   }
 
   @Post('logout')
-  logout(@Res({ passthrough: true }) res: Response) {
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const token = (req as any).cookies?.[REFRESH_COOKIE] as string | undefined;
+    await this.authService.logout(token);
     res.clearCookie(REFRESH_COOKIE, { path: '/api/v1/auth' });
     return { message: 'Đăng xuất thành công' };
   }

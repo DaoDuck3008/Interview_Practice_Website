@@ -55,6 +55,7 @@ PORT                  default 3001
 NODE_ENV              default development
 JWT_ACCESS_EXPIRES_IN  default 15m
 JWT_REFRESH_EXPIRES_IN default 7d
+REDIS_URL             default redis://localhost:6379
 FRONTEND_URL          default http://localhost:3000
 ```
 
@@ -141,6 +142,15 @@ Tokens:
 - **Refresh token**: long-lived (7 days), stored in an `httpOnly` cookie named `refresh_token`. Cookie path is `/api/v1/auth`.
 
 The guards wrapping these strategies (`JwtAuthGuard`, `LocalAuthGuard`, `JwtRefreshGuard`) override `handleRequest` to keep Vietnamese error messages.
+
+### Refresh token allowlist (Redis — stateful)
+
+Access token stays **stateless** (15 min, no DB/Redis lookup). The **refresh token is stateful**, gated by an allowlist in Redis so sessions can be revoked instantly:
+
+- Each refresh token carries a unique `jti` claim. On login/refresh, `AuthService.issueTokens` stores key `refresh:<userId>:<jti>` in Redis with TTL = the token's remaining lifetime (`RefreshTokenStore`, `src/modules/auth/refresh-token.store.ts`).
+- `POST /auth/refresh`: after Passport verifies signature + expiry, `refreshTokens` checks the `jti` is still in Redis (else 401), then **rotates** — deletes the old `jti` and stores a new one.
+- `POST /auth/logout`: decodes the refresh cookie (best-effort, no verify) to read `sub` + `jti` and deletes just that key — revokes the **current device only**, other sessions stay valid.
+- Redis client is provided globally via `RedisModule` (`src/redis/redis.module.ts`) as the `REDIS_CLIENT` token (ioredis). Run it with `docker compose up -d redis`.
 
 ### Guards
 

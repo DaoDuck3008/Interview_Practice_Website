@@ -6,8 +6,7 @@ import { Request } from 'express';
 
 interface JwtPayload {
   sub: string;
-  email: string;
-  role: string;
+  jti: string;
 }
 
 function cookieExtractor(req: Request): string | null {
@@ -28,6 +27,6 @@ export class JwtRefreshStrategy extends PassportStrategy(
   }
 
   validate(payload: JwtPayload) {
-    return { id: payload.sub, email: payload.email, role: payload.role };
+    return { id: payload.sub, jti: payload.jti };
   }
 }

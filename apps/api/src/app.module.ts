@@ -3,6 +3,7 @@ import { APP_FILTER } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import configuration, { validationSchema } from './config/configuration';
 import { PrismaModule } from './prisma/prisma.module';
+import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { TopicsModule } from './modules/topics/topics.module';
@@ -21,6 +22,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
       validationSchema,
     }),
     PrismaModule,
+    RedisModule,
     AuthModule,
     UsersModule,
     TopicsModule,

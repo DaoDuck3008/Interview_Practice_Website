@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { RefreshTokenStore } from './refresh-token.store';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -15,6 +16,12 @@ describe('AuthService', () => {
 
   const mockJwtService = {
     signAsync: jest.fn().mockResolvedValue('mock_token'),
+  };
+
+  const mockRefreshTokenStore = {
+    store: jest.fn(),
+    exists: jest.fn(),
+    remove: jest.fn(),
   };
 
   const mockConfigService = {
@@ -36,6 +43,7 @@ describe('AuthService', () => {
         { provide: UsersService, useValue: mockUsersService },
         { provide: JwtService, useValue: mockJwtService },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: RefreshTokenStore, useValue: mockRefreshTokenStore },
       ],
     }).compile();
 

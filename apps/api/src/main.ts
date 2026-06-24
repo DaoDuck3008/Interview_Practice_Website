@@ -9,6 +9,8 @@ const cookieParser = require('cookie-parser');
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  // Cho phép onApplicationShutdown chạy (đóng kết nối Redis khi tắt app)
+  app.enableShutdownHooks();
   app.use(cookieParser());
   const config = app.get(ConfigService);
 
