@@ -10,6 +10,8 @@ import { Redis } from 'ioredis';
 
 export const REDIS_CLIENT = 'REDIS_CLIENT';
 
+const MAX_RECONNECT_ATTEMPTS = 10;
+
 @Global()
 @Module({
   providers: [
@@ -21,6 +23,15 @@ export const REDIS_CLIENT = 'REDIS_CLIENT';
         const url = config.getOrThrow<string>('redis.url');
         const client = new Redis(url, {
           maxRetriesPerRequest: 3,
+          retryStrategy: (times: number) => {
+            if (times > MAX_RECONNECT_ATTEMPTS) {
+              logger.error(
+                `Không thể kết nối Redis sau ${MAX_RECONNECT_ATTEMPTS} lần thử, ngừng thử lại`,
+              );
+              return null;
+            }
+            return Math.min(times * 50, 2000);
+          },
         });
 
         client.on('connect', () => logger.log(`Đang kết nối Redis (${url})`));
@@ -29,8 +40,10 @@ export const REDIS_CLIENT = 'REDIS_CLIENT';
           logger.warn(`Mất kết nối Redis, đang thử lại sau ${delay}ms...`),
         );
         client.on('end', () => logger.warn('Đã đóng kết nối Redis'));
-        client.on('error', (err: Error) =>
-          logger.error(`Lỗi kết nối Redis: ${err.message}`),
+        client.on('error', (err: Error & { code?: string }) =>
+          logger.error(
+            `Lỗi kết nối Redis: ${err.message || err.code || err.name}`,
+          ),
         );
 
         return client;
