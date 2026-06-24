@@ -235,6 +235,7 @@ const FALLBACK_QUESTIONS: Question[] = [
     ],
     level: "MEDIUM",
     isActive: true,
+    isFeatured: false,
     detailAnswerKey: "",
   },
   {
@@ -251,6 +252,7 @@ const FALLBACK_QUESTIONS: Question[] = [
     ],
     level: "MEDIUM",
     isActive: true,
+    isFeatured: false,
     detailAnswerKey: "",
   },
   {
@@ -268,6 +270,7 @@ const FALLBACK_QUESTIONS: Question[] = [
     ],
     level: "MEDIUM",
     isActive: true,
+    isFeatured: false,
     detailAnswerKey: "",
   },
   {
@@ -286,6 +289,7 @@ const FALLBACK_QUESTIONS: Question[] = [
     ],
     level: "MEDIUM",
     isActive: true,
+    isFeatured: false,
     detailAnswerKey: "",
   },
   {
@@ -304,6 +308,7 @@ const FALLBACK_QUESTIONS: Question[] = [
     ],
     level: "HARD",
     isActive: true,
+    isFeatured: false,
     detailAnswerKey: "",
   },
   {
@@ -322,6 +327,7 @@ const FALLBACK_QUESTIONS: Question[] = [
     ],
     level: "HARD",
     isActive: true,
+    isFeatured: false,
     detailAnswerKey: "",
   },
 ];

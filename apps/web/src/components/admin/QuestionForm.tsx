@@ -4,7 +4,7 @@ import { useEffect, useState, FormEvent, KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { X, Loader2, Crown } from "lucide-react";
 import { toast } from "react-toastify";
-import { getTopics } from "@/lib/api/topics";
+import { getTopics, type Topic } from "@/lib/api/topics";
 import { LEVELS, type Level, type QuestionInput } from "@/lib/api/questions";
 import MarkdownEditor from "@/components/admin/MarkdownEditor";
 import { buildTopicOptions } from "@/lib/utils/topics";

@@ -1,0 +1,82 @@
+"use client";
+
+import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
+import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
+import { useAuthStore } from "@/stores/auth.store";
+import { googleLoginApi } from "@/lib/api/auth";
+
+// Logo "G" chính thức của Google
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+      <path
+        fill="#EA4335"
+        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+      />
+      <path
+        fill="#4285F4"
+        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+      />
+      <path
+        fill="#34A853"
+        d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+      />
+    </svg>
+  );
+}
+
+export default function GoogleLoginButton({
+  redirectTo,
+}: {
+  redirectTo?: string;
+}) {
+  const setAuth = useAuthStore((s) => s.setAuth);
+  const router = useRouter();
+
+  async function handleSuccess(cred: CredentialResponse) {
+    if (!cred.credential) {
+      toast.error("Không nhận được thông tin từ Google.");
+      return;
+    }
+    try {
+      const { accessToken, user } = await googleLoginApi(cred.credential);
+      setAuth(accessToken, user);
+      const fallback = user.role === "ADMIN" ? "/admin" : "/practice";
+      router.push(redirectTo || fallback);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message;
+      toast.error(msg || "Đăng nhập bằng Google thất bại.");
+    }
+  }
+
+  return (
+    <div className="group relative w-full">
+      <button
+        type="button"
+        tabIndex={-1}
+        className="pointer-events-none flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-[#1c1c28] bg-[#13131c] text-sm font-medium text-[#f4f4f6] transition-colors group-hover:bg-[#1a1a26]"
+      >
+        <GoogleIcon />
+        Tiếp tục với Google
+      </button>
+
+      <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden opacity-0">
+        <GoogleLogin
+          onSuccess={handleSuccess}
+          onError={() => toast.error("Đăng nhập bằng Google thất bại.")}
+          theme="filled_black"
+          text="continue_with"
+          shape="rectangular"
+          size="large"
+          width="400"
+        />
+      </div>
+    </div>
+  );
+}

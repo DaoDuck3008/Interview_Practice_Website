@@ -44,6 +44,7 @@ npm run web:test
 
 ```
 NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
+NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID=   # Google OAuth Client ID (ID token flow — no client secret in the browser)
 ```
 
 ---

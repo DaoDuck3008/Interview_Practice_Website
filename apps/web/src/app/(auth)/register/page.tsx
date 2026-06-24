@@ -8,6 +8,7 @@ import { useAuthStore } from "@/stores/auth.store";
 import { loginApi, registerApi } from "@/lib/api/auth";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
+import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 
 const FEATURES = [
   "Ghi âm câu trả lời phỏng vấn thực tế",
@@ -259,6 +260,15 @@ function RegisterContent() {
               Tạo tài khoản
             </button>
           </form>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3">
+            <span className="h-px flex-1 bg-[#1c1c28]" />
+            <span className="text-xs text-[#606072]">hoặc</span>
+            <span className="h-px flex-1 bg-[#1c1c28]" />
+          </div>
+
+          <GoogleLoginButton redirectTo={redirectTo} />
 
           <p className="text-sm text-center text-[#606072]">
             Đã có tài khoản?{" "}
