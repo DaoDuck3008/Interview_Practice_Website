@@ -14,7 +14,51 @@ const NAV_LINKS = [
   // { href: "#cach-hoat-dong", label: "Cách Hoạt Động" },
 ];
 
-function UserDropdown({ name, role }: { name: string; role: string }) {
+// Hiển thị avatar nếu có URL; nếu thiếu hoặc ảnh load lỗi thì fallback về chữ cái đầu
+function Avatar({
+  name,
+  avatarUrl,
+  sizeClass,
+  textClass,
+}: {
+  name: string;
+  avatarUrl?: string | null;
+  sizeClass: string;
+  textClass: string;
+}) {
+  const [errored, setErrored] = useState(false);
+
+  if (avatarUrl && !errored) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={name}
+        referrerPolicy="no-referrer"
+        onError={() => setErrored(true)}
+        className={`${sizeClass} rounded-full object-cover flex-shrink-0`}
+      />
+    );
+  }
+
+  return (
+    <div
+      className={`${sizeClass} rounded-full flex items-center justify-center ${textClass} font-bold text-white flex-shrink-0`}
+      style={{ background: "#7c3aed" }}
+    >
+      {name.charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
+function UserDropdown({
+  name,
+  role,
+  avatarUrl,
+}: {
+  name: string;
+  role: string;
+  avatarUrl?: string | null;
+}) {
   const [open, setOpen] = useState(false);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const router = useRouter();
@@ -39,21 +83,18 @@ function UserDropdown({ name, role }: { name: string; role: string }) {
     router.push("/login");
   }
 
-  const initial = name.charAt(0).toUpperCase();
-
   return (
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-[#13131c] transition-colors duration-200 cursor-pointer"
       >
-        {/* Avatar */}
-        <div
-          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-          style={{ background: "#7c3aed" }}
-        >
-          {initial}
-        </div>
+        <Avatar
+          name={name}
+          avatarUrl={avatarUrl}
+          sizeClass="w-7 h-7"
+          textClass="text-xs"
+        />
         <span className="text-sm text-[#f4f4f6] max-w-[120px] truncate">
           {name}
         </span>
@@ -144,10 +185,8 @@ export default function Header() {
   return (
     <header
       ref={headerRef}
-      className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? "bg-[#06060c]/88 backdrop-blur-md border-b border-[#1c1c28]"
-          : "bg-transparent"
+      className={`sticky top-0 left-0 right-0 z-50 backdrop-blur-md transition-all duration-300 ${
+        scrolled ? "bg-black/60 border-b border-[#1c1c28]" : "bg-black/30"
       }`}
     >
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 h-16 flex items-center justify-between">
@@ -177,7 +216,11 @@ export default function Header() {
         <div className="hidden md:flex items-center gap-3">
           {hydrated &&
             (user ? (
-              <UserDropdown name={user.name} role={user.role} />
+              <UserDropdown
+                name={user.name}
+                role={user.role}
+                avatarUrl={user.avatarUrl}
+              />
             ) : (
               <>
                 <Link
@@ -228,12 +271,12 @@ export default function Header() {
                 {user ? (
                   <>
                     <div className="flex items-center gap-3 py-1">
-                      <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
-                        style={{ background: "#7c3aed" }}
-                      >
-                        {user.name.charAt(0).toUpperCase()}
-                      </div>
+                      <Avatar
+                        name={user.name}
+                        avatarUrl={user.avatarUrl}
+                        sizeClass="w-8 h-8"
+                        textClass="text-sm"
+                      />
                       <span className="text-sm text-[#f4f4f6]">
                         {user.name}
                       </span>
