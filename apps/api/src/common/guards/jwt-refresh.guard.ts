@@ -2,16 +2,14 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
 @Injectable()
-export class JwtAuthGuard extends AuthGuard('jwt') {
+export class JwtRefreshGuard extends AuthGuard('jwt-refresh') {
   handleRequest<TUser = any>(err: any, user: any, info: any): TUser {
     if (err || !user) {
       if (info?.name === 'TokenExpiredError')
         throw new UnauthorizedException(
           'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại',
         );
-      if (info?.name === 'JsonWebTokenError')
-        throw new UnauthorizedException('Access token không hợp lệ');
-      throw err || new UnauthorizedException('Vui lòng đăng nhập');
+      throw err || new UnauthorizedException('Refresh token không hợp lệ');
     }
     return user as TUser;
   }

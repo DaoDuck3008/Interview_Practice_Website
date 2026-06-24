@@ -9,6 +9,7 @@ describe('AuthService', () => {
 
   const mockUsersService = {
     findByEmail: jest.fn(),
+    findById: jest.fn(),
     create: jest.fn(),
   };
 

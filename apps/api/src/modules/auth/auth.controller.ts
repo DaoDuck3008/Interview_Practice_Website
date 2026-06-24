@@ -1,16 +1,12 @@
-import {
-  Body,
-  Controller,
-  Post,
-  Req,
-  Res,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { Request, Response } from 'express';
+import { Body, Controller, Post, Res, UseGuards } from '@nestjs/common';
+import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ConfigService } from '@nestjs/config';
+import { LocalAuthGuard } from '../../common/guards/local-auth.guard';
+import { JwtRefreshGuard } from '../../common/guards/jwt-refresh.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 const REFRESH_COOKIE = 'refresh_token';
 
@@ -26,15 +22,14 @@ export class AuthController {
     return this.authService.register(dto);
   }
 
+  @UseGuards(LocalAuthGuard)
   @Post('login')
   async login(
-    @Body() dto: LoginDto,
+    // dto giữ lại để ValidationPipe kiểm tra email/password
+    @Body() _dto: LoginDto,
+    @CurrentUser() user: { id: string; email: string; name: string; role: string },
     @Res({ passthrough: true }) res: Response,
   ) {
-    const user = await this.authService.validateUser(dto.email, dto.password);
-    if (!user)
-      throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
-
     const { accessToken, refreshToken } = await this.authService.login(user);
     res.cookie(REFRESH_COOKIE, refreshToken, this.cookieOptions());
     return {
@@ -43,16 +38,14 @@ export class AuthController {
     };
   }
 
+  @UseGuards(JwtRefreshGuard)
   @Post('refresh')
   async refresh(
-    @Req() req: Request,
+    @CurrentUser() current: { id: string },
     @Res({ passthrough: true }) res: Response,
   ) {
-    const token = (req as any).cookies?.[REFRESH_COOKIE] as string | undefined;
-    if (!token) throw new UnauthorizedException('Refresh token không tồn tại');
-
     const { accessToken, refreshToken, user } =
-      await this.authService.refreshTokens(token);
+      await this.authService.refreshTokens(current.id);
     res.cookie(REFRESH_COOKIE, refreshToken, this.cookieOptions());
     return { accessToken, user };
   }

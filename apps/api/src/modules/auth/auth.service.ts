@@ -16,7 +16,8 @@ export class AuthService {
   async validateUser(email: string, password: string) {
     const user = await this.usersService.findByEmail(email);
     // Luôn chạy bcrypt để tránh timing attack (không để lộ email tồn tại qua response time)
-    const hash = user?.passwordHash ?? '$2b$10$invalidhashfortimingprotectionxx';
+    const hash =
+      user?.passwordHash ?? '$2b$10$invalidhashfortimingprotectionxx';
     const isMatch = await bcrypt.compare(password, hash);
     return user && isMatch ? user : null;
   }
@@ -45,42 +46,28 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  async refreshTokens(refreshToken: string) {
-    try {
-      const payload = await this.jwtService.verifyAsync<{
-        sub: string;
-        email: string;
-      }>(refreshToken, {
-        secret: this.config.getOrThrow<string>('jwt.refreshSecret'),
-      });
+  // Refresh token đã được JwtRefreshStrategy verify ở guard; chỉ nhận userId.
+  async refreshTokens(userId: string) {
+    // Đọc lại user từ DB để role luôn cập nhật
+    const user = await this.usersService.findById(userId);
+    if (!user) throw new UnauthorizedException('Người dùng không tồn tại');
 
-      // Đọc lại user từ DB để role luôn cập nhật (vd. vừa được nâng lên ADMIN)
-      const user = await this.usersService.findById(payload.sub);
-      if (!user) throw new UnauthorizedException('Người dùng không tồn tại');
+    const newPayload = { sub: user.id, email: user.email, role: user.role };
+    const [accessToken, newRefreshToken] = await Promise.all([
+      this.jwtService.signAsync(newPayload, {
+        secret: this.config.get('jwt.accessSecret'),
+        expiresIn: this.config.get('jwt.accessExpiresIn'),
+      }),
+      this.jwtService.signAsync(newPayload, {
+        secret: this.config.get('jwt.refreshSecret'),
+        expiresIn: this.config.get('jwt.refreshExpiresIn'),
+      }),
+    ]);
 
-      const newPayload = { sub: user.id, email: user.email, role: user.role };
-      const [accessToken, newRefreshToken] = await Promise.all([
-        this.jwtService.signAsync(newPayload, {
-          secret: this.config.get('jwt.accessSecret'),
-          expiresIn: this.config.get('jwt.accessExpiresIn'),
-        }),
-        this.jwtService.signAsync(newPayload, {
-          secret: this.config.get('jwt.refreshSecret'),
-          expiresIn: this.config.get('jwt.refreshExpiresIn'),
-        }),
-      ]);
-
-      return {
-        accessToken,
-        refreshToken: newRefreshToken,
-        user: { name: user.name, email: user.email, role: user.role },
-      };
-    } catch (err: any) {
-      if (err?.name === 'TokenExpiredError')
-        throw new UnauthorizedException(
-          'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại',
-        );
-      throw new UnauthorizedException('Refresh token không hợp lệ');
-    }
+    return {
+      accessToken,
+      refreshToken: newRefreshToken,
+      user: { name: user.name, email: user.email, role: user.role },
+    };
   }
 }

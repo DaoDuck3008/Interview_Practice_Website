@@ -12,7 +12,7 @@ NestJS API for an interview-practice platform. Part of an npm-workspaces monorep
 | Language | TypeScript (strict) |
 | ORM | Prisma 7 (`@prisma/adapter-pg`) |
 | Database | PostgreSQL |
-| Auth | Custom JWT guards (no Passport) |
+| Auth | Passport (local + JWT + JWT-refresh strategies) |
 | Storage | Cloudflare R2 (S3-compatible) |
 | Validation | class-validator + class-transformer |
 | Config | `@nestjs/config` + Joi schema |
@@ -129,10 +129,18 @@ Use standard NestJS exceptions: `NotFoundException`, `ConflictException`, `Unaut
 
 ## Authentication
 
-Two-token pattern. No Passport — guards are custom.
+Two-token pattern built on **Passport** (`@nestjs/passport`). Three strategies live in `src/modules/auth/strategies/`:
+
+- **`LocalStrategy`** (`'local'`) — validates `email`/`password` on login via `AuthService.validateUser`.
+- **`JwtStrategy`** (`'jwt'`) — verifies the Bearer access token. Payload-only: returns `{ id, email, role }` from the JWT without hitting the DB.
+- **`JwtRefreshStrategy`** (`'jwt-refresh'`) — verifies the refresh token read from the `refresh_token` cookie.
+
+Tokens:
 
 - **Access token**: short-lived (15 min), sent as `Authorization: Bearer <token>` header.
 - **Refresh token**: long-lived (7 days), stored in an `httpOnly` cookie named `refresh_token`. Cookie path is `/api/v1/auth`.
+
+The guards wrapping these strategies (`JwtAuthGuard`, `LocalAuthGuard`, `JwtRefreshGuard`) override `handleRequest` to keep Vietnamese error messages.
 
 ### Guards
 
@@ -348,7 +356,7 @@ Both models exist in `schema.prisma`. Follow the standard module conventions abo
 ## What NOT to Do
 
 - **Do not use TypeORM.** This project uses Prisma exclusively.
-- **Do not use Passport strategies.** Auth guards are custom (`JwtAuthGuard`, `RolesGuard`).
+- **Auth uses Passport strategies** (`local`, `jwt`, `jwt-refresh`) in `src/modules/auth/strategies/`. Guards (`JwtAuthGuard`, `LocalAuthGuard`, `JwtRefreshGuard`, `RolesGuard`) wrap them — do not re-introduce hand-rolled token verification.
 - **Do not hard-delete Questions.** Use `softDelete` (set `isActive: false`).
 - **Do not add `@Global()` to new modules.** Only `PrismaModule` is global.
 - **Do not manually wrap controller returns** in `{ success, data }` — `ResponseInterceptor` does this.
