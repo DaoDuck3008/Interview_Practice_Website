@@ -1,6 +1,9 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { Sparkles, ArrowRight } from "lucide-react";
+import BlurText from "../ui/BlurText";
 
 export default function Hero() {
   return (
@@ -77,15 +80,42 @@ export default function Hero() {
 
         {/* Headline */}
         <h1 className="text-[2rem] sm:text-5xl md:text-6xl lg:text-[4.5rem] font-extrabold leading-[1.1] sm:leading-[1.07] tracking-tight text-[#f4f4f6]">
-          Chinh Phục Mọi
-          <br />
-          <span
-            className="text-[#a78bfa]"
-            style={{ textShadow: "0 0 40px rgba(167,139,250,0.4)" }}
-          >
-            Buổi Phỏng Vấn
-          </span>{" "}
-          IT
+          <BlurText
+            as="span"
+            text="Chinh Phục Mọi"
+            delay={180}
+            startDelay={0}
+            repeatInterval={5000}
+            animateBy="words"
+            direction="top"
+            className="justify-center"
+          />
+          <span className="flex flex-wrap justify-center gap-x-[0.28em]">
+            <span
+              className="text-[#a78bfa]"
+              style={{ textShadow: "0 0 40px rgba(167,139,250,0.4)" }}
+            >
+              <BlurText
+                as="span"
+                text="Buổi Phỏng Vấn"
+                delay={180}
+                startDelay={540}
+                repeatInterval={5000}
+                animateBy="words"
+                direction="top"
+                className="justify-center"
+              />
+            </span>
+            <BlurText
+              as="span"
+              text="IT"
+              delay={180}
+              startDelay={1080}
+              repeatInterval={5000}
+              animateBy="words"
+              direction="top"
+            />
+          </span>
         </h1>
 
         {/* Subtitle */}

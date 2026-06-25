@@ -6,7 +6,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { ChevronDown, ArrowUpRight, Crown } from "lucide-react";
+import { ChevronDown, ArrowUpRight, Star } from "lucide-react";
 import type { Question } from "@/lib/api/questions";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
 
@@ -124,9 +124,7 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
   strong: ({ children }) => (
     <strong className="text-[#f4f4f6] font-semibold">{children}</strong>
   ),
-  em: ({ children }) => (
-    <em className="text-[#c4c4d4] italic">{children}</em>
-  ),
+  em: ({ children }) => <em className="text-[#c4c4d4] italic">{children}</em>,
   del: ({ children }) => (
     <del className="text-[#606072] line-through">{children}</del>
   ),
@@ -197,7 +195,7 @@ export default function QuestionCard({
       >
         {/* Featured crown */}
         {question.isFeatured && (
-          <Crown size={14} className="flex-shrink-0 text-[#fbbf24]" />
+          <Star size={14} className="flex-shrink-0 text-[#fbbf24]" />
         )}
 
         {/* Index */}
