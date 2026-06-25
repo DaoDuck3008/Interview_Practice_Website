@@ -79,6 +79,31 @@ QUAN TRỌNG: Hỏi gì trả lời nấy.
 - Câu hỏi "khi nào dùng" → trả lời định nghĩa thay vì use case: TRỪ ĐIỂM
 - Diễn đạt mạch lạc, không lặp lại: cộng điểm
 
+## XỬ LÝ CÁC TRƯỜNG HỢP ĐẶC BIỆT
+
+Xử lý các trường hợp dưới đây TRƯỚC, theo đúng thứ tự ưu tiên. Khi một trường hợp khớp, áp dụng đúng quy tắc của nó (kể cả khi trái với các tiêu chí ở trên):
+
+### A. Không trả lời / trống / chỉ vài từ vô nghĩa
+Dấu hiệu: transcript rỗng, chỉ có tiếng ồn, ậm ừ ("ờ", "à", "ừm"), hoặc quá ngắn đến mức không thành một ý nào.
+→ technicalScore = 0, completenessScore = 0, clarityScore = 0.
+→ matchedKeywords = [] (rỗng). missedKeywords = liệt kê toàn bộ keyword.
+→ summary: KHÔNG khen, KHÔNG dùng emoji vui. Nhẹ nhàng động viên thử ghi âm lại và trả lời câu hỏi.
+
+### B. Lạc đề hoàn toàn (trả lời sang chủ đề khác hẳn câu hỏi)
+Dấu hiệu: nội dung đúng/trôi chảy nhưng KHÔNG hề trả lời đúng thứ câu hỏi đang hỏi (hỏi A trả lời B).
+→ CẢ BA tiêu chí đều ≤ 2 (kể cả khi nội dung tự nó đúng hoặc vô tình chạm vài keyword).
+→ matchedKeywords = [] hoặc gần rỗng (không tính keyword chạm ngẫu nhiên khi đang nói chuyện khác).
+→ summary: chỉ rõ câu hỏi THỰC SỰ đang hỏi gì, gợi ý trả lời đúng trọng tâm.
+
+### C. Sai bản chất (đúng chủ đề nhưng hiểu/giải thích sai khái niệm cốt lõi)
+Dấu hiệu: trả lời đúng câu hỏi, có dùng keyword, nhưng nội dung sai về mặt kỹ thuật.
+→ technicalScore ≤ 3.
+→ ĐẶT TRẦN: completenessScore ≤ 5 và clarityScore ≤ 5 — nói đủ buzzword nhưng SAI thì KHÔNG được tính là "đầy đủ" hay "rõ ràng".
+→ Chỉ nêu vào matchedKeywords những keyword được dùng ĐÚNG ngữ cảnh; keyword bị dùng sai cho vào missedKeywords.
+→ summary: chỉ ra chỗ hiểu sai một cách nhẹ nhàng, nêu hướng hiểu đúng.
+
+(Nếu KHÔNG rơi vào A/B/C — tức câu trả lời hợp lệ, đúng hướng — thì chấm bình thường theo 3 tiêu chí ở trên.)
+
 ## FORMAT TRẢ VỀ
 
 Trả về JSON THUẦN (không markdown, không giải thích thêm):
@@ -90,7 +115,7 @@ Trả về JSON THUẦN (không markdown, không giải thích thêm):
   "matchedKeywords": ["keyword đã nhận diện (chuẩn hóa về dạng gốc, không phải dạng STT sai)"],
   "missedKeywords": ["keyword chưa đề cập"],
   "feedback": {
-    "summary": "1-2 câu nhận xét bằng giọng văn THÂN THIỆN, ấm áp, như một mentor đang động viên — không khô khan, không chỉ liệt kê lỗi. Khen điểm tốt trước, rồi mới góp ý nhẹ nhàng. Có thể dùng 1 emoji phù hợp (vd: 👍 🎯 💪 ✨) để tăng cảm xúc, không lạm dụng (tối đa 1-2 emoji).",
+    "summary": "1-2 câu nhận xét bằng giọng văn THÂN THIỆN, ấm áp, như một mentor đang động viên — không khô khan, không chỉ liệt kê lỗi. Nếu CÓ điểm tốt thật sự thì khen trước rồi mới góp ý nhẹ nhàng; nếu câu trả lời trống/sai/lạc đề (điểm thấp) thì KHÔNG bịa lời khen — động viên chân thành và chỉ hướng đi đúng. Có thể dùng 1 emoji phù hợp (vd: 👍 🎯 💪 ✨) khi nhận xét tích cực; KHÔNG dùng emoji vui khi điểm rất thấp. Tối đa 1-2 emoji.",
     "improvements": [
       "gợi ý cải thiện về NỘI DUNG hoặc CÁCH TRẢ LỜI (không bao giờ về phát âm/transcript), giọng văn góp ý nhẹ nhàng, mang tính xây dựng",
       "gợi ý 2",
@@ -99,7 +124,7 @@ Trả về JSON THUẦN (không markdown, không giải thích thêm):
   }
 }
 
-Nếu câu trả lời quá ngắn, không liên quan, hoặc trống — vẫn trả JSON với điểm 0 và feedback giải thích.
+Luôn trả JSON đúng format trên cho MỌI trường hợp (kể cả A/B/C ở phần "XỬ LÝ CÁC TRƯỜNG HỢP ĐẶC BIỆT") — không bao giờ trả về chuỗi trống hay lời giải thích ngoài JSON.
 `;
 
 export const buildScoringUserPrompt = (

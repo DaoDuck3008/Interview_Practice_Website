@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Tags } from "lucide-react";
 import { getSessionsByQuestion } from "@/lib/api/sessions";
 import type { Session } from "@/lib/api/sessions";
+import { useAuthStore } from "@/stores/auth.store";
 import AnswerHistory from "@/components/practice/AnswerHistory";
 import PracticeSession from "@/components/practice/PracticeSession";
 
@@ -18,10 +19,15 @@ interface Props {
  */
 export default function PracticeContent({ questionId, keywords }: Props) {
   const [sessions, setSessions] = useState<Session[]>([]);
+  const hydrated = useAuthStore((s) => s.hydrated);
 
+  // Chờ AuthHydrator refresh token xong (hydrated) mới fetch — nếu fetch ngay lúc
+  // mount thì token chưa có trong store -> request bị 401 -> trả [] -> lịch sử
+  // không hiện cho tới khi trả lời. Khi hydrated bật true, token đã được set.
   useEffect(() => {
+    if (!hydrated) return;
     getSessionsByQuestion(questionId).then(setSessions);
-  }, [questionId]);
+  }, [questionId, hydrated]);
 
   return (
     <>

@@ -11,6 +11,7 @@ import { StorageService } from '../storage/storage.service';
 import { SpeechService } from '../speech/speech.service';
 import { ScoringService } from '../scoring/scoring.service';
 import { ImprovementService } from '../scoring/improvement.service';
+import type { ScoreResult } from '../scoring/prompts/scoring.prompt';
 import { CreateSessionDto } from './dto/create-session.dto';
 
 @Injectable()
@@ -88,24 +89,102 @@ export class SessionsService {
     if (!session) throw new NotFoundException('Session không tồn tại');
     if (session.score) return session.score;
 
-    const result = await this.scoring.score(session.transcript, {
-      content: session.question.content,
-      answerKeySummary: session.question.answerKeySummary,
-      answerKeywords: session.question.answerKeywords,
-    });
+    // Transcript rỗng (im lặng / Whisper không nhận được gì): chấm 0 ngay,
+    // không tốn 1 lượt gọi DeepSeek vì kết quả chắc chắn là 0 điểm.
+    let result: ScoreResult;
+    if (!session.transcript.trim()) {
+      result = {
+        technicalScore: 0,
+        completenessScore: 0,
+        clarityScore: 0,
+        overallScore: 0,
+        matchedKeywords: [],
+        missedKeywords: session.question.answerKeywords,
+        feedback: {
+          summary:
+            'Mình chưa nghe được câu trả lời nào. Bạn thử ghi âm lại và trả lời câu hỏi nhé!',
+          improvements: [],
+        },
+      };
+    } else {
+      result = await this.scoring.score(session.transcript, {
+        content: session.question.content,
+        answerKeySummary: session.question.answerKeySummary,
+        answerKeywords: session.question.answerKeywords,
+      });
+    }
 
-    return this.prisma.score.create({
-      data: {
-        sessionId,
-        technicalScore: result.technicalScore,
-        completenessScore: result.completenessScore,
-        clarityScore: result.clarityScore,
-        matchedKeywords: result.matchedKeywords ?? [],
-        missedKeywords: result.missedKeywords ?? [],
-        summary: result.feedback.summary,
-        improvements: result.feedback.improvements ?? [],
-      },
-    });
+    // Điểm 0 (trống / lạc đề / sai hoàn toàn): KHÔNG lưu vào DB. Xóa session +
+    // audio rồi trả kết quả tạm để frontend vẫn hiển thị nhận xét, nhưng không
+    // vào lịch sử luyện tập.
+    if (
+      result.technicalScore + result.completenessScore + result.clarityScore ===
+      0
+    ) {
+      await this.deleteSessionAndAudio(session.id, session.audioUrl);
+      return this.transientZeroScore(result); // trả kết quả luôn, không lưu DB
+    }
+
+    return this.createScore(sessionId, result);
+  }
+
+  /** Xóa session + file audio trên R2 (dùng khi không muốn lưu, vd điểm 0). */
+  private async deleteSessionAndAudio(sessionId: string, audioUrl: string) {
+    await this.prisma.session.delete({ where: { id: sessionId } });
+    await this.storage.delete(this.storage.keyFromUrl(audioUrl));
+  }
+
+  /** Kết quả điểm 0 trả về cho frontend hiển thị nhưng KHÔNG persist (id rỗng). */
+  private transientZeroScore(result: ScoreResult) {
+    return {
+      id: '',
+      technicalScore: result.technicalScore,
+      completenessScore: result.completenessScore,
+      clarityScore: result.clarityScore,
+      matchedKeywords: result.matchedKeywords,
+      missedKeywords: result.missedKeywords,
+      summary: result.feedback.summary,
+      improvements: result.feedback.improvements,
+    };
+  }
+
+  /**
+   * Tạo Score, chịu được race: nếu 2 request song song (double-click) cùng qua
+   * check `session.score` rồi cùng create, request thua sẽ vi phạm unique
+   * `sessionId` (P2002) — bắt lỗi đó và trả về bản ghi đã tồn tại thay vì 500.
+   */
+  private async createScore(sessionId: string, result: ScoreResult) {
+    try {
+      return await this.prisma.score.create({
+        data: {
+          sessionId,
+          technicalScore: result.technicalScore,
+          completenessScore: result.completenessScore,
+          clarityScore: result.clarityScore,
+          matchedKeywords: result.matchedKeywords ?? [],
+          missedKeywords: result.missedKeywords ?? [],
+          summary: result.feedback.summary,
+          improvements: result.feedback.improvements ?? [],
+        },
+      });
+    } catch (err) {
+      if (this.isUniqueViolation(err)) {
+        const existing = await this.prisma.score.findUnique({
+          where: { sessionId },
+        });
+        if (existing) return existing;
+      }
+      throw err;
+    }
+  }
+
+  /** True nếu là lỗi vi phạm ràng buộc unique của Prisma (P2002). */
+  private isUniqueViolation(err: unknown): boolean {
+    return (
+      typeof err === 'object' &&
+      err !== null &&
+      (err as { code?: string }).code === 'P2002'
+    );
   }
 
   /**
@@ -146,13 +225,24 @@ export class SessionsService {
       },
     );
 
-    return this.prisma.improvement.create({
-      data: {
-        sessionId,
-        improvedAnswer: result.improvedAnswer,
-        annotations: result.annotations as unknown as Prisma.InputJsonValue,
-        keyChanges: result.keyChanges ?? [],
-      },
-    });
+    try {
+      return await this.prisma.improvement.create({
+        data: {
+          sessionId,
+          improvedAnswer: result.improvedAnswer,
+          annotations: result.annotations as unknown as Prisma.InputJsonValue,
+          keyChanges: result.keyChanges ?? [],
+        },
+      });
+    } catch (err) {
+      // Race như createScore: request song song đã tạo trước -> trả bản ghi đã có.
+      if (this.isUniqueViolation(err)) {
+        const existing = await this.prisma.improvement.findUnique({
+          where: { sessionId },
+        });
+        if (existing) return existing;
+      }
+      throw err;
+    }
   }
 }
