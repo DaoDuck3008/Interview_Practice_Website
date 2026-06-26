@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 const NAV_LINKS = [
   { href: "/learning/javascript/questions", label: "Câu Hỏi" },
   { href: "/practice", label: "Luyện Tập" },
+  { href: "/pricing", label: "Bảng Giá" },
   // { href: "#tinh-nang", label: "Tính Năng" },
   // { href: "#cach-hoat-dong", label: "Cách Hoạt Động" },
 ];

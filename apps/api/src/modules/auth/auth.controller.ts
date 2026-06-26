@@ -77,15 +77,21 @@ export class AuthController {
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const token = (req as any).cookies?.[REFRESH_COOKIE] as string | undefined;
     await this.authService.logout(token);
-    res.clearCookie(REFRESH_COOKIE, { path: '/api/v1/auth' });
+    const { maxAge: _maxAge, ...clearOptions } = this.cookieOptions();
+    res.clearCookie(REFRESH_COOKIE, clearOptions);
     return { message: 'Đăng xuất thành công' };
   }
 
   private cookieOptions() {
-    const isProd = this.config.get('NODE_ENV') === 'production';
+    // frontend (daoduck.id.vn) và API (backend.daoduck.id.vn) cùng registrable
+    // domain → same-site, nên SameSite=Lax vẫn gửi cookie kèm request refresh.
+    // Chỉ cần bật Secure khi chạy qua HTTPS (tunnel). Local http giữ secure=false.
+    const isHttps = (this.config.get<string>('FRONTEND_URL') ?? '').startsWith(
+      'https://',
+    );
     return {
       httpOnly: true,
-      secure: isProd,
+      secure: isHttps,
       sameSite: 'lax' as const,
       path: '/api/v1/auth',
       maxAge: 7 * 24 * 60 * 60 * 1000,

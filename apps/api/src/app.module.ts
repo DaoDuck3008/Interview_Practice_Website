@@ -12,6 +12,7 @@ import { StorageModule } from './modules/storage/storage.module';
 import { SpeechModule } from './modules/speech/speech.module';
 import { ScoreModule } from './modules/scoring/score.module';
 import { SessionsModule } from './modules/sessions/sessions.module';
+import { PlansModule } from './modules/plans/plans.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 @Module({
@@ -31,6 +32,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
     SpeechModule,
     ScoreModule,
     SessionsModule,
+    PlansModule,
   ],
   providers: [
     {

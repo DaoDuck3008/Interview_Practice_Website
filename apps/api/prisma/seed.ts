@@ -101,6 +101,50 @@ async function main() {
     }
   }
 
+  // Upsert subscription plans (giá VND, kỳ hạn theo ngày)
+  const PLANS = [
+    {
+      slug: 'pro-1w',
+      name: 'Gói 1 tuần',
+      description: 'Dùng thử toàn bộ tính năng trong 1 tuần.',
+      priceVnd: 50_000,
+      durationDays: 7,
+      sortOrder: 1,
+    },
+    {
+      slug: 'pro-1m',
+      name: 'Gói 1 tháng',
+      description: 'Phù hợp ôn luyện trước kỳ phỏng vấn.',
+      priceVnd: 89_000,
+      durationDays: 30,
+      sortOrder: 2,
+    },
+    {
+      slug: 'pro-3m',
+      name: 'Gói 3 tháng',
+      description: 'Tiết kiệm nhất — chỉ ~85.000đ mỗi tháng.',
+      priceVnd: 255_000,
+      durationDays: 90,
+      sortOrder: 3,
+    },
+  ];
+  for (const p of PLANS) {
+    await prisma.plan.upsert({
+      where: { slug: p.slug },
+      update: {
+        name: p.name,
+        description: p.description,
+        priceVnd: p.priceVnd,
+        durationDays: p.durationDays,
+        sortOrder: p.sortOrder,
+        isUnlimited: true,
+        isActive: true,
+      },
+      create: { ...p, isUnlimited: true },
+    });
+    console.log(`  [plan] ${p.name} — ${p.priceVnd.toLocaleString('vi-VN')}đ`);
+  }
+
   console.log('\nSeed completed successfully.');
 }
 
