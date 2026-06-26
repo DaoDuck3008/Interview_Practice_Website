@@ -20,6 +20,11 @@ export const validationSchema = Joi.object({
   R2_PUBLIC_URL: Joi.string().required(),
   GROQ_API_KEY: Joi.string().required(),
   DEEPSEEK_API_KEY: Joi.string().required(),
+  // Sepay — thanh toán chuyển khoản
+  SEPAY_WEBHOOK_SECRET: Joi.string().allow('').default(''),
+  SEPAY_BANK_ACCOUNT: Joi.string().default(''),
+  SEPAY_BANK_CODE: Joi.string().default(''),
+  SEPAY_ACCOUNT_NAME: Joi.string().default(''),
 });
 
 export default () => ({
@@ -49,5 +54,11 @@ export default () => ({
   },
   deepseek: {
     apiKey: process.env.DEEPSEEK_API_KEY,
+  },
+  sepay: {
+    webhookSecret: process.env.SEPAY_WEBHOOK_SECRET ?? '',
+    bankAccount: process.env.SEPAY_BANK_ACCOUNT ?? '0353102705',
+    bankCode: process.env.SEPAY_BANK_CODE ?? 'MBBank',
+    accountName: process.env.SEPAY_ACCOUNT_NAME ?? 'DAO ANH DUC',
   },
 });

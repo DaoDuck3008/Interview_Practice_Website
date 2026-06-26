@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import configuration, { validationSchema } from './config/configuration';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
@@ -13,6 +14,8 @@ import { SpeechModule } from './modules/speech/speech.module';
 import { ScoreModule } from './modules/scoring/score.module';
 import { SessionsModule } from './modules/sessions/sessions.module';
 import { PlansModule } from './modules/plans/plans.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 @Module({
@@ -22,6 +25,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
       load: [configuration],
       validationSchema,
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     RedisModule,
     AuthModule,
@@ -33,6 +37,8 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
     ScoreModule,
     SessionsModule,
     PlansModule,
+    PaymentsModule,
+    SubscriptionsModule,
   ],
   providers: [
     {

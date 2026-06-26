@@ -8,7 +8,8 @@ import { ConfigService } from '@nestjs/config';
 const cookieParser = require('cookie-parser');
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // rawBody: true → giữ lại body thô (Buffer) để verify chữ ký HMAC webhook Sepay.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   // Cho phép onApplicationShutdown chạy (đóng kết nối Redis khi tắt app)
   app.enableShutdownHooks();
   app.use(cookieParser());
