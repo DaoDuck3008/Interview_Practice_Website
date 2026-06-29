@@ -10,6 +10,11 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma, Plan, Order } from '@prisma/client';
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { QueryOrderDto, OrderDateField } from './dto/query-order.dto';
+import { SepayClient, type SepayTransaction } from './sepay.client';
+
+// Việt Nam cố định UTC+7 — dùng để tính mốc "hôm nay/tháng này" theo giờ VN.
+const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
 
 // Đơn hết hiệu lực (QR) sau 10 phút — chỉ để UX tạo lại; tiền về trễ vẫn được honor ở webhook.
 const ORDER_TTL_MS = 10 * 60 * 1000;
@@ -25,6 +30,7 @@ export class PaymentsService {
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
+    private sepay: SepayClient,
   ) {}
 
   /** Tạo (hoặc tái dùng) đơn PENDING cho user + plan, trả về thông tin thanh toán + QR động. */
@@ -156,6 +162,265 @@ export class PaymentsService {
     if (count > 0) {
       this.logger.log(`Đã dọn ${count} đơn PENDING hết hạn.`);
     }
+  }
+
+  // ─── Admin: sổ cái giao dịch ──────────────
+
+  /** Dựng where cho danh sách/đối soát admin từ bộ lọc. */
+  private buildAdminOrderWhere(query: QueryOrderDto): Prisma.OrderWhereInput {
+    const field = query.dateField ?? OrderDateField.CREATED;
+    const range =
+      query.from || query.to
+        ? {
+            ...(query.from && { gte: new Date(query.from) }),
+            ...(query.to && {
+              lte: new Date(`${query.to.slice(0, 10)}T23:59:59.999Z`),
+            }),
+          }
+        : undefined;
+
+    return {
+      ...(query.status && { status: query.status }),
+      ...(range && { [field]: range }),
+      ...(query.search && {
+        OR: [
+          { transferCode: { contains: query.search, mode: 'insensitive' } },
+          { providerTxnId: { contains: query.search, mode: 'insensitive' } },
+          {
+            user: {
+              is: {
+                OR: [
+                  { name: { contains: query.search, mode: 'insensitive' } },
+                  { email: { contains: query.search, mode: 'insensitive' } },
+                ],
+              },
+            },
+          },
+        ],
+      }),
+    };
+  }
+
+  private static readonly ADMIN_LIST_SELECT = {
+    id: true,
+    amountVnd: true,
+    status: true,
+    provider: true,
+    transferCode: true,
+    providerTxnId: true,
+    paidAt: true,
+    createdAt: true,
+    user: { select: { id: true, name: true, email: true } },
+    plan: { select: { name: true, slug: true } },
+  } satisfies Prisma.OrderSelect;
+
+  /** Danh sách đơn cho admin (sổ cái) — lọc + phân trang, mọi trạng thái. */
+  async findAllAdmin(query: QueryOrderDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 30;
+    const where = this.buildAdminOrderWhere(query);
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.order.findMany({
+        where,
+        select: PaymentsService.ADMIN_LIST_SELECT,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 1,
+    };
+  }
+
+  /** Toàn bộ đơn khớp bộ lọc (không phân trang) để xuất CSV. Giới hạn an toàn 5000 dòng. */
+  async getOrdersForExport(query: QueryOrderDto) {
+    return this.prisma.order.findMany({
+      where: this.buildAdminOrderWhere(query),
+      select: PaymentsService.ADMIN_LIST_SELECT,
+      orderBy: { createdAt: 'desc' },
+      take: 5000,
+    });
+  }
+
+  /** Chi tiết 1 đơn cho admin (đối soát) — gồm rawPayload, providerTxnId, subscription liên quan. */
+  async getOrderAdmin(id: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        plan: { select: { name: true, slug: true, durationDays: true } },
+        subscription: {
+          select: { id: true, status: true, expiresAt: true },
+        },
+      },
+    });
+    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
+    return order;
+  }
+
+  /** Thẻ thống kê: doanh thu (tổng / tháng này / hôm nay) + đếm theo trạng thái. */
+  async getStats() {
+    const nowMs = Date.now();
+    const vnNow = new Date(nowMs + VN_OFFSET_MS);
+    // Mốc đầu ngày/tháng theo giờ VN, quy về Date (UTC) để so với paidAt đã lưu UTC.
+    const startOfDay = new Date(
+      Date.UTC(
+        vnNow.getUTCFullYear(),
+        vnNow.getUTCMonth(),
+        vnNow.getUTCDate(),
+      ) - VN_OFFSET_MS,
+    );
+    const startOfMonth = new Date(
+      Date.UTC(vnNow.getUTCFullYear(), vnNow.getUTCMonth(), 1) - VN_OFFSET_MS,
+    );
+
+    // Promise.all (không dùng $transaction) để giữ kiểu trả về chính xác của groupBy.
+    const [byStatus, totalAgg, monthAgg, todayAgg] = await Promise.all([
+      this.prisma.order.groupBy({
+        by: ['status'],
+        _count: { id: true },
+        orderBy: { status: 'asc' },
+      }),
+      this.prisma.order.aggregate({
+        where: { status: 'PAID' },
+        _sum: { amountVnd: true },
+      }),
+      this.prisma.order.aggregate({
+        where: { status: 'PAID', paidAt: { gte: startOfMonth } },
+        _sum: { amountVnd: true },
+      }),
+      this.prisma.order.aggregate({
+        where: { status: 'PAID', paidAt: { gte: startOfDay } },
+        _sum: { amountVnd: true },
+      }),
+    ]);
+
+    const counts: Record<string, number> = {};
+    for (const row of byStatus) counts[row.status] = row._count.id;
+
+    return {
+      revenueTotal: totalAgg._sum.amountVnd ?? 0,
+      revenueMonth: monthAgg._sum.amountVnd ?? 0,
+      revenueToday: todayAgg._sum.amountVnd ?? 0,
+      counts,
+    };
+  }
+
+  // ─── Admin: đối soát ngân hàng (Sepay) ──────────────
+
+  /** FE dùng để biết tab đối soát có khả dụng không. */
+  getReconcileConfig() {
+    return { configured: this.sepay.isConfigured() };
+  }
+
+  /**
+   * Đối soát giao dịch ngân hàng (Sepay) với bảng Order trong khoảng ngày.
+   * Read-only: KHÔNG ghi gì vào DB. Phân loại mỗi giao dịch tiền vào thành:
+   *  - matched : khớp đơn PAID, đúng số tiền.
+   *  - mismatch: khớp đơn nhưng lệch tiền hoặc đơn chưa PAID (webhook lỡ / thiếu tiền).
+   *  - orphan  : không khớp đơn nào (tiền về sai nội dung) — bảng Order không thấy được.
+   */
+  async reconcile(from: string, to: string) {
+    const txns = await this.sepay.listIncoming({
+      dateFrom: from.slice(0, 10),
+      dateTo: to.slice(0, 10),
+    });
+
+    // Trích mã đơn (CODE_PREFIX + 10 hex) từ code / nội dung / mã tham chiếu.
+    const codeRe = new RegExp(`${CODE_PREFIX}[0-9A-F]{10}`);
+    const extractCode = (t: SepayTransaction): string | null => {
+      const hay =
+        `${t.code ?? ''} ${t.transaction_content ?? ''} ${t.reference_number ?? ''}`
+          .toUpperCase()
+          .replace(/\s+/g, '');
+      return hay.match(codeRe)?.[0] ?? null;
+    };
+
+    const withCode = txns.map((t) => ({ t, code: extractCode(t) }));
+    const codes = [
+      ...new Set(
+        withCode.map((x) => x.code).filter((c): c is string => Boolean(c)),
+      ),
+    ];
+
+    const orders = codes.length
+      ? await this.prisma.order.findMany({
+          where: { transferCode: { in: codes } },
+          select: {
+            id: true,
+            transferCode: true,
+            amountVnd: true,
+            status: true,
+            user: { select: { name: true, email: true } },
+            plan: { select: { name: true } },
+          },
+        })
+      : [];
+    const orderByCode = new Map(orders.map((o) => [o.transferCode, o]));
+
+    type Base = {
+      txnId: string;
+      date: string;
+      amountIn: number;
+      content: string | null;
+      referenceNumber: string | null;
+      code: string | null;
+      bankBrand: string | null;
+    };
+    const matched: (Base & { order: (typeof orders)[number] })[] = [];
+    const mismatch: (Base & {
+      order: (typeof orders)[number];
+      reason: string;
+    })[] = [];
+    const orphan: Base[] = [];
+
+    for (const { t, code } of withCode) {
+      const base: Base = {
+        txnId: t.id,
+        date: t.transaction_date,
+        amountIn: t.amount_in,
+        content: t.transaction_content,
+        referenceNumber: t.reference_number,
+        code,
+        bankBrand: t.bank_brand_name,
+      };
+      const order = code ? orderByCode.get(code) : undefined;
+      if (!order) {
+        orphan.push(base);
+      } else if (order.status === 'PAID' && t.amount_in === order.amountVnd) {
+        matched.push({ ...base, order });
+      } else {
+        const reason =
+          order.status !== 'PAID'
+            ? `Đơn đang ở trạng thái ${order.status} (chưa PAID)`
+            : `Lệch tiền: nhận ${t.amount_in} ≠ cần ${order.amountVnd}`;
+        mismatch.push({ ...base, order, reason });
+      }
+    }
+
+    const totalAmountIn = txns.reduce((s, t) => s + t.amount_in, 0);
+    return {
+      from,
+      to,
+      summary: {
+        total: txns.length,
+        matched: matched.length,
+        mismatch: mismatch.length,
+        orphan: orphan.length,
+        totalAmountIn,
+      },
+      matched,
+      mismatch,
+      orphan,
+    };
   }
 
   // ─── Helpers ───────────────────────────────────────

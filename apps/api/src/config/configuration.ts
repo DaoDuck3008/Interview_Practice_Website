@@ -25,6 +25,7 @@ export const validationSchema = Joi.object({
   SEPAY_BANK_ACCOUNT: Joi.string().default(''),
   SEPAY_BANK_CODE: Joi.string().default(''),
   SEPAY_ACCOUNT_NAME: Joi.string().default(''),
+  SEPAY_API_KEY: Joi.string().allow('').default(''), // Userapi token để đối soát
 });
 
 export default () => ({
@@ -60,5 +61,6 @@ export default () => ({
     bankAccount: process.env.SEPAY_BANK_ACCOUNT ?? '0353102705',
     bankCode: process.env.SEPAY_BANK_CODE ?? 'MBBank',
     accountName: process.env.SEPAY_ACCOUNT_NAME ?? 'DAO ANH DUC',
+    apiToken: process.env.SEPAY_API_KEY ?? '',
   },
 });

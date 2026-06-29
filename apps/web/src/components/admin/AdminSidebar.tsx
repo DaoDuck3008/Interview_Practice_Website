@@ -8,6 +8,7 @@ import {
   ListChecks,
   CreditCard,
   Repeat,
+  Wallet,
 } from "lucide-react";
 
 const NAV = [
@@ -21,6 +22,7 @@ const NAV = [
     icon: Repeat,
     exact: false,
   },
+  { href: "/admin/payments", label: "Giao dịch", icon: Wallet, exact: false },
 ];
 
 export default function AdminSidebar() {
