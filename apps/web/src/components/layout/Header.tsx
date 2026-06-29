@@ -2,7 +2,14 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Menu, X, LogOut, ChevronDown, LayoutDashboard } from "lucide-react";
+import {
+  Menu,
+  X,
+  LogOut,
+  ChevronDown,
+  LayoutDashboard,
+  CreditCard,
+} from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
 import { logoutApi } from "@/lib/api/auth";
 import { useRouter } from "next/navigation";
@@ -126,6 +133,14 @@ function UserDropdown({
                 Trang quản trị
               </Link>
             )}
+            <Link
+              href="/billing"
+              onClick={() => setOpen(false)}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#9898aa] hover:text-[#f4f4f6] hover:bg-[#13131c] transition-colors duration-150 cursor-pointer border-b border-[#1c1c28]"
+            >
+              <CreditCard size={14} />
+              Gói của tôi
+            </Link>
             <button
               onClick={handleLogout}
               className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#9898aa] hover:text-[#f4f4f6] hover:bg-[#13131c] transition-colors duration-150 cursor-pointer"
@@ -292,6 +307,14 @@ export default function Header() {
                         Trang quản trị
                       </Link>
                     )}
+                    <Link
+                      href="/billing"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center justify-center gap-2 text-sm text-[#a1a1aa] hover:text-[#fafafa] transition-colors duration-200 cursor-pointer py-2 border border-[#1c1c28] rounded-lg"
+                    >
+                      <CreditCard size={14} />
+                      Gói của tôi
+                    </Link>
                     <button
                       onClick={mobileLogout}
                       className="flex items-center justify-center gap-2 text-sm text-[#606072] hover:text-[#9898aa] transition-colors duration-200 cursor-pointer py-2 border border-[#1c1c28] rounded-lg"

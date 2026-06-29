@@ -125,7 +125,23 @@ export class PaymentsService {
     return { success: true };
   }
 
-  // ─── Cron jobs ─────────────────────────────────────
+  /** Lịch sử các đơn ĐÃ THANH TOÁN của user (mới nhất trước). */
+  async getPaidOrdersForUser(userId: string) {
+    const orders = await this.prisma.order.findMany({
+      where: { userId, status: 'PAID' },
+      orderBy: { paidAt: 'desc' },
+      include: {
+        plan: { select: { name: true, slug: true, durationDays: true } },
+      },
+    });
+    return orders.map((o) => ({
+      id: o.id,
+      amountVnd: o.amountVnd,
+      paidAt: o.paidAt,
+      periodEnd: o.periodEnd,
+      plan: o.plan,
+    }));
+  }
 
   /**
    * Dọn các đơn PENDING đã quá hạn từ lâu (chạy mỗi giờ).
@@ -209,6 +225,7 @@ export class PaymentsService {
           providerTxnId: txnId || undefined,
           rawPayload: payload as Prisma.InputJsonValue,
           subscriptionId,
+          periodEnd: expiresAt,
         },
       });
     });

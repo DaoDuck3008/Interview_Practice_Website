@@ -36,3 +36,21 @@ export async function getOrder(id: string): Promise<CheckoutOrder> {
   );
   return res.data.data;
 }
+
+export interface PaidOrder {
+  id: string;
+  amountVnd: number;
+  paidAt: string | null;
+  periodEnd: string | null;
+  plan: { name: string; slug: string; durationDays: number };
+}
+
+/** Lịch sử đơn đã thanh toán. Lỗi → [] để UI không vỡ. */
+export async function getPaidOrders(): Promise<PaidOrder[]> {
+  try {
+    const res = await api.get<ApiResponse<PaidOrder[]>>("/payments/orders");
+    return res.data.data;
+  } catch {
+    return [];
+  }
+}

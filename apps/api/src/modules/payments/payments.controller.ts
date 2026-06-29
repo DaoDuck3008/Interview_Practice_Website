@@ -30,6 +30,12 @@ export class PaymentsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('orders')
+  getMyOrders(@CurrentUser() user: { id: string; email: string; role: Role }) {
+    return this.paymentsService.getPaidOrdersForUser(user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('orders/:id')
   getOrder(
     @CurrentUser() user: { id: string; email: string; role: Role },

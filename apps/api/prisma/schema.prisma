@@ -191,6 +191,7 @@ model Order {
   rawPayload    Json? //           payload webhook để đối soát/tra cứu
 
   expiresAt DateTime //            hạn hiệu lực QR/đơn (vd now + 15–30 phút)
+  periodEnd DateTime? //           ngày hết hạn subscription mà đơn này tạo ra (snapshot lúc kích hoạt)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
