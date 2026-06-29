@@ -8,6 +8,7 @@ import {
   XCircle,
   type LucideIcon,
 } from "lucide-react";
+import ModalPortal from "./ModalPortal";
 
 export type StatusType = "success" | "info" | "alert" | "error";
 
@@ -72,11 +73,12 @@ export default function StatusModal({
   const closeLabel = cancelText ?? (isConfirm ? "Hủy" : "Đóng");
 
   return (
-    <div
-      className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 transition-opacity duration-200"
-      style={{ opacity: show ? 1 : 0 }}
-      onMouseDown={onClose}
-    >
+    <ModalPortal>
+      <div
+        className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 transition-opacity duration-200"
+        style={{ opacity: show ? 1 : 0 }}
+        onMouseDown={onClose}
+      >
       <div
         className="w-full max-w-sm rounded-2xl bg-[#0d0d14] border border-[#1c1c28] p-6 transition-all duration-200"
         style={{
@@ -123,6 +125,7 @@ export default function StatusModal({
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </ModalPortal>
   );
 }

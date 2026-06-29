@@ -2,12 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FolderTree, ListChecks } from "lucide-react";
+import {
+  LayoutDashboard,
+  FolderTree,
+  ListChecks,
+  CreditCard,
+} from "lucide-react";
 
 const NAV = [
   { href: "/admin", label: "Tổng quan", icon: LayoutDashboard, exact: true },
   { href: "/admin/topics", label: "Chủ đề", icon: FolderTree, exact: false },
   { href: "/admin/questions", label: "Câu hỏi", icon: ListChecks, exact: false },
+  { href: "/admin/plans", label: "Gói", icon: CreditCard, exact: false },
 ];
 
 export default function AdminSidebar() {

@@ -45,3 +45,61 @@ export async function getPlans(): Promise<Plan[]> {
     return FALLBACK_PLANS;
   }
 }
+
+// ─── Admin ───────────────────────────────────────────
+
+/** Gói đầy đủ (admin) — gồm quota, trạng thái và số lượng đã dùng. */
+export interface AdminPlan {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  priceVnd: number;
+  durationDays: number;
+  isUnlimited: boolean;
+  dailyScoreLimit: number | null;
+  monthlyScoreLimit: number | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  _count: { subscriptions: number; orders: number };
+}
+
+/** Payload tạo/sửa gói. Khi sửa truyền Partial. */
+export interface PlanInput {
+  slug: string;
+  name: string;
+  description?: string | null;
+  priceVnd: number;
+  durationDays: number;
+  isUnlimited?: boolean;
+  dailyScoreLimit?: number | null;
+  monthlyScoreLimit?: number | null;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+/** Tất cả gói (kể cả đã tắt) — yêu cầu quyền ADMIN. */
+export async function getPlansAdmin(): Promise<AdminPlan[]> {
+  const res = await api.get<ApiResponse<AdminPlan[]>>("/plans/all");
+  return res.data.data;
+}
+
+export async function createPlan(input: PlanInput): Promise<AdminPlan> {
+  const res = await api.post<ApiResponse<AdminPlan>>("/plans", input);
+  return res.data.data;
+}
+
+export async function updatePlan(
+  id: string,
+  input: Partial<PlanInput>,
+): Promise<AdminPlan> {
+  const res = await api.patch<ApiResponse<AdminPlan>>(`/plans/${id}`, input);
+  return res.data.data;
+}
+
+export async function deletePlan(id: string): Promise<{ id: string }> {
+  const res = await api.delete<ApiResponse<{ id: string }>>(`/plans/${id}`);
+  return res.data.data;
+}
