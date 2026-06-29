@@ -89,6 +89,8 @@ export interface AdminOrderDetail {
   periodEnd: string | null;
   subscriptionId: string | null;
   rawPayload: unknown;
+  note: string | null;
+  grantedBy: { name: string; email: string } | null;
   user: { id: string; name: string; email: string };
   plan: { name: string; slug: string; durationDays: number };
   subscription: { id: string; status: string; expiresAt: string } | null;

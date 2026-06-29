@@ -260,6 +260,7 @@ export class PaymentsService {
         subscription: {
           select: { id: true, status: true, expiresAt: true },
         },
+        grantedBy: { select: { name: true, email: true } },
       },
     });
     if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');

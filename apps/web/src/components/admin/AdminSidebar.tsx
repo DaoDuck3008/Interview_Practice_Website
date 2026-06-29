@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  Users,
   FolderTree,
   ListChecks,
   CreditCard,
@@ -13,6 +14,7 @@ import {
 
 const NAV = [
   { href: "/admin", label: "Tổng quan", icon: LayoutDashboard, exact: true },
+  { href: "/admin/users", label: "Người dùng", icon: Users, exact: false },
   { href: "/admin/topics", label: "Chủ đề", icon: FolderTree, exact: false },
   { href: "/admin/questions", label: "Câu hỏi", icon: ListChecks, exact: false },
   { href: "/admin/plans", label: "Gói", icon: CreditCard, exact: false },

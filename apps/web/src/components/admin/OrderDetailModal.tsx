@@ -107,6 +107,16 @@ export default function OrderDetailModal({ orderId, onClose }: Props) {
                 "—"
               )}
             </Row>
+            {order.grantedBy && (
+              <Row label="Cấp bởi">
+                {order.grantedBy.name}
+                <span className="text-[#606072]">
+                  {" "}
+                  · {order.grantedBy.email}
+                </span>
+              </Row>
+            )}
+            {order.note && <Row label="Lý do">{order.note}</Row>}
           </div>
 
           <div>

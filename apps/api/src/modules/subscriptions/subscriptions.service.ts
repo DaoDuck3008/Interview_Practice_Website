@@ -1,8 +1,12 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { QuerySubscriptionDto } from './dto/query-subscription.dto';
+import { GrantSubscriptionDto } from './dto/grant-subscription.dto';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class SubscriptionsService {
@@ -152,30 +156,75 @@ export class SubscriptionsService {
   }
 
   /**
-   * Gia hạn thủ công (admin) — không qua thanh toán.
-   * Cộng đúng durationDays của gói vào mốc lớn hơn giữa now và expiresAt
-   * (đang còn hạn → cộng dồn; đã hết hạn → tính từ bây giờ), đưa status về ACTIVE.
+   * Cấp gói thủ công (admin / hỗ trợ KH) — không qua thanh toán.
+   * Tạo mới hoặc gia hạn (cộng dồn nếu còn hạn) subscription, đồng thời ghi 1 Order
+   * provider='manual' (amount 0) kèm lý do + admin thực hiện để truy vết.
    */
-  async renewManual(id: string) {
-    const sub = await this.prisma.subscription.findUnique({
-      where: { id },
-      include: { plan: { select: { durationDays: true } } },
+  async grantManual(dto: GrantSubscriptionDto, adminId: string) {
+    const plan = await this.prisma.plan.findUnique({
+      where: { id: dto.planId },
     });
-    if (!sub) throw new NotFoundException('Không tìm thấy gói đăng ký');
+    if (!plan) throw new NotFoundException('Không tìm thấy gói');
 
+    const days = dto.days ?? plan.durationDays;
     const now = new Date();
-    const base = sub.expiresAt > now ? sub.expiresAt : now;
-    const expiresAt = new Date(
-      base.getTime() + sub.plan.durationDays * 24 * 60 * 60 * 1000,
-    );
 
-    return this.prisma.subscription.update({
-      where: { id },
-      data: { status: 'ACTIVE', expiresAt, canceledAt: null },
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-        plan: { select: { name: true, slug: true, durationDays: true } },
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({ where: { id: dto.userId } });
+      if (!user) throw new NotFoundException('Không tìm thấy người dùng');
+
+      const sub = await tx.subscription.findUnique({
+        where: { userId: dto.userId },
+      });
+      // Còn hạn → cộng dồn; đã hết hạn (hoặc chưa có) → tính từ hôm nay.
+      const base = sub && sub.expiresAt > now ? sub.expiresAt : now;
+      const expiresAt = new Date(base.getTime() + days * DAY_MS);
+
+      let subscriptionId: string;
+      if (sub) {
+        await tx.subscription.update({
+          where: { id: sub.id },
+          data: {
+            planId: plan.id,
+            status: 'ACTIVE',
+            expiresAt,
+            canceledAt: null,
+          },
+        });
+        subscriptionId = sub.id;
+      } else {
+        const created = await tx.subscription.create({
+          data: { userId: dto.userId, planId: plan.id, expiresAt },
+        });
+        subscriptionId = created.id;
+      }
+
+      await tx.order.create({
+        data: {
+          userId: dto.userId,
+          planId: plan.id,
+          subscriptionId,
+          amountVnd: 0,
+          status: 'PAID',
+          provider: 'manual',
+          transferCode:
+            'MANUAL-' +
+            randomUUID().replace(/-/g, '').slice(0, 10).toUpperCase(),
+          paidAt: now,
+          periodEnd: expiresAt,
+          expiresAt: now, // không áp dụng cho cấp tay
+          note: dto.note,
+          grantedById: adminId,
+        },
+      });
+
+      return tx.subscription.findUniqueOrThrow({
+        where: { id: subscriptionId },
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+          plan: { select: { name: true, slug: true, durationDays: true } },
+        },
+      });
     });
   }
 }

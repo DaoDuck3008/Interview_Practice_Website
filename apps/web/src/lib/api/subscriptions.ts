@@ -109,12 +109,20 @@ export async function activateSubscription(
   return res.data.data;
 }
 
-/** Gia hạn thủ công (admin) — cộng thêm durationDays của gói. */
-export async function renewSubscription(
-  id: string,
+/** Cấp gói thủ công (admin / hỗ trợ KH). days bỏ trống → dùng kỳ hạn gói. */
+export interface GrantInput {
+  userId: string;
+  planId: string;
+  days?: number;
+  note: string;
+}
+
+export async function grantSubscription(
+  input: GrantInput,
 ): Promise<AdminSubscription> {
-  const res = await api.patch<ApiResponse<AdminSubscription>>(
-    `/subscriptions/${id}/renew`,
+  const res = await api.post<ApiResponse<AdminSubscription>>(
+    "/subscriptions/grant",
+    input,
   );
   return res.data.data;
 }

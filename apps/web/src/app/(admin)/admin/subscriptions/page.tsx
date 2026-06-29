@@ -2,21 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Loader2,
-  Search,
-  RefreshCw,
-  Ban,
-  RotateCcw,
-  Receipt,
-  X,
-} from "lucide-react";
+import { Loader2, Search, Ban, RotateCcw, Receipt, X } from "lucide-react";
 import { toast } from "react-toastify";
 import {
   getSubscriptionsAdmin,
   cancelSubscription,
   activateSubscription,
-  renewSubscription,
   type AdminSubscription,
   type SubscriptionStatus,
 } from "@/lib/api/subscriptions";
@@ -135,26 +126,6 @@ export default function AdminSubscriptionsPage() {
     setSearch("");
     setDebouncedSearch("");
     setPage(1);
-  }
-
-  async function handleRenew(s: AdminSubscription) {
-    const ok = await confirm({
-      type: "info",
-      title: "Gia hạn thủ công?",
-      message: `Cộng thêm ${s.plan.durationDays} ngày cho "${s.user.name}" (gói ${s.plan.name}). Gói sẽ chuyển sang trạng thái Đang dùng.`,
-      confirmText: "Gia hạn",
-    });
-    if (!ok) return;
-    setBusyId(s.id);
-    try {
-      await renewSubscription(s.id);
-      toast.success("Đã gia hạn gói đăng ký.");
-      await load();
-    } catch {
-      toast.error("Không thể gia hạn gói đăng ký.");
-    } finally {
-      setBusyId(null);
-    }
   }
 
   async function handleCancel(s: AdminSubscription) {
@@ -359,14 +330,6 @@ export default function AdminSubscriptionsPage() {
                         title="Lịch sử giao dịch"
                       >
                         <Receipt size={15} />
-                      </button>
-                      <button
-                        onClick={() => handleRenew(s)}
-                        className="p-2 rounded-md text-[#606072] hover:text-[#22c55e] hover:bg-[#1c1c28] transition-colors cursor-pointer"
-                        aria-label="Gia hạn thủ công"
-                        title="Gia hạn thủ công"
-                      >
-                        <RefreshCw size={15} />
                       </button>
                       {s.status === "ACTIVE" && (
                         <button

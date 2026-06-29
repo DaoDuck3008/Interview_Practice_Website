@@ -45,9 +45,10 @@ model User {
   avatarUrl    String? //         Ảnh đại diện (lấy từ Google "picture")
   createdAt    DateTime @default(now())
 
-  sessions     Session[]
-  subscription Subscription? // 1–1: mỗi user tối đa 1 subscription
-  orders       Order[]
+  sessions      Session[]
+  subscription  Subscription? // 1–1: mỗi user tối đa 1 subscription
+  orders        Order[]
+  grantedOrders Order[]       @relation("OrderGrantedBy") // các đơn admin này cấp thủ công
 }
 
 model Topic {
@@ -183,7 +184,12 @@ model Order {
 
   amountVnd Int //                            số tiền kỳ vọng (snapshot từ Plan tại thời điểm tạo)
   status    OrderStatus @default(PENDING)
-  provider  String      @default("sepay")
+  provider  String      @default("sepay") //  "sepay" | "manual" (cấp tay)
+
+  // ── Cấp gói thủ công (admin / hỗ trợ KH) ──
+  note        String? //          lý do cấp thủ công
+  grantedById String? //          admin thực hiện cấp tay (null nếu đơn mua thường)
+  grantedBy   User?   @relation("OrderGrantedBy", fields: [grantedById], references: [id])
 
   transferCode  String  @unique // mã nhúng trong nội dung VietQR để khớp webhook (alphanumeric, ngắn)
   providerTxnId String? @unique // id giao dịch Sepay — idempotency khi webhook lặp

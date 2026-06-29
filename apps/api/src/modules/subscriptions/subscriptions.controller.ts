@@ -1,13 +1,16 @@
 import {
+  Body,
   Controller,
   Get,
   Param,
   Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
 import { SubscriptionsService } from './subscriptions.service';
 import { QuerySubscriptionDto } from './dto/query-subscription.dto';
+import { GrantSubscriptionDto } from './dto/grant-subscription.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -54,8 +57,11 @@ export class SubscriptionsController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  @Patch(':id/renew')
-  renew(@Param('id') id: string) {
-    return this.subscriptionsService.renewManual(id);
+  @Post('grant')
+  grant(
+    @CurrentUser() user: { id: string; email: string; role: Role },
+    @Body() dto: GrantSubscriptionDto,
+  ) {
+    return this.subscriptionsService.grantManual(dto, user.id);
   }
 }
