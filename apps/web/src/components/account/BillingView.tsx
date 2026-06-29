@@ -16,6 +16,7 @@ import {
   type MySubscription,
 } from "@/lib/api/subscriptions";
 import { getPaidOrders, type PaidOrder } from "@/lib/api/payments";
+import { formatDay } from "@/lib/utils/format";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -23,18 +24,15 @@ const cardClass =
   "rounded-2xl p-6 md:p-8 backdrop-blur-xl border border-white/10";
 const cardBg = { background: "rgba(255,255,255,0.05)" };
 
-function formatDay(iso: string | null) {
-  return iso ? new Date(iso).toLocaleDateString("vi-VN") : "—";
-}
-
 // Ngày hết hạn của đơn: ưu tiên snapshot periodEnd; đơn cũ chưa có thì suy ra từ ngày mua + kỳ hạn.
 function orderEndDay(o: PaidOrder) {
   if (o.periodEnd) return formatDay(o.periodEnd);
-  if (o.paidAt) {
-    return new Date(
-      new Date(o.paidAt).getTime() + o.plan.durationDays * DAY_MS,
-    ).toLocaleDateString("vi-VN");
-  }
+  if (o.paidAt)
+    return formatDay(
+      new Date(
+        new Date(o.paidAt).getTime() + o.plan.durationDays * DAY_MS,
+      ).toISOString(),
+    );
   return "—";
 }
 

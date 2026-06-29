@@ -162,11 +162,23 @@ Shared pure functions and constants go in `src/lib/utils/`. Current files:
 
 | File | Exports |
 |---|---|
-| `format.ts` | `formatDate`, `formatDuration`, `formatTime` |
+| `format.ts` | `formatDate`, `formatDay`, `formatDateTime`, `formatDuration`, `formatTime` |
 | `levels.ts` | `LEVEL_STYLE`, `LEVEL_DOT`, `LEVELS` constant array |
 | `topics.tsx` | `TOPIC_NAME_MAP`, `formatTopicName`, `buildTopicOptions` |
 
 Add a new file here whenever a pure helper is used in more than one component.
+
+### Date formatting
+
+Always use helpers from `src/lib/utils/format.ts` when displaying dates — never call `.toLocaleDateString()` or `.toLocaleString()` inline. Both helpers apply `timeZone: "Asia/Ho_Chi_Minh"` automatically so dates render correctly for Vietnamese users regardless of the server timezone.
+
+```ts
+import { formatDate, formatDay } from "@/lib/utils/format";
+
+formatDate(iso)       // "28/06/2026 14:30" — datetime, non-nullable
+formatDay(iso)        // "28/06/2026" — date only, returns "—" for null/undefined
+formatDateTime(iso)   // "28/06/2026 14:30:25" — datetime with seconds, returns "—" for null/undefined
+```
 
 ---
 
