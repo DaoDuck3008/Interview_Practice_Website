@@ -1,6 +1,16 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { SubscriptionsService } from './subscriptions.service';
+import { QuerySubscriptionDto } from './dto/query-subscription.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Role } from '@prisma/client';
 
@@ -12,5 +22,40 @@ export class SubscriptionsController {
   @Get('me')
   getMine(@CurrentUser() user: { id: string; email: string; role: Role }) {
     return this.subscriptionsService.getMine(user.id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Get('all')
+  findAllAdmin(@Query() query: QuerySubscriptionDto) {
+    return this.subscriptionsService.findAllAdmin(query);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Get(':id/orders')
+  getOrders(@Param('id') id: string) {
+    return this.subscriptionsService.getOrders(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Patch(':id/cancel')
+  cancel(@Param('id') id: string) {
+    return this.subscriptionsService.cancel(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Patch(':id/activate')
+  activate(@Param('id') id: string) {
+    return this.subscriptionsService.activate(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Patch(':id/renew')
+  renew(@Param('id') id: string) {
+    return this.subscriptionsService.renewManual(id);
   }
 }

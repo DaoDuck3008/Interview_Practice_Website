@@ -7,6 +7,7 @@ import {
   FolderTree,
   ListChecks,
   CreditCard,
+  Repeat,
 } from "lucide-react";
 
 const NAV = [
@@ -14,6 +15,12 @@ const NAV = [
   { href: "/admin/topics", label: "Chủ đề", icon: FolderTree, exact: false },
   { href: "/admin/questions", label: "Câu hỏi", icon: ListChecks, exact: false },
   { href: "/admin/plans", label: "Gói", icon: CreditCard, exact: false },
+  {
+    href: "/admin/subscriptions",
+    label: "Gói đăng ký",
+    icon: Repeat,
+    exact: false,
+  },
 ];
 
 export default function AdminSidebar() {
