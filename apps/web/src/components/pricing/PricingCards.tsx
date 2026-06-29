@@ -10,6 +10,7 @@ import { createCheckout } from "@/lib/api/payments";
 import { getMySubscription, type MySubscription } from "@/lib/api/subscriptions";
 import { useAuthStore } from "@/stores/auth.store";
 import { toastApiError } from "@/lib/utils/apiError";
+import { formatDay, formatNumber } from "@/lib/utils/format";
 
 const FEATURES = [
   "Truy cập toàn bộ ngân hàng câu hỏi",
@@ -76,9 +77,7 @@ export default function PricingCards() {
         Math.ceil((new Date(sub!.expiresAt).getTime() - Date.now()) / DAY_MS),
       )
     : 0;
-  const expiryStr = hasActiveSub
-    ? new Date(sub!.expiresAt).toLocaleDateString("vi-VN")
-    : "";
+  const expiryStr = hasActiveSub ? formatDay(sub!.expiresAt) : "";
 
   function buttonLabel(plan: Plan, isCurrent: boolean) {
     if (!user || !hasActiveSub) return "Mua ngay";
@@ -167,7 +166,7 @@ export default function PricingCards() {
 
                 <div className="mt-5 flex items-baseline gap-1.5">
                   <span className="text-4xl font-extrabold text-[var(--color-text-primary)]">
-                    {plan.priceVnd.toLocaleString("vi-VN")}
+                    {formatNumber(plan.priceVnd)}
                     <span className="text-2xl">đ</span>
                   </span>
                   <span className="text-sm text-[var(--color-text-muted)]">

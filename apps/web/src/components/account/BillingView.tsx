@@ -16,7 +16,7 @@ import {
   type MySubscription,
 } from "@/lib/api/subscriptions";
 import { getPaidOrders, type PaidOrder } from "@/lib/api/payments";
-import { formatDay } from "@/lib/utils/format";
+import { formatDay, formatVnd } from "@/lib/utils/format";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -207,7 +207,7 @@ function HistoryCard({ orders }: { orders: PaidOrder[] }) {
               </span>
 
               <span className="ml-auto font-semibold text-[var(--color-text-primary)] whitespace-nowrap">
-                {o.amountVnd.toLocaleString("vi-VN")}đ
+                {formatVnd(o.amountVnd)}
               </span>
             </li>
           ))}

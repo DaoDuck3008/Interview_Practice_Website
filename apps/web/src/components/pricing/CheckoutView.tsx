@@ -12,6 +12,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { getOrder, type CheckoutOrder } from "@/lib/api/payments";
+import { formatVnd } from "@/lib/utils/format";
 
 const panel =
   "rounded-2xl border border-white/10 backdrop-blur-xl p-6 md:p-8";
@@ -184,7 +185,7 @@ export default function CheckoutView({ orderId }: { orderId: string }) {
   const expired = remainingMs <= 0;
   const mm = Math.max(0, Math.floor(remainingMs / 60000));
   const ss = Math.max(0, Math.floor((remainingMs % 60000) / 1000));
-  const amountStr = order.amountVnd.toLocaleString("vi-VN");
+  const amountStr = formatVnd(order.amountVnd);
 
   return (
     <div>
@@ -242,7 +243,7 @@ export default function CheckoutView({ orderId }: { orderId: string }) {
             <CopyRow label="Chủ tài khoản" value={order.accountName} />
             <CopyRow
               label="Số tiền"
-              value={`${amountStr}đ`}
+              value={amountStr}
               copyText={String(order.amountVnd)}
             />
             <CopyRow label="Nội dung" value={order.transferCode} />

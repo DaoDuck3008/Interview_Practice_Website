@@ -32,6 +32,16 @@ export function formatDateTime(iso: string | null | undefined): string {
   });
 }
 
+/** Nhóm chữ số theo định dạng VN, không kèm ký hiệu (vd "50.000"). */
+export function formatNumber(value: number): string {
+  return value.toLocaleString("vi-VN");
+}
+
+/** Định dạng số tiền VND kèm ký hiệu "đ" (vd "50.000đ"). */
+export function formatVnd(amount: number): string {
+  return `${formatNumber(amount)}đ`;
+}
+
 export function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;

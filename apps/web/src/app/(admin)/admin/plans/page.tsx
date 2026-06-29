@@ -20,6 +20,7 @@ import {
 } from "@/lib/api/plans";
 import Modal from "@/components/admin/Modal";
 import { useStatusModal } from "@/components/ui/useStatusModal";
+import { formatVnd } from "@/lib/utils/format";
 
 const inputStyle = { background: "#0d0d14", border: "1px solid #1c1c28" };
 const inputClass =
@@ -34,10 +35,6 @@ function onFocus(
 function onBlur(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) {
   e.currentTarget.style.borderColor = "#1c1c28";
   e.currentTarget.style.boxShadow = "none";
-}
-
-function formatVnd(v: number) {
-  return v.toLocaleString("vi-VN") + "đ";
 }
 
 function quotaLabel(p: AdminPlan) {
