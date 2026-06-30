@@ -49,6 +49,7 @@ model User {
   subscription  Subscription? // 1–1: mỗi user tối đa 1 subscription
   orders        Order[]
   grantedOrders Order[]       @relation("OrderGrantedBy") // các đơn admin này cấp thủ công
+  usageLogs     UsageLog[]
 }
 
 model Topic {
@@ -203,4 +204,16 @@ model Order {
 
   @@index([userId])
   @@index([status])
+}
+
+// 1 dòng = 1 lượt luyện tập, ghi khi tạo session (ghi âm) thành công.
+model UsageLog {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  sessionId String? //  tham chiếu lỏng (không FK — session có thể bị xóa ở nhánh điểm 0)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt]) // COUNT lượt dùng theo kỳ (ngày/tháng)
 }

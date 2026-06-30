@@ -4,9 +4,10 @@ import { SessionsController } from './sessions.controller';
 import { StorageModule } from '../storage/storage.module';
 import { SpeechModule } from '../speech/speech.module';
 import { ScoreModule } from '../scoring/score.module';
+import { QuotaModule } from '../quota/quota.module';
 
 @Module({
-  imports: [StorageModule, SpeechModule, ScoreModule],
+  imports: [StorageModule, SpeechModule, ScoreModule, QuotaModule],
   providers: [SessionsService],
   controllers: [SessionsController],
 })

@@ -9,6 +9,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SpeechService } from './speech.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { QuotaGuard } from '../quota/quota.guard';
 import { fileUploadOptions } from '../../common/upload/file-upload.options';
 
 const MAX_SIZE = 25 * 1024 * 1024; // 25 MB — Groq audio API limit
@@ -17,7 +18,7 @@ const MAX_SIZE = 25 * 1024 * 1024; // 25 MB — Groq audio API limit
 export class SpeechController {
   constructor(private readonly speechService: SpeechService) {}
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, QuotaGuard)
   @Post('transcribe')
   @UseInterceptors(
     FileInterceptor(

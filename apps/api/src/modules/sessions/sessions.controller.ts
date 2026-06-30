@@ -14,6 +14,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { SessionsService } from './sessions.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { QuotaGuard } from '../quota/quota.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { fileUploadOptions } from '../../common/upload/file-upload.options';
 
@@ -38,6 +39,7 @@ export class SessionsController {
   }
 
   @Post()
+  @UseGuards(QuotaGuard)
   @UseInterceptors(
     FileInterceptor(
       'audio',

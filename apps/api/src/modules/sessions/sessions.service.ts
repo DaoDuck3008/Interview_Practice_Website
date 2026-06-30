@@ -11,6 +11,7 @@ import { StorageService } from '../storage/storage.service';
 import { SpeechService } from '../speech/speech.service';
 import { ScoringService } from '../scoring/scoring.service';
 import { ImprovementService } from '../scoring/improvement.service';
+import { QuotaService } from '../quota/quota.service';
 import type { ScoreResult } from '../scoring/prompts/scoring.prompt';
 import { CreateSessionDto } from './dto/create-session.dto';
 
@@ -24,6 +25,7 @@ export class SessionsService {
     private speech: SpeechService,
     private scoring: ScoringService,
     private improvement: ImprovementService,
+    private quota: QuotaService,
   ) {}
 
   /** Liệt kê các lần luyện tập của user cho 1 câu hỏi. */
@@ -68,6 +70,9 @@ export class SessionsService {
         duration: dto.duration,
       },
     });
+
+    // Đếm 1 lượt luyện tập (QuotaGuard đã chặn trước khi tới đây nếu hết lượt).
+    await this.quota.record(userId, session.id);
 
     return {
       id: session.id,
