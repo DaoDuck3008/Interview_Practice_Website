@@ -4,8 +4,7 @@ import { useState, FormEvent, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
-import { useAuthStore } from "@/stores/auth.store";
-import { loginApi, registerApi } from "@/lib/api/auth";
+import { registerApi } from "@/lib/api/auth";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
@@ -17,7 +16,6 @@ const FEATURES = [
 ];
 
 function RegisterContent() {
-  const setAuth = useAuthStore((s) => s.setAuth);
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") ?? undefined;
   const router = useRouter();
@@ -49,10 +47,10 @@ function RegisterContent() {
     setIsSubmitting(true);
     try {
       await registerApi(name.trim(), email.trim(), password);
-      const { accessToken, user } = await loginApi(email.trim(), password);
-      setAuth(accessToken, user);
-      toast.success("Đăng ký thành công!");
-      router.push(redirectTo || "/practice");
+      toast.success("Đã gửi mã xác thực tới email của bạn!");
+      const params = new URLSearchParams({ email: email.trim() });
+      if (redirectTo) params.set("redirect", redirectTo);
+      router.push(`/verify-email?${params.toString()}`);
     } catch (err: unknown) {
       const status = (
         err as { response?: { status?: number; data?: { message?: string } } }

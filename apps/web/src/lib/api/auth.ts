@@ -23,12 +23,56 @@ export async function registerApi(
   name: string,
   email: string,
   password: string,
-): Promise<AuthUser> {
-  const res = await api.post<ApiResponse<AuthUser>>("/auth/register", {
+): Promise<{ email: string }> {
+  const res = await api.post<ApiResponse<{ email: string }>>("/auth/register", {
     name,
     email,
     password,
   });
+  return res.data.data;
+}
+
+/** Xác thực email bằng mã 6 số → trả token + user (đăng nhập luôn). */
+export async function verifyEmailApi(
+  email: string,
+  code: string,
+): Promise<LoginResponse> {
+  const res = await api.post<ApiResponse<LoginResponse>>("/auth/verify-email", {
+    email,
+    code,
+  });
+  return res.data.data;
+}
+
+export async function resendVerificationApi(
+  email: string,
+): Promise<{ message: string }> {
+  const res = await api.post<ApiResponse<{ message: string }>>(
+    "/auth/resend-verification",
+    { email },
+  );
+  return res.data.data;
+}
+
+export async function forgotPasswordApi(
+  email: string,
+): Promise<{ message: string }> {
+  const res = await api.post<ApiResponse<{ message: string }>>(
+    "/auth/forgot-password",
+    { email },
+  );
+  return res.data.data;
+}
+
+export async function resetPasswordApi(
+  email: string,
+  code: string,
+  password: string,
+): Promise<{ message: string }> {
+  const res = await api.post<ApiResponse<{ message: string }>>(
+    "/auth/reset-password",
+    { email, code, password },
+  );
   return res.data.data;
 }
 

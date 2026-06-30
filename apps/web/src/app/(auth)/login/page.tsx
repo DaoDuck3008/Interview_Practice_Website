@@ -7,6 +7,7 @@ import { Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
 import { loginApi } from "@/lib/api/auth";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 
 const FEATURES = [
@@ -43,9 +44,22 @@ function LoginContent() {
       const fallback = user.role === "ADMIN" ? "/admin" : "/practice";
       router.push(redirectTo || fallback);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })
-        ?.response?.data?.message;
-      setError(msg || "Email hoặc mật khẩu không đúng.");
+      const data = (
+        err as {
+          response?: { data?: { message?: string; errorCode?: string } };
+        }
+      )?.response?.data;
+      // Chưa xác thực email thì chuyển sang trang nhập mã thay vì báo lỗi.
+      if (data?.errorCode === "EMAIL_NOT_VERIFIED") {
+        toast.info(
+          "Tài khoản chưa xác thực. Vui lòng nhập mã đã gửi tới email.",
+        );
+        const params = new URLSearchParams({ email: email.trim() });
+        if (redirectTo) params.set("redirect", redirectTo);
+        router.push(`/verify-email?${params.toString()}`);
+        return;
+      }
+      setError(data?.message || "Email hoặc mật khẩu không đúng.");
     } finally {
       setIsSubmitting(false);
     }
@@ -204,6 +218,15 @@ function LoginContent() {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+            </div>
+
+            <div className="flex justify-end -mt-2">
+              <Link
+                href="/forgot-password"
+                className="text-xs text-[#8b5cf6] hover:text-[#7c3aed] transition-colors"
+              >
+                Quên mật khẩu?
+              </Link>
             </div>
 
             {error && <p className="text-sm text-[#ef4444]">{error}</p>}

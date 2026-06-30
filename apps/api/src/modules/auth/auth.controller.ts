@@ -4,6 +4,9 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { ResendCodeDto } from './dto/resend-code.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ConfigService } from '@nestjs/config';
 import { LocalAuthGuard } from '../../common/guards/local-auth.guard';
 import { JwtRefreshGuard } from '../../common/guards/jwt-refresh.guard';
@@ -21,6 +24,32 @@ export class AuthController {
   @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
+  }
+
+  @Post('verify-email')
+  async verifyEmail(
+    @Body() dto: VerifyEmailDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { accessToken, refreshToken, user } =
+      await this.authService.verifyEmail(dto.email, dto.code);
+    res.cookie(REFRESH_COOKIE, refreshToken, this.cookieOptions());
+    return { accessToken, user };
+  }
+
+  @Post('resend-verification')
+  resendVerification(@Body() dto: ResendCodeDto) {
+    return this.authService.resendVerification(dto.email);
+  }
+
+  @Post('forgot-password')
+  forgotPassword(@Body() dto: ResendCodeDto) {
+    return this.authService.forgotPassword(dto.email);
+  }
+
+  @Post('reset-password')
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto.email, dto.code, dto.password);
   }
 
   @UseGuards(LocalAuthGuard)

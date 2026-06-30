@@ -41,6 +41,7 @@ model User {
   passwordHash String? //  null nếu tài khoản đăng nhập bằng Google (không có mật khẩu)
   name         String
   role         Role     @default(USER)
+  emailVerified Boolean @default(false) // true sau khi xác thực email qua mã 6 số; Google = true sẵn
   googleId     String?  @unique // Google "sub" — gắn khi đăng nhập bằng Google
   avatarUrl    String? //         Ảnh đại diện (lấy từ Google "picture")
   createdAt    DateTime @default(now())

@@ -20,12 +20,13 @@ export const validationSchema = Joi.object({
   R2_PUBLIC_URL: Joi.string().required(),
   GROQ_API_KEY: Joi.string().required(),
   DEEPSEEK_API_KEY: Joi.string().required(),
-  // Sepay — thanh toán chuyển khoản
   SEPAY_WEBHOOK_SECRET: Joi.string().allow('').default(''),
   SEPAY_BANK_ACCOUNT: Joi.string().default(''),
   SEPAY_BANK_CODE: Joi.string().default(''),
   SEPAY_ACCOUNT_NAME: Joi.string().default(''),
   SEPAY_API_KEY: Joi.string().allow('').default(''), // Userapi token để đối soát
+  RESEND_API_KEY: Joi.string().allow('').default(''),
+  MAIL_FROM: Joi.string().default('InterviewPrep <onboarding@resend.dev>'),
 });
 
 export default () => ({
@@ -62,5 +63,9 @@ export default () => ({
     bankCode: process.env.SEPAY_BANK_CODE ?? 'MBBank',
     accountName: process.env.SEPAY_ACCOUNT_NAME ?? 'DAO ANH DUC',
     apiToken: process.env.SEPAY_API_KEY ?? '',
+  },
+  resend: {
+    apiKey: process.env.RESEND_API_KEY ?? '',
+    mailFrom: process.env.MAIL_FROM ?? 'InterviewPrep <onboarding@resend.dev>',
   },
 });
