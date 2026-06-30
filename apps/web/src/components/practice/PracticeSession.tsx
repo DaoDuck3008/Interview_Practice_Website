@@ -13,14 +13,17 @@ import {
   X,
 } from "lucide-react";
 import axios from "axios";
+import Link from "next/link";
 import {
   createSession,
   scoreSession,
   improveSession,
 } from "@/lib/api/sessions";
 import type { Score, Improvement, Session } from "@/lib/api/sessions";
+import { quotaDescriptor } from "@/lib/api/quota";
 import { formatTime } from "@/lib/utils/format";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
+import { useQuota } from "@/hooks/useQuota";
 import TranscriptPanel from "@/components/practice/TranscriptPanel";
 import AnswerEvaluation from "@/components/practice/AnswerEvaluation";
 import EvaluationSkeleton from "@/components/practice/EvaluationSkeleton";
@@ -47,6 +50,10 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
   const [improvementError, setImprovementError] = useState("");
   const [isImproving, setIsImproving] = useState(false);
 
+  const { status: quotaStatus, refresh: refreshQuota } = useQuota();
+  const quota = quotaDescriptor(quotaStatus);
+  const outOfQuota = quota !== null && quota.remaining <= 0;
+
   const handleRecordingComplete = useCallback(
     async (blob: Blob, duration: number) => {
       // Chặn bản ghi quá ngắn (bấm nhầm) trước khi tốn 1 lượt phiên âm.
@@ -71,6 +78,7 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
         setSessionId(createdSession.id);
         setTranscript(createdSession.transcript);
         setTranscriptError("");
+        refreshQuota(); // đã tốn 1 lượt — cập nhật số còn lại
       } catch (err) {
         // Ưu tiên message tiếng Việt từ backend (vd: hết hạn mức trong ngày)
         const serverMsg = axios.isAxiosError(err)
@@ -108,7 +116,7 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
       }
       setPhase("evaluated");
     },
-    [questionId, onSessionSaved],
+    [questionId, onSessionSaved, refreshQuota],
   );
 
   const recorder = useAudioRecorder({ onComplete: handleRecordingComplete });
@@ -165,21 +173,50 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
         {/* IDLE */}
         {recorder.status === "idle" && phase === "idle" && (
           <div className="flex flex-col items-center gap-3 py-6">
-            <button
-              onClick={recorder.start}
-              className="w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
-              style={{
-                background: "#7c3aed",
-                boxShadow:
-                  "0 0 40px rgba(124,58,237,0.45), 0 0 80px rgba(124,58,237,0.15)",
-              }}
-              aria-label="Bắt đầu ghi âm"
-            >
-              <Mic size={30} className="text-white" />
-            </button>
-            <p className="text-sm text-[#606072] font-mono">
-              Nhấn để bắt đầu ghi âm
-            </p>
+            {outOfQuota ? (
+              <>
+                <div
+                  className="w-20 h-20 rounded-full flex items-center justify-center opacity-40"
+                  style={{ background: "#13131c", border: "1px solid #1c1c28" }}
+                >
+                  <Mic size={30} className="text-[#606072]" />
+                </div>
+                <div className="flex flex-col items-center gap-1.5 text-center max-w-xs">
+                  <p className="text-sm text-[#f59e0b]">
+                    Bạn đã dùng hết lượt luyện tập {quota?.period}.
+                  </p>
+                  <Link
+                    href="/pricing"
+                    className="text-sm font-medium text-[#8b5cf6] hover:underline"
+                  >
+                    Nâng cấp gói để luyện nhiều hơn →
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={recorder.start}
+                  className="w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
+                  style={{
+                    background: "#7c3aed",
+                    boxShadow:
+                      "0 0 40px rgba(124,58,237,0.45), 0 0 80px rgba(124,58,237,0.15)",
+                  }}
+                  aria-label="Bắt đầu ghi âm"
+                >
+                  <Mic size={30} className="text-white" />
+                </button>
+                <p className="text-sm text-[#606072] font-mono">
+                  Nhấn để bắt đầu ghi âm
+                </p>
+                {quota && (
+                  <p className="text-xs text-[#606072]">
+                    Còn {quota.remaining}/{quota.limit} lượt {quota.period}
+                  </p>
+                )}
+              </>
+            )}
           </div>
         )}
 
