@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Search, Ban, RotateCcw, Receipt, X } from "lucide-react";
 import { toast } from "react-toastify";
@@ -58,8 +58,14 @@ export default function AdminSubscriptionsPage() {
   const [page, setPage] = useState(Number(sp.get("page") ?? "1"));
   const [limit, setLimit] = useState(Number(sp.get("limit") ?? "30"));
 
-  // Debounce ô tìm kiếm + reset trang
+  // Debounce ô tìm kiếm + reset trang.
+  // Bỏ qua lần chạy đầu để không reset trang đã deep-link (?page=N) về 1.
+  const firstSearch = useRef(true);
   useEffect(() => {
+    if (firstSearch.current) {
+      firstSearch.current = false;
+      return;
+    }
     const t = setTimeout(() => {
       setDebouncedSearch(search);
       setPage(1);

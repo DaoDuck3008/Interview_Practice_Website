@@ -11,6 +11,8 @@
   --color-accent: #7c3aed;
   --color-accent-light: #8b5cf6;
   --color-success: #22c55e;
+  --color-danger: #ef4444;     /* đỏ — lỗi / cảnh báo / huỷ */
+  --color-text-faint: #3d3d54; /* xám rất nhạt — chữ placeholder */
 
   --font-heading: var(--font-be-vietnam), "Be Vietnam Pro", sans-serif;
   --font-body: var(--font-be-vietnam), "Be Vietnam Pro", sans-serif;

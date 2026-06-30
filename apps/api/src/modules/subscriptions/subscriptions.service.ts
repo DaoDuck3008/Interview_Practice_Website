@@ -176,34 +176,30 @@ export class SubscriptionsService {
       const sub = await tx.subscription.findUnique({
         where: { userId: dto.userId },
       });
-      // Còn hạn → cộng dồn; đã hết hạn (hoặc chưa có) → tính từ hôm nay.
-      const base = sub && sub.expiresAt > now ? sub.expiresAt : now;
+      // Còn hạn VÀ chưa hủy thì cộng dồn; đã hủy / hết hạn (hoặc chưa có) thì tính từ hôm nay.
+      const base =
+        sub && sub.status !== 'CANCELED' && sub.expiresAt > now
+          ? sub.expiresAt
+          : now;
       const expiresAt = new Date(base.getTime() + days * DAY_MS);
 
-      let subscriptionId: string;
-      if (sub) {
-        await tx.subscription.update({
-          where: { id: sub.id },
-          data: {
-            planId: plan.id,
-            status: 'ACTIVE',
-            expiresAt,
-            canceledAt: null,
-          },
-        });
-        subscriptionId = sub.id;
-      } else {
-        const created = await tx.subscription.create({
-          data: { userId: dto.userId, planId: plan.id, expiresAt },
-        });
-        subscriptionId = created.id;
-      }
+      // upsert theo userId (@unique) — an toàn khi 2 request cấp song song (tránh P2002).
+      const subscription = await tx.subscription.upsert({
+        where: { userId: dto.userId },
+        create: { userId: dto.userId, planId: plan.id, expiresAt },
+        update: {
+          planId: plan.id,
+          status: 'ACTIVE',
+          expiresAt,
+          canceledAt: null,
+        },
+      });
 
       await tx.order.create({
         data: {
           userId: dto.userId,
           planId: plan.id,
-          subscriptionId,
+          subscriptionId: subscription.id,
           amountVnd: 0,
           status: 'PAID',
           provider: 'manual',
@@ -219,7 +215,7 @@ export class SubscriptionsService {
       });
 
       return tx.subscription.findUniqueOrThrow({
-        where: { id: subscriptionId },
+        where: { id: subscription.id },
         include: {
           user: { select: { id: true, name: true, email: true } },
           plan: { select: { name: true, slug: true, durationDays: true } },
