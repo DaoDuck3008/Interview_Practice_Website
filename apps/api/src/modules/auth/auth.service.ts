@@ -91,6 +91,14 @@ export class AuthService {
     const isMatch = await bcrypt.compare(password, hash);
     if (!user || !isMatch) return null;
 
+    // Tài khoản bị admin khóa → chặn đăng nhập.
+    if (user.isLock) {
+      throw new ForbiddenException({
+        message: 'Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.',
+        errorCode: 'ACCOUNT_LOCKED',
+      });
+    }
+
     // Đúng mật khẩu nhưng chưa xác thực email → chặn cứng, báo errorCode riêng
     // để frontend điều hướng sang trang nhập mã.
     if (!user.emailVerified) {
@@ -164,7 +172,15 @@ export class AuthService {
   /** Quên mật khẩu: gửi mã đặt lại. Luôn trả lời chung để tránh dò email. */
   async forgotPassword(email: string) {
     const user = await this.usersService.findByEmail(email);
-    // Chỉ gửi cho tài khoản có mật khẩu (tài khoản Google không đặt lại được).
+    // Tài khoản Google (không có mật khẩu) → báo rõ để hướng dẫn đăng nhập Google.
+    if (user && !user.passwordHash) {
+      throw new BadRequestException({
+        message:
+          'Tài khoản này đăng nhập bằng Google nên không thể đặt lại mật khẩu. Vui lòng dùng "Đăng nhập với Google".',
+        errorCode: 'GOOGLE_ACCOUNT',
+      });
+    }
+    // Chỉ gửi cho tài khoản có mật khẩu.
     if (user?.passwordHash) {
       const ttl = await this.codeStore.cooldownTtl('reset', email);
       if (ttl === 0) {
@@ -221,6 +237,12 @@ export class AuthService {
 
     const picture = payload.picture;
     const existing = await this.usersService.findByEmail(email);
+
+    if (existing?.isLock)
+      throw new ForbiddenException({
+        message: 'Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.',
+        errorCode: 'ACCOUNT_LOCKED',
+      });
 
     let user: {
       id: string;

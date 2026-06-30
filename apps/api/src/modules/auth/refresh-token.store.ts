@@ -30,4 +30,21 @@ export class RefreshTokenStore {
   async remove(userId: string, jti: string) {
     await this.redis.del(this.key(userId, jti));
   }
+
+  /** Thu hồi TẤT CẢ phiên của user (dùng khi khóa tài khoản / đổi mật khẩu). */
+  async removeAll(userId: string) {
+    const pattern = `refresh:${userId}:*`;
+    let cursor = '0';
+    do {
+      const [next, keys] = await this.redis.scan(
+        cursor,
+        'MATCH',
+        pattern,
+        'COUNT',
+        100,
+      );
+      cursor = next;
+      if (keys.length) await this.redis.del(...keys);
+    } while (cursor !== '0');
+  }
 }

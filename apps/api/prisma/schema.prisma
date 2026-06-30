@@ -42,6 +42,7 @@ model User {
   name         String
   role         Role     @default(USER)
   emailVerified Boolean @default(false) // true sau khi xác thực email qua mã 6 số; Google = true sẵn
+  isLock       Boolean  @default(false) // true = admin khóa tài khoản, chặn đăng nhập
   googleId     String?  @unique // Google "sub" — gắn khi đăng nhập bằng Google
   avatarUrl    String? //         Ảnh đại diện (lấy từ Google "picture")
   createdAt    DateTime @default(now())

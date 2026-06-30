@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Resend } from 'resend';
 import { codeEmailTemplate } from './templates/code-email.template';
+import { tempPasswordEmailTemplate } from './templates/temp-password.template';
 
 /**
  * Gửi email giao dịch qua Resend. Hiện dùng cho:
@@ -52,6 +53,14 @@ export class MailService {
         intro:
           'Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn. Nhập mã bên dưới để tiếp tục. Nếu không phải bạn, hãy bỏ qua email này.',
       }),
+    });
+  }
+
+  async sendTempPassword(to: string, name: string, password: string) {
+    await this.send({
+      to,
+      subject: 'Mật khẩu InterviewPrep của bạn đã được đặt lại',
+      html: tempPasswordEmailTemplate({ name, password }),
     });
   }
 

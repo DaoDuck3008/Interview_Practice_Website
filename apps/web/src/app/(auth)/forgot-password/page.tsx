@@ -41,8 +41,20 @@ function ForgotPasswordContent() {
       toast.success("Nếu email tồn tại, mã đặt lại đã được gửi.");
       setStep("reset");
       setCooldown(RESEND_COOLDOWN);
-    } catch {
-      // Backend luôn trả chung để tránh dò email; lỗi mạng thì báo nhẹ.
+    } catch (err: unknown) {
+      const data = (
+        err as {
+          response?: { data?: { message?: string; errorCode?: string } };
+        }
+      )?.response?.data;
+      // Tài khoản Google thì báo rõ và không chuyển sang bước nhập mã.
+      if (data?.errorCode === "GOOGLE_ACCOUNT") {
+        setError(
+          data.message ||
+            "Tài khoản này đăng nhập bằng Google, vui lòng dùng nút Đăng nhập với Google.",
+        );
+        return;
+      }
       toast.error("Có lỗi xảy ra, vui lòng thử lại.");
     } finally {
       setIsSubmitting(false);
