@@ -22,7 +22,7 @@ export class QuotaService {
           select: {
             isUnlimited: true,
             dailyScoreLimit: true,
-            monthlyScoreLimit: true,
+            weeklyScoreLimit: true,
           },
         },
       },
@@ -35,22 +35,22 @@ export class QuotaService {
     return {
       isUnlimited: sub.plan.isUnlimited,
       dailyLimit: sub.plan.dailyScoreLimit,
-      monthlyLimit: sub.plan.monthlyScoreLimit,
+      weeklyLimit: sub.plan.weeklyScoreLimit,
     };
   }
 
-  /** Số lượt đã dùng trong hôm nay & tháng này (giờ VN). */
-  async getUsage(userId: string): Promise<{ daily: number; monthly: number }> {
-    const { startOfDay, startOfMonth } = vnPeriodStarts();
-    const [daily, monthly] = await Promise.all([
+  /** Số lượt đã dùng trong hôm nay & tuần này (giờ VN). */
+  async getUsage(userId: string): Promise<{ daily: number; weekly: number }> {
+    const { startOfDay, startOfWeek } = vnPeriodStarts();
+    const [daily, weekly] = await Promise.all([
       this.prisma.usageLog.count({
         where: { userId, createdAt: { gte: startOfDay } },
       }),
       this.prisma.usageLog.count({
-        where: { userId, createdAt: { gte: startOfMonth } },
+        where: { userId, createdAt: { gte: startOfWeek } },
       }),
     ]);
-    return { daily, monthly };
+    return { daily, weekly };
   }
 
   /**
@@ -60,15 +60,15 @@ export class QuotaService {
   async assertWithinLimit(userId: string): Promise<void> {
     const limits = await this.getLimits(userId);
     if (limits.isUnlimited) return;
-    if (limits.dailyLimit === null && limits.monthlyLimit === null) return;
+    if (limits.dailyLimit === null && limits.weeklyLimit === null) return;
 
     const usage = await this.getUsage(userId);
 
     if (limits.dailyLimit !== null && usage.daily >= limits.dailyLimit) {
       throw this.limitException('hôm nay', limits.dailyLimit);
     }
-    if (limits.monthlyLimit !== null && usage.monthly >= limits.monthlyLimit) {
-      throw this.limitException('tháng này', limits.monthlyLimit);
+    if (limits.weeklyLimit !== null && usage.weekly >= limits.weeklyLimit) {
+      throw this.limitException('tuần này', limits.weeklyLimit);
     }
   }
 
@@ -79,11 +79,11 @@ export class QuotaService {
     });
   }
 
-  /** Trạng thái hạn mức cho frontend hiển thị (used/limit theo ngày & tháng). */
+  /** Trạng thái hạn mức cho frontend hiển thị (used/limit theo ngày & tuần). */
   async getStatus(userId: string) {
     const limits = await this.getLimits(userId);
     if (limits.isUnlimited) {
-      return { unlimited: true, daily: null, monthly: null };
+      return { unlimited: true, daily: null, weekly: null };
     }
     const usage = await this.getUsage(userId);
     return {
@@ -92,10 +92,10 @@ export class QuotaService {
         limits.dailyLimit === null
           ? null
           : { used: usage.daily, limit: limits.dailyLimit },
-      monthly:
-        limits.monthlyLimit === null
+      weekly:
+        limits.weeklyLimit === null
           ? null
-          : { used: usage.monthly, limit: limits.monthlyLimit },
+          : { used: usage.weekly, limit: limits.weeklyLimit },
     };
   }
 

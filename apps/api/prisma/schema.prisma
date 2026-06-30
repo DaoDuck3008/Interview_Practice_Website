@@ -141,7 +141,7 @@ model Plan {
   // ── Limits/quota (cột có kiểu + JSON dự phòng) ──
   isUnlimited       Boolean @default(false) // true = không giới hạn lượt
   dailyScoreLimit   Int? //                    null = không giới hạn theo ngày
-  monthlyScoreLimit Int? //                    null = không giới hạn theo tháng
+  weeklyScoreLimit  Int? //                    null = không giới hạn theo tuần
   limits            Json? //                   mở rộng các limit khác sau này
 
   isActive  Boolean  @default(true)

@@ -41,7 +41,7 @@ function quotaLabel(p: AdminPlan) {
   if (p.isUnlimited) return "Không giới hạn";
   const parts: string[] = [];
   if (p.dailyScoreLimit != null) parts.push(`${p.dailyScoreLimit}/ngày`);
-  if (p.monthlyScoreLimit != null) parts.push(`${p.monthlyScoreLimit}/tháng`);
+  if (p.weeklyScoreLimit != null) parts.push(`${p.weeklyScoreLimit}/tuần`);
   return parts.length ? parts.join(" · ") : "—";
 }
 
@@ -54,7 +54,7 @@ interface FormState {
   sortOrder: string;
   isUnlimited: boolean;
   dailyScoreLimit: string;
-  monthlyScoreLimit: string;
+  weeklyScoreLimit: string;
   isActive: boolean;
 }
 
@@ -67,7 +67,7 @@ const EMPTY_FORM: FormState = {
   sortOrder: "0",
   isUnlimited: false,
   dailyScoreLimit: "",
-  monthlyScoreLimit: "",
+  weeklyScoreLimit: "",
   isActive: true,
 };
 
@@ -121,8 +121,8 @@ export default function AdminPlansPage() {
       sortOrder: String(p.sortOrder),
       isUnlimited: p.isUnlimited,
       dailyScoreLimit: p.dailyScoreLimit != null ? String(p.dailyScoreLimit) : "",
-      monthlyScoreLimit:
-        p.monthlyScoreLimit != null ? String(p.monthlyScoreLimit) : "",
+      weeklyScoreLimit:
+        p.weeklyScoreLimit != null ? String(p.weeklyScoreLimit) : "",
       isActive: p.isActive,
     });
     setError("");
@@ -167,10 +167,10 @@ export default function AdminPlansPage() {
         : form.dailyScoreLimit.trim()
           ? Number(form.dailyScoreLimit)
           : null,
-      monthlyScoreLimit: form.isUnlimited
+      weeklyScoreLimit: form.isUnlimited
         ? null
-        : form.monthlyScoreLimit.trim()
-          ? Number(form.monthlyScoreLimit)
+        : form.weeklyScoreLimit.trim()
+          ? Number(form.weeklyScoreLimit)
           : null,
       isActive: form.isActive,
     };
@@ -521,14 +521,14 @@ export default function AdminPlansPage() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-[#9898aa]">
-                    Giới hạn / tháng{" "}
+                    Giới hạn / tuần{" "}
                     <span className="text-[#3d3d54] normal-case">(trống = ∞)</span>
                   </label>
                   <input
                     type="number"
                     min={0}
-                    value={form.monthlyScoreLimit}
-                    onChange={(e) => set("monthlyScoreLimit", e.target.value)}
+                    value={form.weeklyScoreLimit}
+                    onChange={(e) => set("weeklyScoreLimit", e.target.value)}
                     placeholder="—"
                     className={inputClass}
                     style={inputStyle}

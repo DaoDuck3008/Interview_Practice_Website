@@ -91,7 +91,7 @@ export class PlansService {
       durationDays: dto.durationDays,
       isUnlimited: dto.isUnlimited,
       dailyScoreLimit: dto.dailyScoreLimit,
-      monthlyScoreLimit: dto.monthlyScoreLimit,
+      weeklyScoreLimit: dto.weeklyScoreLimit,
       limits: dto.limits as Prisma.InputJsonValue | undefined,
       isActive: dto.isActive,
       sortOrder: dto.sortOrder,

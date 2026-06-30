@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Bookmark,
   CreditCard,
+  Gauge,
   History,
   LayoutDashboard,
   type LucideIcon,
@@ -21,6 +22,7 @@ interface NavItem {
 // — khi tạo xong page chỉ cần bật enabled:true.
 const NAV_ITEMS: NavItem[] = [
   { href: "/billing", label: "Gói của tôi", icon: CreditCard, enabled: true },
+  { href: "/usage", label: "Mức sử dụng", icon: Gauge, enabled: true },
   {
     href: "/overview",
     label: "Tổng quan",

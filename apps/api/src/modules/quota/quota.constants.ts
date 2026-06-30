@@ -4,31 +4,36 @@
  */
 export interface QuotaLimits {
   isUnlimited: boolean;
-  dailyLimit: number | null; //   null = không giới hạn theo ngày
-  monthlyLimit: number | null; // null = không giới hạn theo tháng
+  dailyLimit: number | null; //  null = không giới hạn theo ngày
+  weeklyLimit: number | null; // null = không giới hạn theo tuần
 }
 
 export const FREE_TIER_LIMITS: QuotaLimits = {
   isUnlimited: false,
   dailyLimit: 3,
-  monthlyLimit: null,
+  weeklyLimit: null,
 };
 
-// Việt Nam cố định UTC+7 — dùng để tính mốc "hôm nay/tháng này" theo giờ VN.
+// Việt Nam cố định UTC+7 — dùng để tính mốc "hôm nay/tuần này" theo giờ VN.
 export const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
 
-/** Mốc đầu ngày & đầu tháng theo giờ VN, quy về Date (UTC) để so với createdAt đã lưu UTC. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Mốc đầu ngày & đầu tuần theo giờ VN, quy về Date (UTC) để so với createdAt đã lưu UTC.
+ * Tuần bắt đầu từ Thứ Hai 00:00 (giờ VN).
+ */
 export function vnPeriodStarts(now = new Date()): {
   startOfDay: Date;
-  startOfMonth: Date;
+  startOfWeek: Date;
 } {
   const vnNow = new Date(now.getTime() + VN_OFFSET_MS);
   const startOfDay = new Date(
     Date.UTC(vnNow.getUTCFullYear(), vnNow.getUTCMonth(), vnNow.getUTCDate()) -
       VN_OFFSET_MS,
   );
-  const startOfMonth = new Date(
-    Date.UTC(vnNow.getUTCFullYear(), vnNow.getUTCMonth(), 1) - VN_OFFSET_MS,
-  );
-  return { startOfDay, startOfMonth };
+  // getUTCDay: 0 = CN … 6 = T7 → số ngày đã trôi qua kể từ Thứ Hai.
+  const daysSinceMonday = (vnNow.getUTCDay() + 6) % 7;
+  const startOfWeek = new Date(startOfDay.getTime() - daysSinceMonday * DAY_MS);
+  return { startOfDay, startOfWeek };
 }

@@ -58,7 +58,7 @@ export interface AdminPlan {
   durationDays: number;
   isUnlimited: boolean;
   dailyScoreLimit: number | null;
-  monthlyScoreLimit: number | null;
+  weeklyScoreLimit: number | null;
   isActive: boolean;
   sortOrder: number;
   createdAt: string;
@@ -75,7 +75,7 @@ export interface PlanInput {
   durationDays: number;
   isUnlimited?: boolean;
   dailyScoreLimit?: number | null;
-  monthlyScoreLimit?: number | null;
+  weeklyScoreLimit?: number | null;
   isActive?: boolean;
   sortOrder?: number;
 }

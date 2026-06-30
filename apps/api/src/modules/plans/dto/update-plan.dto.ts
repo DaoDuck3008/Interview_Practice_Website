@@ -46,7 +46,7 @@ export class UpdatePlanDto {
   @IsOptional()
   @IsInt()
   @Min(0)
-  monthlyScoreLimit?: number;
+  weeklyScoreLimit?: number;
 
   @IsOptional()
   @IsObject()
