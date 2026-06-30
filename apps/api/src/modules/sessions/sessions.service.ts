@@ -32,7 +32,7 @@ export class SessionsService {
   findByQuestion(userId: string, questionId: string) {
     return this.prisma.session.findMany({
       where: { userId, questionId },
-      include: { score: true },
+      include: { score: true, improvement: true },
       orderBy: { createdAt: 'asc' },
     });
   }

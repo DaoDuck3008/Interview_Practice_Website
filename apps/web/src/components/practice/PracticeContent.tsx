@@ -68,7 +68,13 @@ export default function PracticeContent({ questionId, keywords }: Props) {
       <PracticeSession
         questionId={questionId}
         onSessionSaved={(session) =>
-          setSessions((prev) => [...prev, session])
+          setSessions((prev) => {
+            const idx = prev.findIndex((s) => s.id === session.id);
+            if (idx === -1) return [...prev, session];
+            const next = [...prev];
+            next[idx] = session; // cập nhật (vd thêm improvement) thay vì nhân đôi
+            return next;
+          })
         }
       />
     </>

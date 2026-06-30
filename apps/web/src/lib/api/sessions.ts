@@ -18,6 +18,7 @@ export interface Session {
   duration: number;
   createdAt: string;
   score?: Score;
+  improvement?: Improvement;
 }
 
 export interface Annotation {

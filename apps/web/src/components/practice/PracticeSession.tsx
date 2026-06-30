@@ -42,6 +42,7 @@ interface Props {
 export default function PracticeSession({ questionId, onSessionSaved }: Props) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [sessionId, setSessionId] = useState("");
+  const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [transcript, setTranscript] = useState("");
   const [transcriptError, setTranscriptError] = useState("");
   const [evaluation, setEvaluation] = useState<Score | null>(null);
@@ -104,7 +105,11 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
           score.technicalScore === 0 &&
           score.completenessScore === 0 &&
           score.clarityScore === 0;
-        if (!isZero) onSessionSaved?.({ ...createdSession, score });
+        if (!isZero) {
+          const saved = { ...createdSession, score };
+          setCurrentSession(saved);
+          onSessionSaved?.(saved);
+        }
       } catch (err) {
         const serverMsg = axios.isAxiosError(err)
           ? (err.response?.data?.message as string | undefined)
@@ -127,6 +132,12 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
       const result = await improveSession(sessionId);
       setImprovement(result);
       setImprovementError("");
+      // Đồng bộ vào lịch sử để khung "Phiên bản cải thiện" hiện ngay, không cần reload.
+      if (currentSession) {
+        const updated = { ...currentSession, improvement: result };
+        setCurrentSession(updated);
+        onSessionSaved?.(updated);
+      }
     } catch (err) {
       const serverMsg = axios.isAxiosError(err)
         ? (err.response?.data?.message as string | undefined)
@@ -136,12 +147,13 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
       );
     }
     setIsImproving(false);
-  }, [sessionId]);
+  }, [sessionId, currentSession, onSessionSaved]);
 
   const handleReset = useCallback(() => {
     recorder.reset();
     setPhase("idle");
     setSessionId("");
+    setCurrentSession(null);
     setTranscript("");
     setTranscriptError("");
     setEvaluation(null);

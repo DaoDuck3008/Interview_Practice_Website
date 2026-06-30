@@ -40,6 +40,8 @@ export function useAudioRecorder({
   const playbackWsRef = useRef<WaveSurferType | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const elapsedRef = useRef(0);
+  // True khi user huỷ (bấm X) giữa lúc ghi: record-end sẽ dọn dẹp nhưng bỏ qua onComplete.
+  const cancelledRef = useRef(false);
 
   // Keep the latest onComplete without forcing startRecording to re-create.
   const onCompleteRef = useRef(onComplete);
@@ -85,8 +87,13 @@ export function useAudioRecorder({
           import("wavesurfer.js/plugins/record"),
         ]);
 
+      cancelledRef.current = false;
       if (recordWsRef.current) {
-        recordWsRef.current.destroy();
+        try {
+          recordWsRef.current.destroy();
+        } catch {
+          /* AudioContext already closed */
+        }
         recordWsRef.current = null;
       }
 
@@ -125,6 +132,11 @@ export function useAudioRecorder({
             /* AudioContext already closed */
           }
         }, 0);
+        // Huỷ giữa chừng (bấm X): đã dọn dẹp ở trên, không phát lại / không upload.
+        if (cancelledRef.current) {
+          cancelledRef.current = false;
+          return;
+        }
         await initPlayback(blob);
         onCompleteRef.current(blob, duration);
       });
@@ -159,15 +171,21 @@ export function useAudioRecorder({
 
   const reset = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
-    recordPluginRef.current?.stopRecording();
-    recordPluginRef.current = null;
-    if (recordWsRef.current) {
+    if (recordPluginRef.current && recordWsRef.current) {
+      // Đang ghi: để plugin tự đóng AudioContext qua stopRecording; record-end lo
+      // destroy (đã defer) + bỏ qua onComplete. Không destroy đồng bộ ở đây để tránh
+      // đóng AudioContext hai lần ("Cannot close a closed AudioContext").
+      cancelledRef.current = true;
+      recordPluginRef.current.stopRecording();
+    } else if (recordWsRef.current) {
+      // Không ở trạng thái ghi nhưng còn instance -> destroy trực tiếp (an toàn).
       try {
         recordWsRef.current.destroy();
       } catch {
         /* AudioContext already closed */
       }
       recordWsRef.current = null;
+      recordPluginRef.current = null;
     }
     if (playbackWsRef.current) {
       try {

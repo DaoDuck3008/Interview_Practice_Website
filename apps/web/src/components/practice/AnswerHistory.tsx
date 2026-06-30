@@ -9,6 +9,7 @@ import {
   History,
   Mic,
   MessageSquareQuote,
+  Wand2,
 } from "lucide-react";
 import type { Session } from "@/lib/api/sessions";
 import { formatDate, formatDuration } from "@/lib/utils/format";
@@ -125,6 +126,24 @@ function SessionCard({
               </p>
               <p className="text-sm text-[#9898aa] leading-relaxed">{session.score.summary}</p>
             </blockquote>
+          )}
+
+          {session.improvement && (
+            <div
+              className="rounded-lg p-3 flex flex-col gap-1.5"
+              style={{
+                background: "rgba(245,158,11,0.06)",
+                border: "1px solid rgba(245,158,11,0.2)",
+              }}
+            >
+              <p className="flex items-center gap-1.5 text-xs font-medium text-[#f59e0b]">
+                <Wand2 size={12} />
+                Phiên bản cải thiện
+              </p>
+              <p className="text-sm text-[#9898aa] leading-relaxed whitespace-pre-wrap">
+                {session.improvement.improvedAnswer}
+              </p>
+            </div>
           )}
         </div>
       )}
