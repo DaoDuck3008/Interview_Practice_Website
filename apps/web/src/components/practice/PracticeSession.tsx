@@ -34,6 +34,9 @@ type Phase = "idle" | "processing" | "evaluating" | "evaluated";
 // Ghi âm ngắn hơn mức này coi như bấm nhầm — không upload để khỏi tốn lượt phiên âm.
 const MIN_DURATION = 2; // giây
 
+// Khi tới 4 phút thì cảnh báo sắp chạm trần 5 phút (hook tự dừng ở 5 phút).
+const WARN_DURATION = 240; // giây
+
 interface Props {
   questionId: string;
   onSessionSaved?: (session: Session) => void;
@@ -283,6 +286,13 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
             <Square size={16} className="text-white" fill="white" />
           </button>
         </div>
+
+        {/* Cảnh báo sắp chạm trần độ dài (5 phút) — hiện từ phút thứ 4 */}
+        {recorder.status === "recording" &&
+          phase === "idle" &&
+          recorder.elapsed >= WARN_DURATION && (
+            <p className="text-xs font-medium text-[#ef4444]">quá dài rồi</p>
+          )}
 
         {/* PROCESSING */}
         {phase === "processing" && (

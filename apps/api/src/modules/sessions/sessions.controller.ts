@@ -17,8 +17,8 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { QuotaGuard } from '../quota/quota.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { fileUploadOptions } from '../../common/upload/file-upload.options';
-
-const MAX_SIZE = 25 * 1024 * 1024; // 25 MB — Groq audio API limit
+import { MAX_AUDIO_BYTES } from '../../common/upload/audio.constants';
+import { ConcurrencyInterceptor } from '../../common/concurrency/concurrency.interceptor';
 
 interface AuthUser {
   id: string;
@@ -41,11 +41,12 @@ export class SessionsController {
   @Post()
   @UseGuards(QuotaGuard)
   @UseInterceptors(
+    ConcurrencyInterceptor,
     FileInterceptor(
       'audio',
       fileUploadOptions({
         mimePrefix: 'audio/',
-        maxSize: MAX_SIZE,
+        maxSize: MAX_AUDIO_BYTES,
         errorMessage: 'Định dạng audio không hợp lệ.',
       }),
     ),
@@ -60,11 +61,13 @@ export class SessionsController {
   }
 
   @Post(':id/score')
+  @UseInterceptors(ConcurrencyInterceptor)
   score(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.sessions.score(id, user.id);
   }
 
   @Post(':id/improve')
+  @UseInterceptors(ConcurrencyInterceptor)
   improve(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.sessions.improve(id, user.id);
   }

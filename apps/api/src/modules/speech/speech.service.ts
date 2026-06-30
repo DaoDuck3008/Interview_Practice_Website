@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Groq, { toFile } from 'groq-sdk';
+import { MAX_TRANSCRIPT_CHARS } from '../../common/upload/audio.constants';
 
 @Injectable()
 export class SpeechService {
@@ -36,7 +37,8 @@ export class SpeechService {
         response_format: 'json',
       });
 
-      return { transcript: result.text.trim() };
+      // Cắt trần độ dài để chặn chi phí chấm điểm/cải thiện tăng đột biến nếu
+      return { transcript: result.text.trim().slice(0, MAX_TRANSCRIPT_CHARS) };
     } catch (err) {
       this.logger.error(`Groq transcription failed: ${String(err)}`);
 

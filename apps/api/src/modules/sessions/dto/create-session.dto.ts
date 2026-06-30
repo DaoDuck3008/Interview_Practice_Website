@@ -1,5 +1,6 @@
 import { IsInt, IsUUID, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+import { MAX_AUDIO_DURATION_SEC } from '../../../common/upload/audio.constants';
 
 export class CreateSessionDto {
   @IsUUID()
@@ -9,6 +10,8 @@ export class CreateSessionDto {
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  @Max(7200)
+  @Max(MAX_AUDIO_DURATION_SEC, {
+    message: 'Audio không được vượt quá 5 phút.',
+  })
   duration: number;
 }

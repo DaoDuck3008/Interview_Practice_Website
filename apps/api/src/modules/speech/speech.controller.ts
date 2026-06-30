@@ -11,8 +11,8 @@ import { SpeechService } from './speech.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { QuotaGuard } from '../quota/quota.guard';
 import { fileUploadOptions } from '../../common/upload/file-upload.options';
-
-const MAX_SIZE = 25 * 1024 * 1024; // 25 MB — Groq audio API limit
+import { MAX_AUDIO_BYTES } from '../../common/upload/audio.constants';
+import { ConcurrencyInterceptor } from '../../common/concurrency/concurrency.interceptor';
 
 @Controller('speech')
 export class SpeechController {
@@ -21,11 +21,12 @@ export class SpeechController {
   @UseGuards(JwtAuthGuard, QuotaGuard)
   @Post('transcribe')
   @UseInterceptors(
+    ConcurrencyInterceptor,
     FileInterceptor(
       'audio',
       fileUploadOptions({
         mimePrefix: 'audio/',
-        maxSize: MAX_SIZE,
+        maxSize: MAX_AUDIO_BYTES,
         errorMessage: 'Định dạng audio không hợp lệ.',
       }),
     ),

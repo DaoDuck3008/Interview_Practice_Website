@@ -5,6 +5,10 @@ import type RecordPluginType from "wavesurfer.js/plugins/record";
 
 export type RecorderStatus = "idle" | "recording" | "error";
 
+// Độ dài ghi âm tối đa (giây) — 5 phút. Khớp với MAX_AUDIO_DURATION_SEC ở backend.
+// Chạm mốc này thì tự dừng để không vượt giới hạn.
+export const MAX_RECORDING_SEC = 300;
+
 interface UseAudioRecorderOptions {
   /** Called after a recording finishes, with the recorded blob and its duration (s). */
   onComplete: (blob: Blob, duration: number) => void;
@@ -152,6 +156,11 @@ export function useAudioRecorder({
       timerRef.current = setInterval(() => {
         elapsedRef.current += 1;
         setElapsed((v) => v + 1);
+        // Tự dừng khi chạm trần 5 phút (record-end sẽ lo upload + dọn dẹp).
+        if (elapsedRef.current >= MAX_RECORDING_SEC) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          recordPluginRef.current?.stopRecording();
+        }
       }, 1000);
     } catch {
       setErrorMsg(
