@@ -8,6 +8,7 @@ import {
   Gauge,
   History,
   LayoutDashboard,
+  UserCircle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -21,6 +22,12 @@ interface NavItem {
 // Khu vực tài khoản. Trang chưa dựng để enabled:false (hiện "Sắp có", không bấm được)
 // — khi tạo xong page chỉ cần bật enabled:true.
 const NAV_ITEMS: NavItem[] = [
+  {
+    href: "/profile",
+    label: "Thông tin cá nhân",
+    icon: UserCircle,
+    enabled: true,
+  },
   { href: "/billing", label: "Gói của tôi", icon: CreditCard, enabled: true },
   { href: "/usage", label: "Mức sử dụng", icon: Gauge, enabled: true },
   {

@@ -93,3 +93,33 @@ export async function refreshApi(): Promise<LoginResponse> {
   const res = await api.post<ApiResponse<LoginResponse>>("/auth/refresh");
   return res.data.data;
 }
+
+export interface MyProfile {
+  id: string;
+  email: string;
+  name: string;
+  role: "USER" | "ADMIN";
+  avatarUrl: string | null;
+  emailVerified: boolean;
+  createdAt: string;
+  /** true = đăng nhập bằng Google (không có mật khẩu). */
+  isGoogle: boolean;
+}
+
+/** Thông tin cá nhân của user đang đăng nhập. */
+export async function getMyProfile(): Promise<MyProfile> {
+  const res = await api.get<ApiResponse<MyProfile>>("/auth/me");
+  return res.data.data;
+}
+
+/** Đổi mật khẩu (yêu cầu mật khẩu hiện tại). */
+export async function changePasswordApi(
+  oldPassword: string,
+  newPassword: string,
+): Promise<{ message: string }> {
+  const res = await api.post<ApiResponse<{ message: string }>>(
+    "/auth/change-password",
+    { oldPassword, newPassword },
+  );
+  return res.data.data;
+}

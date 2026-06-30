@@ -292,6 +292,61 @@ export class AuthService {
     };
   }
 
+  /** Thông tin cá nhân an toàn của user hiện tại (không gồm passwordHash). */
+  async getProfile(userId: string) {
+    const u = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        avatarUrl: true,
+        emailVerified: true,
+        createdAt: true,
+        passwordHash: true, // chỉ để suy ra isGoogle, không trả ra ngoài
+      },
+    });
+    if (!u) throw new UnauthorizedException('Người dùng không tồn tại');
+    return {
+      id: u.id,
+      email: u.email,
+      name: u.name,
+      role: u.role,
+      avatarUrl: u.avatarUrl,
+      emailVerified: u.emailVerified,
+      createdAt: u.createdAt,
+      isGoogle: u.passwordHash === null,
+    };
+  }
+
+  /** Đổi mật khẩu của chính user (yêu cầu mật khẩu hiện tại đúng). */
+  async changePassword(
+    userId: string,
+    oldPassword: string,
+    newPassword: string,
+  ) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException('Người dùng không tồn tại');
+    if (!user.passwordHash)
+      throw new BadRequestException({
+        message:
+          'Tài khoản đăng nhập bằng Google không có mật khẩu để đổi.',
+        errorCode: 'GOOGLE_ACCOUNT',
+      });
+
+    const isMatch = await bcrypt.compare(oldPassword, user.passwordHash);
+    if (!isMatch)
+      throw new BadRequestException('Mật khẩu hiện tại không đúng');
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+    return { message: 'Đổi mật khẩu thành công' };
+  }
+
   // Refresh token đã được JwtRefreshStrategy verify chữ ký + hạn dùng ở guard.
   // Ở đây chỉ còn kiểm tra jti có nằm trong allowlist (Redis) không, rồi xoay vòng.
   async refreshTokens(userId: string, jti: string) {
