@@ -128,7 +128,11 @@ export class PaymentsService {
       return { success: true, ignored: 'underpaid' };
     }
 
-    const { paidAt, periodEnd } = await this.activateOrder(order, txnId, payload);
+    const { paidAt, periodEnd } = await this.activateOrder(
+      order,
+      txnId,
+      payload,
+    );
     this.logger.log(`Đơn ${order.id} đã thanh toán & kích hoạt subscription.`);
     // Gửi biên nhận best-effort — không để lỗi email làm hỏng phản hồi webhook.
     void this.sendReceiptEmail(order, paidAt, periodEnd);
@@ -479,6 +483,7 @@ export class PaymentsService {
             status: 'ACTIVE',
             expiresAt,
             canceledAt: null,
+            renewalReminderSentAt: null,
           },
         });
         subscriptionId = sub.id;

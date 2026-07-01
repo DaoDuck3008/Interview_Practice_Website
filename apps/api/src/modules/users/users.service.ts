@@ -38,7 +38,37 @@ export class UsersService {
   async findById(id: string) {
     return this.prisma.user.findUnique({
       where: { id },
-      select: publicSelect,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        avatarUrl: true,
+        googleId: true,
+        isLock: true,
+        emailVerified: true,
+        createdAt: true,
+        subscription: {
+          select: {
+            status: true,
+            expiresAt: true,
+            plan: { select: { name: true } },
+          },
+        },
+        orders: {
+          take: 5,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            status: true,
+            amountVnd: true,
+            createdAt: true,
+            providerTxnId: true,
+            provider: true,
+            plan: { select: { name: true, priceVnd: true } },
+          },
+        },
+      },
     });
   }
 

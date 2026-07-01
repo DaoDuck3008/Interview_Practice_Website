@@ -1,18 +1,93 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 import { QuerySubscriptionDto } from './dto/query-subscription.dto';
 import { GrantSubscriptionDto } from './dto/grant-subscription.dto';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// Nhắc gia hạn khi gói còn <= 2 ngày.
+const RENEWAL_REMINDER_WINDOW_DAYS = 2;
+
 @Injectable()
 export class SubscriptionsService {
   private readonly logger = new Logger(SubscriptionsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private config: ConfigService,
+    private mail: MailService,
+  ) {}
+
+  /**
+   * Nhắc gia hạn qua email cho các gói ACTIVE sắp hết hạn (còn <= 2 ngày), chạy mỗi ngày.
+   * Chống gửi lặp bằng cột `renewalReminderSentAt` (đánh dấu đã nhắc cho chu kỳ hiện tại).
+   * Mỗi email gửi best-effort — lỗi 1 người không chặn những người còn lại.
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_9AM, { timeZone: 'Asia/Ho_Chi_Minh' })
+  async sendRenewalReminders() {
+    const now = new Date();
+    const threshold = new Date(
+      now.getTime() + RENEWAL_REMINDER_WINDOW_DAYS * DAY_MS,
+    );
+
+    const subs = await this.prisma.subscription.findMany({
+      where: {
+        status: 'ACTIVE',
+        canceledAt: null,
+        expiresAt: { gt: now, lte: threshold },
+        renewalReminderSentAt: null,
+      },
+      include: {
+        user: { select: { email: true, name: true } },
+        plan: { select: { name: true } },
+      },
+    });
+
+    if (subs.length === 0) return;
+
+    const renewUrl = `${this.frontendUrl()}/pricing`;
+    let sent = 0;
+    for (const sub of subs) {
+      try {
+        const daysLeft = Math.ceil(
+          (sub.expiresAt.getTime() - now.getTime()) / DAY_MS,
+        );
+        await this.mail.sendRenewalReminder(sub.user.email, {
+          name: sub.user.name,
+          planName: sub.plan.name,
+          expiresAt: sub.expiresAt,
+          daysLeft,
+          renewUrl,
+        });
+        await this.prisma.subscription.update({
+          where: { id: sub.id },
+          data: { renewalReminderSentAt: now },
+        });
+        sent++;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.error(
+          `Không gửi được email nhắc gia hạn cho sub ${sub.id}: ${msg}`,
+        );
+      }
+    }
+    if (sent > 0) {
+      this.logger.log(`Đã gửi ${sent}/${subs.length} email nhắc gia hạn.`);
+    }
+  }
+
+  /** URL frontend từ config (không hardcode); có mặc định phòng khi thiếu env. */
+  private frontendUrl(): string {
+    return (
+      this.config.get<string>('frontendUrl')?.replace(/\/$/, '') ??
+      'http://localhost:3000'
+    );
+  }
 
   /**
    * Hạ cấp subscription đã hết hạn: ACTIVE + expiresAt < now → EXPIRED (chạy mỗi giờ).
@@ -192,6 +267,7 @@ export class SubscriptionsService {
           status: 'ACTIVE',
           expiresAt,
           canceledAt: null,
+          renewalReminderSentAt: null, // chu kỳ mới → lại được nhắc khi sắp hết hạn
         },
       });
 

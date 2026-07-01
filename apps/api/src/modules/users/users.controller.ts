@@ -27,6 +27,11 @@ export class UsersController {
     return this.usersService.findAllAdmin(query);
   }
 
+  @Get('admin/:id')
+  findOneAdmin(@Param('id') id: string) {
+    return this.usersService.findById(id);
+  }
+
   @Patch('admin/:id/lock')
   setLock(@Param('id') id: string, @Body() dto: LockUserDto) {
     return this.usersService.setLock(id, dto.isLock);

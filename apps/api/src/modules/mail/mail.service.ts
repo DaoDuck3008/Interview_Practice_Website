@@ -7,6 +7,10 @@ import {
   purchaseReceiptEmailTemplate,
   type PurchaseReceiptEmailOptions,
 } from './templates/purchase-receipt.template';
+import {
+  renewalReminderEmailTemplate,
+  type RenewalReminderEmailOptions,
+} from './templates/renewal-reminder.template';
 
 /**
  * Gửi email giao dịch qua Resend. Hiện dùng cho:
@@ -76,6 +80,17 @@ export class MailService {
       to,
       subject: `Biên nhận thanh toán gói ${opts.planName} — InterviewPrep`,
       html: purchaseReceiptEmailTemplate(opts),
+    });
+  }
+
+  async sendRenewalReminder(
+    to: string,
+    opts: RenewalReminderEmailOptions,
+  ) {
+    await this.send({
+      to,
+      subject: `Gói ${opts.planName} của bạn sắp hết hạn — InterviewPrep`,
+      html: renewalReminderEmailTemplate(opts),
     });
   }
 

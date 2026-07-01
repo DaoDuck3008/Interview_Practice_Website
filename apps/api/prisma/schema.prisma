@@ -167,6 +167,10 @@ model Subscription {
   expiresAt  DateTime //                          luôn có hạn (gói 1 hoặc 3 tháng)
   canceledAt DateTime?
 
+  // Đã gửi email nhắc gia hạn (còn ~2 ngày) cho CHU KỲ hiện tại — chống gửi lặp.
+  // Reset về null mỗi khi gia hạn/cấp mới để chu kỳ sau lại được nhắc.
+  renewalReminderSentAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
