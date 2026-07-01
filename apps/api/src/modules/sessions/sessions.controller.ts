@@ -13,6 +13,8 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SessionsService } from './sessions.service';
 import { CreateSessionDto } from './dto/create-session.dto';
+import { QueryHistoryDto } from './dto/query-history.dto';
+import { QueryMonthlyDto } from './dto/query-monthly.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { QuotaGuard } from '../quota/quota.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -36,6 +38,36 @@ export class SessionsController {
   ) {
     if (!questionId) throw new BadRequestException('Thiếu questionId.');
     return this.sessions.findByQuestion(user.id, questionId);
+  }
+
+  /** Thống kê toàn thời gian cho dashboard cá nhân. */
+  @Get('me/stats')
+  getMyStats(@CurrentUser() user: AuthUser) {
+    return this.sessions.getMyStats(user.id);
+  }
+
+  /** Lịch sử luyện tập (phân trang). */
+  @Get('me/history')
+  getMyHistory(
+    @CurrentUser() user: AuthUser,
+    @Query() query: QueryHistoryDto,
+  ) {
+    return this.sessions.getMyHistory(user.id, query);
+  }
+
+  /** Dữ liệu biểu đồ tiến bộ trong 1 tháng. */
+  @Get('me/monthly')
+  getMyMonthly(
+    @CurrentUser() user: AuthUser,
+    @Query() query: QueryMonthlyDto,
+  ) {
+    return this.sessions.getMyMonthly(user.id, query.month);
+  }
+
+  /** Heatmap hoạt động 1 năm gần nhất. */
+  @Get('me/heatmap')
+  getMyHeatmap(@CurrentUser() user: AuthUser) {
+    return this.sessions.getMyHeatmap(user.id);
   }
 
   @Post()

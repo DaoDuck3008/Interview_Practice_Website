@@ -14,6 +14,10 @@ import { ImprovementService } from '../scoring/improvement.service';
 import { QuotaService } from '../quota/quota.service';
 import type { ScoreResult } from '../scoring/prompts/scoring.prompt';
 import { CreateSessionDto } from './dto/create-session.dto';
+import { QueryHistoryDto } from './dto/query-history.dto';
+
+// Việt Nam cố định UTC+7 — dùng để gom nhóm theo "ngày/tháng" giờ VN.
+const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
 
 @Injectable()
 export class SessionsService {
@@ -35,6 +39,172 @@ export class SessionsService {
       include: { score: true, improvement: true },
       orderBy: { createdAt: 'asc' },
     });
+  }
+
+  // ─── Dashboard cá nhân ──────────────────────────────
+
+  /** Thống kê toàn thời gian: tổng lượt, tổng thời gian luyện, điểm trung bình. */
+  async getMyStats(userId: string) {
+    const [totalSessions, durationAgg, scoreAgg] = await Promise.all([
+      this.prisma.session.count({ where: { userId } }),
+      this.prisma.session.aggregate({
+        where: { userId },
+        _sum: { duration: true },
+      }),
+      this.prisma.score.aggregate({
+        where: { session: { userId } },
+        _avg: {
+          technicalScore: true,
+          completenessScore: true,
+          clarityScore: true,
+        },
+        _count: { _all: true },
+      }),
+    ]);
+
+    return {
+      totalSessions,
+      totalDurationSeconds: durationAgg._sum.duration ?? 0,
+      avgTechnical: round1(scoreAgg._avg.technicalScore),
+      avgCompleteness: round1(scoreAgg._avg.completenessScore),
+      avgClarity: round1(scoreAgg._avg.clarityScore),
+      scoredCount: scoreAgg._count._all,
+    };
+  }
+
+  /** Lịch sử luyện tập (phân trang, mới nhất trước) kèm câu hỏi & điểm. */
+  async getMyHistory(userId: string, query: QueryHistoryDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const where = { userId };
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.session.findMany({
+        where,
+        select: {
+          id: true,
+          duration: true,
+          createdAt: true,
+          question: {
+            select: {
+              content: true,
+              level: true,
+              topic: { select: { name: true } },
+            },
+          },
+          score: {
+            select: {
+              technicalScore: true,
+              completenessScore: true,
+              clarityScore: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.session.count({ where }),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 1,
+    };
+  }
+
+  /**
+   * Dữ liệu 2 biểu đồ trong 1 tháng (giờ VN):
+   *  - activity: số buổi luyện mỗi ngày (heatmap)
+   *  - progress: điểm trung bình mỗi ngày (technical/completeness/clarity)
+   */
+  async getMyMonthly(userId: string, month?: string) {
+    const { key, start, end } = resolveMonth(month);
+
+    const sessions = await this.prisma.session.findMany({
+      where: { userId, createdAt: { gte: start, lt: end } },
+      select: {
+        createdAt: true,
+        score: {
+          select: {
+            technicalScore: true,
+            completenessScore: true,
+            clarityScore: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const activityMap = new Map<string, number>();
+    const progMap = new Map<
+      string,
+      { t: number; c: number; cl: number; n: number }
+    >();
+
+    for (const s of sessions) {
+      const day = vnDayKey(s.createdAt);
+      activityMap.set(day, (activityMap.get(day) ?? 0) + 1);
+      if (s.score) {
+        const p = progMap.get(day) ?? { t: 0, c: 0, cl: 0, n: 0 };
+        p.t += s.score.technicalScore;
+        p.c += s.score.completenessScore;
+        p.cl += s.score.clarityScore;
+        p.n += 1;
+        progMap.set(day, p);
+      }
+    }
+
+    const activity = [...activityMap.entries()].map(([date, count]) => ({
+      date,
+      count,
+    }));
+    const progress = [...progMap.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, p]) => ({
+        date,
+        technical: round1(p.t / p.n),
+        completeness: round1(p.c / p.n),
+        clarity: round1(p.cl / p.n),
+      }));
+
+    return { month: key, activity, progress };
+  }
+
+  /**
+   * Heatmap hoạt động 1 năm gần nhất (giờ VN): từ hôm nay lùi lại đúng 1 năm.
+   * Trả các ngày có buổi luyện (sparse) + mốc from/to để FE dựng lưới đầy đủ.
+   */
+  async getMyHeatmap(userId: string) {
+    const vnNow = new Date(Date.now() + VN_OFFSET_MS);
+    const y = vnNow.getUTCFullYear();
+    const m = vnNow.getUTCMonth();
+    const d = vnNow.getUTCDate();
+    // [start = cùng ngày 1 năm trước, end = hết ngày hôm nay) quy về UTC.
+    const startUtc = new Date(Date.UTC(y - 1, m, d) - VN_OFFSET_MS);
+    const endUtc = new Date(Date.UTC(y, m, d + 1) - VN_OFFSET_MS);
+
+    const sessions = await this.prisma.session.findMany({
+      where: { userId, createdAt: { gte: startUtc, lt: endUtc } },
+      select: { createdAt: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const map = new Map<string, number>();
+    for (const s of sessions) {
+      const day = vnDayKey(s.createdAt);
+      map.set(day, (map.get(day) ?? 0) + 1);
+    }
+    const days = [...map.entries()].map(([date, count]) => ({ date, count }));
+
+    return {
+      from: vnDayKey(startUtc),
+      to: vnDayKey(new Date(endUtc.getTime() - 1)), // hôm nay
+      days,
+    };
   }
 
   /**
@@ -250,4 +420,34 @@ export class SessionsService {
       throw err;
     }
   }
+}
+
+/** Làm tròn 1 chữ số thập phân; null (chưa có điểm) => 0. */
+function round1(n: number | null): number {
+  return n == null ? 0 : Math.round(n * 10) / 10;
+}
+
+/** Khoảng [start, end) UTC của một tháng theo giờ VN + key 'YYYY-MM' chuẩn hoá.
+ *  month không hợp lệ (thiếu / MM ngoài 1..12) => tháng hiện tại giờ VN. */
+function resolveMonth(month?: string): { key: string; start: Date; end: Date } {
+  let y: number;
+  let m: number; // 1..12
+  const match = month?.match(/^(\d{4})-(\d{2})$/);
+  if (match && Number(match[2]) >= 1 && Number(match[2]) <= 12) {
+    y = Number(match[1]);
+    m = Number(match[2]);
+  } else {
+    const vnNow = new Date(Date.now() + VN_OFFSET_MS);
+    y = vnNow.getUTCFullYear();
+    m = vnNow.getUTCMonth() + 1;
+  }
+  const start = new Date(Date.UTC(y, m - 1, 1) - VN_OFFSET_MS);
+  const end = new Date(Date.UTC(y, m, 1) - VN_OFFSET_MS);
+  return { key: `${y}-${String(m).padStart(2, '0')}`, start, end };
+}
+
+/** Key ngày 'YYYY-MM-DD' theo giờ VN từ một Date (lưu UTC). */
+function vnDayKey(d: Date): string {
+  const vn = new Date(d.getTime() + VN_OFFSET_MS);
+  return `${vn.getUTCFullYear()}-${String(vn.getUTCMonth() + 1).padStart(2, '0')}-${String(vn.getUTCDate()).padStart(2, '0')}`;
 }

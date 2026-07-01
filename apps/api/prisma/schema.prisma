@@ -99,6 +99,8 @@ model Session {
 
   score       Score?
   improvement Improvement?
+
+  @@index([userId, createdAt]) // dashboard: thống kê/lịch sử/heatmap theo user + thời gian
 }
 
 model Score {

@@ -53,3 +53,11 @@ export function formatTime(totalSeconds: number): string {
   const s = totalSeconds % 60;
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
+
+/** Tổng thời gian dài dạng "9h 30m" / "45m" / "0m" (dùng cho số liệu tổng). */
+export function formatHoursMinutes(seconds: number): string {
+  const totalMinutes = Math.floor(seconds / 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
