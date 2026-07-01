@@ -114,7 +114,7 @@ export default function ActivityHeatmap({ data, loading, from, to }: Props) {
             Hoạt động luyện tập
           </h3>
           <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
-            {total} buổi trong 1 năm qua
+            {total} câu đã luyện trong 1 năm qua
           </p>
         </div>
       </div>
@@ -161,7 +161,7 @@ export default function ActivityHeatmap({ data, loading, from, to }: Props) {
                       ) : (
                         <span
                           key={ri}
-                          title={`${cell.count} buổi · ${cell.dom}/${cell.month + 1}/${cell.date.slice(0, 4)}`}
+                          title={`${cell.count} câu · ${cell.dom}/${cell.month + 1}/${cell.date.slice(0, 4)}`}
                           className="h-[12px] w-[12px] rounded-[2px]"
                           style={cellStyle(cell.count)}
                         />

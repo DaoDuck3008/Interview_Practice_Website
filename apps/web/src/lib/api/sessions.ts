@@ -74,12 +74,13 @@ export interface DashboardStats {
 
 export interface HistoryItem {
   id: string;
+  questionId: string;
   duration: number;
   createdAt: string;
   question: {
     content: string;
     level: Level;
-    topic: { name: string };
+    topic: { name: string; slug: string };
   };
   score: {
     technicalScore: number;

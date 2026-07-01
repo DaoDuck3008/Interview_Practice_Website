@@ -11,6 +11,7 @@ import {
   type HeatmapData,
 } from "@/lib/api/sessions";
 import { formatNumber, formatHoursMinutes } from "@/lib/utils/format";
+import StatCard from "@/components/ui/StatsCard";
 import ActivityHeatmap from "./ActivityHeatmap";
 import ProgressChart from "./ProgressChart";
 import PracticeHistoryList from "./PracticeHistoryList";
@@ -75,11 +76,13 @@ export default function OverviewView() {
             icon={Dumbbell}
             label="Tổng lượt luyện"
             value={formatNumber(stats?.totalSessions ?? 0)}
+            hint="Câu hỏi đã luyện"
           />
           <StatCard
             icon={Clock}
             label="Thời gian luyện"
             value={formatHoursMinutes(stats?.totalDurationSeconds ?? 0)}
+            hint="Trong tháng qua"
           />
           <StatCard
             icon={Star}
@@ -109,35 +112,6 @@ export default function OverviewView() {
       />
 
       <PracticeHistoryList />
-    </div>
-  );
-}
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  hint,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  hint?: string;
-}) {
-  return (
-    <div className={cardClass} style={cardBg}>
-      <div className="flex items-center gap-2 text-[var(--color-text-muted)]">
-        <Icon size={16} />
-        <span className="text-xs font-medium uppercase tracking-wider">
-          {label}
-        </span>
-      </div>
-      <p className="mt-3 text-2xl font-extrabold text-[var(--color-text-primary)]">
-        {value}
-      </p>
-      {hint && (
-        <p className="mt-1 text-xs text-[var(--color-text-muted)]">{hint}</p>
-      )}
     </div>
   );
 }

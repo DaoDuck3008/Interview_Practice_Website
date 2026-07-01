@@ -83,13 +83,14 @@ export class SessionsService {
         where,
         select: {
           id: true,
+          questionId: true,
           duration: true,
           createdAt: true,
           question: {
             select: {
               content: true,
               level: true,
-              topic: { select: { name: true } },
+              topic: { select: { name: true, slug: true } },
             },
           },
           score: {

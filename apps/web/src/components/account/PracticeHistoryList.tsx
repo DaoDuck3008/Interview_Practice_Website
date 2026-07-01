@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { getMyHistory, type HistoryItem } from "@/lib/api/sessions";
 import type { Paginated } from "@/lib/api/questions";
@@ -40,41 +41,46 @@ export default function PracticeHistoryList() {
         ) : (
           <ul className="flex flex-col divide-y divide-white/10">
             {data.items.map((item) => (
-              <li key={item.id} className="flex items-start gap-3 py-3.5">
-                <div className="min-w-0 flex-1">
-                  <p className="line-clamp-2 text-sm text-[var(--color-text-primary)]">
-                    {item.question.content}
-                  </p>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-muted)]">
-                    <span
-                      className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${LEVEL_STYLE[item.question.level].className}`}
-                    >
-                      {LEVEL_STYLE[item.question.level].label}
-                    </span>
-                    <span>{item.question.topic.name}</span>
-                    <span className="inline-flex items-center gap-1">
-                      <Clock size={12} />
-                      {formatDuration(item.duration)}
-                    </span>
-                    <span>{formatDay(item.createdAt)}</span>
-                  </div>
-                </div>
-                <div className="flex-shrink-0 pt-0.5">
-                  {item.score ? (
-                    <div className="flex items-center gap-1.5">
-                      <ScoreChip label="KT" value={item.score.technicalScore} />
-                      <ScoreChip
-                        label="ĐĐ"
-                        value={item.score.completenessScore}
-                      />
-                      <ScoreChip label="RR" value={item.score.clarityScore} />
+              <li key={item.id}>
+                <Link
+                  href={`/practice/${item.question.topic.slug}/${item.questionId}`}
+                  className="flex items-start gap-3 rounded-lg py-3.5 transition-colors hover:bg-white/5"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="line-clamp-2 text-sm text-[var(--color-text-primary)]">
+                      {item.question.content}
+                    </p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-muted)]">
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${LEVEL_STYLE[item.question.level].className}`}
+                      >
+                        {LEVEL_STYLE[item.question.level].label}
+                      </span>
+                      <span>{item.question.topic.name}</span>
+                      <span className="inline-flex items-center gap-1">
+                        <Clock size={12} />
+                        {formatDuration(item.duration)}
+                      </span>
+                      <span>{formatDay(item.createdAt)}</span>
                     </div>
-                  ) : (
-                    <span className="text-xs text-[var(--color-text-muted)]">
-                      Chưa chấm
-                    </span>
-                  )}
-                </div>
+                  </div>
+                  <div className="flex-shrink-0 pt-0.5">
+                    {item.score ? (
+                      <div className="flex items-center gap-1.5">
+                        <ScoreChip label="KT" value={item.score.technicalScore} />
+                        <ScoreChip
+                          label="ĐĐ"
+                          value={item.score.completenessScore}
+                        />
+                        <ScoreChip label="RR" value={item.score.clarityScore} />
+                      </div>
+                    ) : (
+                      <span className="text-xs text-[var(--color-text-muted)]">
+                        Chưa chấm
+                      </span>
+                    )}
+                  </div>
+                </Link>
               </li>
             ))}
           </ul>
@@ -106,11 +112,40 @@ export default function PracticeHistoryList() {
   );
 }
 
+/** Mốc màu nội suy cho thang điểm 0..10: đỏ -> vàng -> xanh lá -> xanh dương. */
+const SCORE_COLOR_STOPS: [number, [number, number, number]][] = [
+  [0, [239, 68, 68]], // đỏ
+  [10 / 3, [234, 179, 8]], // vàng
+  [20 / 3, [34, 197, 94]], // xanh lá
+  [10, [59, 130, 246]], // xanh dương
+];
+
+function scoreColor(value: number): [number, number, number] {
+  const v = Math.max(0, Math.min(10, value));
+  for (let i = 0; i < SCORE_COLOR_STOPS.length - 1; i += 1) {
+    const [p0, c0] = SCORE_COLOR_STOPS[i];
+    const [p1, c1] = SCORE_COLOR_STOPS[i + 1];
+    if (v <= p1) {
+      const t = (v - p0) / (p1 - p0);
+      return [
+        Math.round(c0[0] + (c1[0] - c0[0]) * t),
+        Math.round(c0[1] + (c1[1] - c0[1]) * t),
+        Math.round(c0[2] + (c1[2] - c0[2]) * t),
+      ];
+    }
+  }
+  return SCORE_COLOR_STOPS[SCORE_COLOR_STOPS.length - 1][1];
+}
+
 function ScoreChip({ label, value }: { label: string; value: number }) {
+  const [r, g, b] = scoreColor(value);
   return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-white/10 px-1.5 py-0.5 text-[10px] text-[var(--color-text-secondary)]">
+    <span
+      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold"
+      style={{ backgroundColor: `rgba(${r}, ${g}, ${b}, 0.16)`, color: `rgb(${r}, ${g}, ${b})` }}
+    >
       {label}
-      <span className="font-bold text-[var(--color-text-primary)]">{value}</span>
+      <span className="font-bold">{value}</span>
     </span>
   );
 }

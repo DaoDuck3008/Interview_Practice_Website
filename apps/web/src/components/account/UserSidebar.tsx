@@ -37,12 +37,6 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/billing", label: "Gói của tôi", icon: CreditCard, enabled: true },
   { href: "/usage", label: "Mức sử dụng", icon: Gauge, enabled: true },
   {
-    href: "/history",
-    label: "Lịch sử trả lời",
-    icon: History,
-    enabled: false,
-  },
-  {
     href: "/saved",
     label: "Câu hỏi đã lưu",
     icon: Bookmark,
