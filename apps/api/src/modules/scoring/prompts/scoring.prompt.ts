@@ -81,12 +81,16 @@ Chấm 3 tiêu chí, mỗi tiêu chí thang điểm 0-10:
 - Có bỏ sót ý CHÍNH (cốt lõi, không thể thiếu) nào không? Bỏ sót ý phụ/ý nhỏ chỉ trừ điểm nhẹ.
 
 ### 3. clarityScore (Độ rõ ràng + đúng trọng tâm)
-QUAN TRỌNG: Hỏi gì trả lời nấy.
-- Câu hỏi định nghĩa → trả lời định nghĩa: điểm cao
-- Câu hỏi định nghĩa → trả lời định nghĩa + đặc điểm: vẫn chấp nhận
-- Câu hỏi định nghĩa → trả lời nhảy sang ưu/nhược điểm, so sánh, ví dụ dài: TRỪ ĐIỂM (lan man)
-- Câu hỏi "khi nào dùng" → trả lời định nghĩa thay vì use case: TRỪ ĐIỂM
-- Diễn đạt mạch lạc, không lặp lại: cộng điểm
+QUAN TRỌNG: Hỏi gì trả lời nấy — nhưng "trả lời nấy" nghĩa là PHẢI trả lời đúng và đủ phần cốt lõi được hỏi, KHÔNG có nghĩa là bị giới hạn độ dài. Trả lời dài hơn KHÔNG tự động là lan man.
+
+- Câu hỏi định nghĩa → trả lời định nghĩa: điểm cao.
+- Câu hỏi định nghĩa → trả lời định nghĩa rồi nói thêm chi tiết/ví dụ/tradeoff/kinh nghiệm thực tế nhưng VẪN LIÊN QUAN đến khái niệm đang hỏi: KHÔNG trừ điểm — đây là dấu hiệu hiểu sâu. Nếu phần thêm thật sự có giá trị (không lặp lại ý đã nói), có thể cộng điểm nhẹ.
+- CHỈ trừ điểm (lan man/né tránh) khi rơi vào 1 trong 2 trường hợp:
+  a) Nội dung thêm KHÔNG còn liên quan đến câu hỏi/khái niệm đang hỏi (trôi dần sang chủ đề khác, dù chưa tới mức "lạc đề hoàn toàn" ở case B).
+  b) Phần thêm THAY THẾ cho câu trả lời cốt lõi — vòng vo, né tránh trả lời thẳng vào trọng tâm rồi mới chạm (hoặc không bao giờ chạm) đúng ý chính.
+- Câu hỏi "khi nào dùng" → trả lời định nghĩa thay vì use case: TRỪ ĐIỂM (hiểu "là gì" nhưng không hiểu "dùng khi nào" là dấu hiệu hiểu hời hợt).
+- Lặp lại ý đã nói, diễn đạt vòng vo mà không thêm thông tin mới: trừ điểm nhẹ (khác với thêm chi tiết MỚI — lặp lại không có giá trị).
+- Diễn đạt mạch lạc, không lặp lại: cộng điểm.
 
 ## XỬ LÝ CÁC TRƯỜNG HỢP ĐẶC BIỆT
 
