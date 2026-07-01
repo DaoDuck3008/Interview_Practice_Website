@@ -35,8 +35,25 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { email } });
   }
 
+  // Bản ghi tối giản dùng cho luồng NÓNG (refresh token) — chỉ các field cần
+  // để phát hành token lại. KHÔNG join subscription/orders ở đây.
   async findById(id: string) {
     return this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        avatarUrl: true,
+      },
+    });
+  }
+
+  /** Chi tiết đầy đủ 1 user cho modal admin: thông tin tài khoản (trừ mật khẩu),
+   *  gói đã đăng ký và toàn bộ lịch sử giao dịch. */
+  async getAdminDetail(id: string) {
+    const user = await this.prisma.user.findUnique({
       where: { id },
       select: {
         id: true,
@@ -51,25 +68,37 @@ export class UsersService {
         subscription: {
           select: {
             status: true,
+            startedAt: true,
             expiresAt: true,
-            plan: { select: { name: true } },
+            canceledAt: true,
+            plan: {
+              select: { name: true, slug: true, durationDays: true },
+            },
           },
         },
         orders: {
-          take: 5,
+          take: 10, // chỉ lấy 10 giao dịch gần nhất, muốn xem hết thì vào trang riêng
           orderBy: { createdAt: 'desc' },
           select: {
             id: true,
             status: true,
             amountVnd: true,
-            createdAt: true,
-            providerTxnId: true,
             provider: true,
-            plan: { select: { name: true, priceVnd: true } },
+            transferCode: true,
+            providerTxnId: true,
+            paidAt: true,
+            periodEnd: true,
+            note: true,
+            createdAt: true,
+            plan: { select: { name: true } },
           },
         },
       },
     });
+    if (!user) throw new NotFoundException('Không tìm thấy người dùng');
+
+    const { googleId, ...rest } = user;
+    return { ...rest, isGoogle: googleId !== null };
   }
 
   async create(data: { name: string; email: string; passwordHash: string }) {

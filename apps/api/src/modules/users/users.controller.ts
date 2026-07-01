@@ -29,7 +29,7 @@ export class UsersController {
 
   @Get('admin/:id')
   findOneAdmin(@Param('id') id: string) {
-    return this.usersService.findById(id);
+    return this.usersService.getAdminDetail(id);
   }
 
   @Patch('admin/:id/lock')

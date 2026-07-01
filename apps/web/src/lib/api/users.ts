@@ -1,6 +1,6 @@
 import api, { type ApiResponse } from "./api";
 import type { Paginated } from "./questions";
-import type { SubscriptionStatus } from "./subscriptions";
+import type { SubscriptionStatus, OrderStatus } from "./subscriptions";
 
 export interface AdminUser {
   id: string;
@@ -16,6 +16,41 @@ export interface AdminUser {
     expiresAt: string;
     planName: string;
   } | null;
+}
+
+export interface AdminUserOrder {
+  id: string;
+  status: OrderStatus;
+  amountVnd: number;
+  provider: string;
+  transferCode: string;
+  providerTxnId: string | null;
+  paidAt: string | null;
+  periodEnd: string | null;
+  note: string | null;
+  createdAt: string;
+  plan: { name: string } | null;
+}
+
+/** Chi tiết đầy đủ 1 user (modal admin): thông tin tài khoản, gói & lịch sử giao dịch. */
+export interface AdminUserDetail {
+  id: string;
+  name: string;
+  email: string;
+  role: "USER" | "ADMIN";
+  avatarUrl: string | null;
+  isGoogle: boolean;
+  isLock: boolean;
+  emailVerified: boolean;
+  createdAt: string;
+  subscription: {
+    status: SubscriptionStatus;
+    startedAt: string;
+    expiresAt: string;
+    canceledAt: string | null;
+    plan: { name: string; slug: string; durationDays: number };
+  } | null;
+  orders: AdminUserOrder[];
 }
 
 export interface AdminUserQuery {
@@ -41,6 +76,14 @@ export async function getUsersAdmin(
   const res = await api.get<ApiResponse<Paginated<AdminUser>>>("/users/admin", {
     params,
   });
+  return res.data.data;
+}
+
+/** Chi tiết đầy đủ 1 user cho modal admin. */
+export async function getUserDetail(id: string): Promise<AdminUserDetail> {
+  const res = await api.get<ApiResponse<AdminUserDetail>>(
+    `/users/admin/${id}`,
+  );
   return res.data.data;
 }
 

@@ -26,6 +26,7 @@ import { getPlans, type Plan } from "@/lib/api/plans";
 import type { Paginated } from "@/lib/api/questions";
 import Pagination from "@/components/admin/Pagination";
 import GrantSubscriptionModal from "@/components/admin/GrantSubscriptionModal";
+import UserDetailModal from "@/components/admin/UserDetailModal";
 import StatusModal, { type StatusType } from "@/components/ui/StatusModal";
 import { formatDay } from "@/lib/utils/format";
 import { SUBSCRIPTION_STATUS_META } from "@/lib/utils/subscriptions";
@@ -65,6 +66,7 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [grantUser, setGrantUser] = useState<AdminUser | null>(null);
+  const [detailUserId, setDetailUserId] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [acting, setActing] = useState(false);
 
@@ -304,9 +306,13 @@ export default function AdminUsersPage() {
                 key={u.id}
                 className={`${GRID} py-3.5 border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-elevated)] transition-colors duration-150`}
               >
-                <div className="min-w-0">
+                <button
+                  onClick={() => setDetailUserId(u.id)}
+                  className="min-w-0 text-left cursor-pointer group"
+                  title="Xem chi tiết"
+                >
                   <p
-                    className="text-sm text-[var(--color-text-primary)] truncate"
+                    className="text-sm text-[var(--color-text-primary)] truncate group-hover:text-[var(--color-accent-light)] transition-colors"
                     title={u.name}
                   >
                     {u.name}
@@ -322,7 +328,7 @@ export default function AdminUsersPage() {
                   >
                     {u.email}
                   </p>
-                </div>
+                </button>
 
                 {/* Trạng thái */}
                 <div className="flex flex-col gap-1 items-start">
@@ -427,6 +433,11 @@ export default function AdminUsersPage() {
         user={grantUser}
         onClose={() => setGrantUser(null)}
         onGranted={load}
+      />
+
+      <UserDetailModal
+        userId={detailUserId}
+        onClose={() => setDetailUserId(null)}
       />
 
       <StatusModal
