@@ -2,11 +2,14 @@ import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common
 import { DeepSeekClient } from './deepseek.client';
 import {
   IMPROVEMENT_SYSTEM_PROMPT,
+  IMPROVEMENT_PROMPT_VERSION,
   buildImprovementUserPrompt,
   type Annotation,
   type ImprovementResult,
 } from './prompts/improvement.prompt';
 import type { QuestionInput, ScoreResult } from './prompts/scoring.prompt';
+
+type ParsedImprovement = Omit<ImprovementResult, 'promptVersion'>;
 
 @Injectable()
 export class ImprovementService {
@@ -29,7 +32,7 @@ export class ImprovementService {
       scoreResult,
     );
 
-    let parsed: ImprovementResult;
+    let parsed: ParsedImprovement;
     try {
       parsed = this.parse(await this.callDeepSeek(userPrompt));
     } catch (err) {
@@ -44,7 +47,7 @@ export class ImprovementService {
       transcript.includes(a.originalSegment),
     );
 
-    return { ...parsed, annotations };
+    return { ...parsed, annotations, promptVersion: IMPROVEMENT_PROMPT_VERSION };
   }
 
   private callDeepSeek(userPrompt: string): Promise<string> {
@@ -55,7 +58,7 @@ export class ImprovementService {
     });
   }
 
-  private parse(raw: string): ImprovementResult {
+  private parse(raw: string): ParsedImprovement {
     let obj: unknown;
     try {
       obj = JSON.parse(raw);
@@ -73,7 +76,7 @@ export class ImprovementService {
    * đảm bảo JSON hợp lệ, KHÔNG đảm bảo đúng schema — nên phải tự kiểm tra để tránh
    * lỗi thô (vd `.filter` trên field thiếu) khi field bị thiếu/sai kiểu.
    */
-  private normalize(obj: unknown): ImprovementResult {
+  private normalize(obj: unknown): ParsedImprovement {
     if (typeof obj !== 'object' || obj === null) throw this.invalid();
 
     const r = obj as Record<string, unknown>;

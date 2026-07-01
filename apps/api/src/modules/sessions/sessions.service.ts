@@ -12,7 +12,10 @@ import { SpeechService } from '../speech/speech.service';
 import { ScoringService } from '../scoring/scoring.service';
 import { ImprovementService } from '../scoring/improvement.service';
 import { QuotaService } from '../quota/quota.service';
-import type { ScoreResult } from '../scoring/prompts/scoring.prompt';
+import {
+  SCORING_PROMPT_VERSION,
+  type ScoreResult,
+} from '../scoring/prompts/scoring.prompt';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { QueryHistoryDto } from './dto/query-history.dto';
 
@@ -281,6 +284,7 @@ export class SessionsService {
             'Mình chưa nghe được câu trả lời nào. Bạn thử ghi âm lại và trả lời câu hỏi nhé!',
           improvements: [],
         },
+        promptVersion: SCORING_PROMPT_VERSION,
       };
     } else {
       result = await this.scoring.score(session.transcript, {
@@ -341,6 +345,7 @@ export class SessionsService {
           missedKeywords: result.missedKeywords ?? [],
           summary: result.feedback.summary,
           improvements: result.feedback.improvements ?? [],
+          promptVersion: result.promptVersion,
         },
       });
     } catch (err) {
@@ -398,6 +403,7 @@ export class SessionsService {
           summary: session.score.summary,
           improvements: session.score.improvements,
         },
+        promptVersion: session.score.promptVersion ?? SCORING_PROMPT_VERSION,
       },
     );
 
@@ -408,6 +414,7 @@ export class SessionsService {
           improvedAnswer: result.improvedAnswer,
           annotations: result.annotations as unknown as Prisma.InputJsonValue,
           keyChanges: result.keyChanges ?? [],
+          promptVersion: result.promptVersion,
         },
       });
     } catch (err) {

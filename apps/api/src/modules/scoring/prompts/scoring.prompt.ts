@@ -32,7 +32,10 @@ export interface ScoreResult {
     summary: string;
     improvements: string[];
   };
+  promptVersion: string;
 }
+
+export const SCORING_PROMPT_VERSION = '2026-07-01';
 
 export const SCORING_SYSTEM_PROMPT = `
 Bạn là chuyên gia kỹ thuật đang chấm điểm câu trả lời phỏng vấn cho vị trí lập trình viên IT (bao trùm web, backend, DevOps, triển khai/deployment, hệ thống...) của một ứng viên người Việt.

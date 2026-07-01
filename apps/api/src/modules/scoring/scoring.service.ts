@@ -6,12 +6,13 @@ import {
 import { DeepSeekClient } from './deepseek.client';
 import {
   SCORING_SYSTEM_PROMPT,
+  SCORING_PROMPT_VERSION,
   buildScoringUserPrompt,
   type QuestionInput,
   type ScoreResult,
 } from './prompts/scoring.prompt';
 
-type ParsedScore = Omit<ScoreResult, 'overallScore'>;
+type ParsedScore = Omit<ScoreResult, 'overallScore' | 'promptVersion'>;
 
 @Injectable()
 export class ScoringService {
@@ -50,7 +51,7 @@ export class ScoringService {
           10,
       ) / 10;
 
-    return { ...parsed, overallScore };
+    return { ...parsed, overallScore, promptVersion: SCORING_PROMPT_VERSION };
   }
 
   private callDeepSeek(userPrompt: string): Promise<string> {

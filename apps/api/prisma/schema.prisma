@@ -119,6 +119,8 @@ model Score {
   summary      String   // Nhận xét tóm tắt (1 câu) bằng tiếng Việt
   improvements String[] // Các gợi ý cải thiện cụ thể
 
+  promptVersion String? // Version của SCORING_PROMPT tại thời điểm chấm — trace khi đổi prompt/model. Null = tạo trước khi có tính năng này.
+
   createdAt DateTime @default(now())
 }
 
@@ -130,6 +132,8 @@ model Improvement {
   improvedAnswer String   // Bản câu trả lời đã được DeepSeek viết lại tốt hơn
   annotations    Json     // Annotation[]: { originalSegment, issue, suggestion }
   keyChanges     String[] // Các thay đổi quan trọng, tóm tắt ngắn gọn
+
+  promptVersion String? // Version của IMPROVEMENT_PROMPT tại thời điểm tạo — trace khi đổi prompt/model. Null = tạo trước khi có tính năng này.
 
   createdAt DateTime @default(now())
 }

@@ -27,7 +27,11 @@ export interface ImprovementResult {
   improvedAnswer: string;
   annotations: Annotation[];
   keyChanges: string[];
+  promptVersion: string;
 }
+
+/** Bump theo ngày mỗi khi sửa nội dung IMPROVEMENT_SYSTEM_PROMPT đáng kể — dùng để truy vết Improvement cũ được tạo bằng phiên bản prompt nào. */
+export const IMPROVEMENT_PROMPT_VERSION = '2026-07-01';
 
 export const IMPROVEMENT_SYSTEM_PROMPT = `
 Bạn là mentor giúp ứng viên người Việt cải thiện câu trả lời phỏng vấn cho vị trí lập trình viên IT (bao trùm web, backend, DevOps, triển khai/deployment, hệ thống...).
