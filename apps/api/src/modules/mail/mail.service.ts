@@ -3,6 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { Resend } from 'resend';
 import { codeEmailTemplate } from './templates/code-email.template';
 import { tempPasswordEmailTemplate } from './templates/temp-password.template';
+import {
+  purchaseReceiptEmailTemplate,
+  type PurchaseReceiptEmailOptions,
+} from './templates/purchase-receipt.template';
 
 /**
  * Gửi email giao dịch qua Resend. Hiện dùng cho:
@@ -61,6 +65,17 @@ export class MailService {
       to,
       subject: 'Mật khẩu InterviewPrep của bạn đã được đặt lại',
       html: tempPasswordEmailTemplate({ name, password }),
+    });
+  }
+
+  async sendPurchaseReceipt(
+    to: string,
+    opts: PurchaseReceiptEmailOptions,
+  ) {
+    await this.send({
+      to,
+      subject: `Biên nhận thanh toán gói ${opts.planName} — InterviewPrep`,
+      html: purchaseReceiptEmailTemplate(opts),
     });
   }
 

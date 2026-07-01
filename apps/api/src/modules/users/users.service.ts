@@ -89,7 +89,7 @@ export class UsersService {
           role: true,
           emailVerified: true,
           isLock: true,
-          passwordHash: true, // chỉ để suy ra isGoogle, không trả ra ngoài
+          googleId: true,
           createdAt: true,
           subscription: {
             select: {
@@ -113,7 +113,7 @@ export class UsersService {
       role: u.role,
       emailVerified: u.emailVerified,
       isLock: u.isLock,
-      isGoogle: u.passwordHash === null, // không có mật khẩu → đăng nhập bằng Google
+      isGoogle: u.googleId !== null,
       createdAt: u.createdAt,
       subscription: u.subscription
         ? {

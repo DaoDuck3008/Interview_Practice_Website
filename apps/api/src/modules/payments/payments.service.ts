@@ -12,6 +12,7 @@ import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { QueryOrderDto, OrderDateField } from './dto/query-order.dto';
 import { SepayClient, type SepayTransaction } from './sepay.client';
+import { MailService } from '../mail/mail.service';
 
 // Việt Nam cố định UTC+7 — dùng để tính mốc "hôm nay/tháng này" theo giờ VN.
 const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
@@ -31,6 +32,7 @@ export class PaymentsService {
     private prisma: PrismaService,
     private config: ConfigService,
     private sepay: SepayClient,
+    private mail: MailService,
   ) {}
 
   /** Tạo (hoặc tái dùng) đơn PENDING cho user + plan, trả về thông tin thanh toán + QR động. */
@@ -126,8 +128,10 @@ export class PaymentsService {
       return { success: true, ignored: 'underpaid' };
     }
 
-    await this.activateOrder(order, txnId, payload);
+    const { paidAt, periodEnd } = await this.activateOrder(order, txnId, payload);
     this.logger.log(`Đơn ${order.id} đã thanh toán & kích hoạt subscription.`);
+    // Gửi biên nhận best-effort — không để lỗi email làm hỏng phản hồi webhook.
+    void this.sendReceiptEmail(order, paidAt, periodEnd);
     return { success: true };
   }
 
@@ -452,8 +456,9 @@ export class PaymentsService {
     order: Order & { plan: Plan },
     txnId: string,
     payload: any,
-  ) {
+  ): Promise<{ paidAt: Date; periodEnd: Date }> {
     const now = new Date();
+    let periodEnd = now;
     await this.prisma.$transaction(async (tx) => {
       const sub = await tx.subscription.findUnique({
         where: { userId: order.userId },
@@ -463,6 +468,7 @@ export class PaymentsService {
       const expiresAt = new Date(
         base.getTime() + order.plan.durationDays * DAY_MS,
       );
+      periodEnd = expiresAt;
 
       let subscriptionId: string;
       if (sub) {
@@ -495,6 +501,38 @@ export class PaymentsService {
         },
       });
     });
+    return { paidAt: now, periodEnd };
+  }
+
+  /**
+   * Gửi email biên nhận + xác nhận mua gói thành công. Best-effort:
+   * nuốt lỗi (chỉ log) để không ảnh hưởng phản hồi webhook cho Sepay.
+   */
+  private async sendReceiptEmail(
+    order: Order & { plan: Plan },
+    paidAt: Date,
+    periodEnd: Date,
+  ) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: order.userId },
+        select: { email: true, name: true },
+      });
+      if (!user) return;
+      await this.mail.sendPurchaseReceipt(user.email, {
+        name: user.name,
+        planName: order.plan.name,
+        amountVnd: order.amountVnd,
+        transferCode: order.transferCode,
+        paidAt,
+        periodEnd,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `Không gửi được email biên nhận cho đơn ${order.id}: ${msg}`,
+      );
+    }
   }
 
   /**
