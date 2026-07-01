@@ -180,15 +180,19 @@ function HistoryCard({ orders }: { orders: PaidOrder[] }) {
           {orders.map((o) => (
             <li
               key={o.id}
-              className="flex items-center gap-4 border-b border-white/10 py-3.5 last:border-b-0 text-sm"
+              className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-white/10 py-3.5 last:border-b-0 text-sm"
             >
-              <span className="flex items-center gap-2 min-w-0 flex-shrink-0">
+              <span className="flex items-center gap-2 min-w-0">
                 <span className="font-semibold text-[var(--color-text-primary)] truncate">
                   {o.plan.name}
                 </span>
                 <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-medium text-[var(--color-text-muted)] whitespace-nowrap">
                   {o.plan.durationDays} ngày
                 </span>
+              </span>
+
+              <span className="ml-auto font-semibold text-[var(--color-text-primary)] whitespace-nowrap">
+                {formatVnd(o.amountVnd)}
               </span>
 
               <span className="inline-flex items-center gap-1.5 text-xs text-[var(--color-text-secondary)] whitespace-nowrap">
@@ -204,10 +208,6 @@ function HistoryCard({ orders }: { orders: PaidOrder[] }) {
                   className="text-[var(--color-text-muted)]"
                 />
                 Hết hạn: {orderEndDay(o)}
-              </span>
-
-              <span className="ml-auto font-semibold text-[var(--color-text-primary)] whitespace-nowrap">
-                {formatVnd(o.amountVnd)}
               </span>
             </li>
           ))}

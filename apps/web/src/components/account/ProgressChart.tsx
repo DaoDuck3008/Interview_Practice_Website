@@ -57,53 +57,60 @@ export default function ProgressChart({
             Chưa có dữ liệu điểm trong tháng này.
           </p>
         ) : (
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart
-              data={data}
-              margin={{ top: 8, right: 8, bottom: 0, left: -16 }}
-            >
-              <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-              <XAxis
-                dataKey="date"
-                tickFormatter={(v: string) => v.slice(8)}
-                tick={{ fill: "#9898aa", fontSize: 11 }}
-                stroke="rgba(255,255,255,0.1)"
-              />
-              <YAxis
-                domain={[0, 10]}
-                ticks={[0, 2, 4, 6, 8, 10]}
-                tick={{ fill: "#9898aa", fontSize: 11 }}
-                stroke="rgba(255,255,255,0.1)"
-              />
-              <Tooltip
-                contentStyle={{
-                  background: "#13131c",
-                  border: "1px solid #1c1c28",
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-                labelStyle={{ color: "#f4f4f6" }}
-                labelFormatter={(label) => formatDay(String(label))}
-              />
-              <Legend
-                wrapperStyle={{ fontSize: 12, color: "#9898aa" }}
-                iconType="plainline"
-              />
-              {SERIES.map((s) => (
-                <Line
-                  key={s.key}
-                  type="monotone"
-                  dataKey={s.key}
-                  name={s.name}
-                  stroke={s.color}
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                  connectNulls
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
+          <div className="overflow-x-auto pb-1">
+            <div className="min-w-[560px]">
+              <ResponsiveContainer width="100%" height={280}>
+                <LineChart
+                  data={data}
+                  margin={{ top: 8, right: 8, bottom: 0, left: -16 }}
+                >
+                  <CartesianGrid
+                    stroke="rgba(255,255,255,0.06)"
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={(v: string) => v.slice(8)}
+                    tick={{ fill: "#9898aa", fontSize: 11 }}
+                    stroke="rgba(255,255,255,0.1)"
+                  />
+                  <YAxis
+                    domain={[0, 10]}
+                    ticks={[0, 2, 4, 6, 8, 10]}
+                    tick={{ fill: "#9898aa", fontSize: 11 }}
+                    stroke="rgba(255,255,255,0.1)"
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: "#13131c",
+                      border: "1px solid #1c1c28",
+                      borderRadius: 8,
+                      fontSize: 12,
+                    }}
+                    labelStyle={{ color: "#f4f4f6" }}
+                    labelFormatter={(label) => formatDay(String(label))}
+                  />
+                  <Legend
+                    wrapperStyle={{ fontSize: 12, color: "#9898aa" }}
+                    iconType="plainline"
+                  />
+                  {SERIES.map((s) => (
+                    <Line
+                      key={s.key}
+                      type="monotone"
+                      dataKey={s.key}
+                      name={s.name}
+                      stroke={s.color}
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                      activeDot={{ r: 5 }}
+                      connectNulls
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         )}
       </div>
     </div>

@@ -164,8 +164,8 @@ function InfoRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-4 border-b border-white/10 py-3.5 last:border-b-0">
-      <span className="inline-flex w-48 flex-shrink-0 items-center gap-2 text-sm text-[var(--color-text-muted)]">
+    <div className="flex flex-col gap-1 border-b border-white/10 py-3.5 last:border-b-0 sm:flex-row sm:items-center sm:gap-4">
+      <span className="inline-flex items-center gap-2 text-sm text-[var(--color-text-muted)] sm:w-48 sm:flex-shrink-0">
         <Icon size={15} />
         {label}
       </span>

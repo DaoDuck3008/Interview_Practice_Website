@@ -57,10 +57,11 @@ export default function UserSidebar() {
         border: "1px solid rgba(255,255,255,0.07)",
       }}
     >
-      <p className="px-3 pb-2 pt-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+      <p className="hidden px-3 pb-2 pt-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)] md:block">
         Tài khoản
       </p>
-      <nav className="flex flex-col gap-1">
+      {/* Mobile: thanh tab cuộn ngang. Desktop (md+): danh sách dọc như cũ. */}
+      <nav className="flex gap-1 overflow-x-auto gap-2 py-2 md:flex-col md:overflow-visible md:pb-0">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const active = item.enabled && pathname === item.href;
@@ -70,12 +71,11 @@ export default function UserSidebar() {
               <div
                 key={item.href}
                 aria-disabled="true"
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm opacity-50 cursor-not-allowed text-[var(--color-text-secondary)]"
-                style={{ borderLeft: "2px solid transparent" }}
+                className="flex flex-shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border-b-2 border-transparent px-3 py-2.5 text-sm text-[var(--color-text-secondary)] opacity-50 cursor-not-allowed md:gap-3 md:border-b-0 md:border-l-2"
               >
                 <Icon size={16} className="flex-shrink-0" />
                 <span>{item.label}</span>
-                <span className="ml-auto inline-flex rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-medium text-[var(--color-text-muted)]">
+                <span className="ml-auto hidden rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-medium text-[var(--color-text-muted)] md:inline-flex">
                   Sắp có
                 </span>
               </div>
@@ -87,17 +87,11 @@ export default function UserSidebar() {
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors duration-150"
-              style={{
-                background: active ? "rgba(124,58,237,0.14)" : "transparent",
-                borderLeft: active
-                  ? "2px solid var(--color-accent)"
-                  : "2px solid transparent",
-                color: active
-                  ? "var(--color-text-primary)"
-                  : "var(--color-text-secondary)",
-                fontWeight: active ? 600 : 400,
-              }}
+              className={`flex flex-shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border-b-2 px-3 py-2.5 text-sm transition-colors duration-150 md:gap-3 md:border-b-0 md:border-l-2 ${
+                active
+                  ? "border-[var(--color-accent)] bg-[rgba(124,58,237,0.14)] font-semibold text-[var(--color-text-primary)]"
+                  : "border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+              }`}
             >
               <Icon
                 size={16}

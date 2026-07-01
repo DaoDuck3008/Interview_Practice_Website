@@ -44,7 +44,7 @@ export default function PracticeHistoryList() {
               <li key={item.id}>
                 <Link
                   href={`/practice/${item.question.topic.slug}/${item.questionId}`}
-                  className="flex items-start gap-3 rounded-lg py-3.5 transition-colors hover:bg-white/5"
+                  className="flex flex-wrap items-start gap-x-3 gap-y-2 rounded-lg py-3.5 transition-colors hover:bg-white/5"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="line-clamp-2 text-sm text-[var(--color-text-primary)]">
