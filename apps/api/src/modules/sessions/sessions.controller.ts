@@ -15,6 +15,7 @@ import { SessionsService } from './sessions.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { QueryHistoryDto } from './dto/query-history.dto';
 import { QueryMonthlyDto } from './dto/query-monthly.dto';
+import { FlagScoreDto } from './dto/flag-score.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { QuotaGuard } from '../quota/quota.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -96,6 +97,16 @@ export class SessionsController {
   @UseInterceptors(ConcurrencyInterceptor)
   score(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.sessions.score(id, user.id);
+  }
+
+  /** User báo điểm chấm sai/khiếu nại cho session đã chấm. */
+  @Post(':id/score/flag')
+  flagScore(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: FlagScoreDto,
+  ) {
+    return this.sessions.flagScore(id, user.id, dto.reason);
   }
 
   @Post(':id/improve')

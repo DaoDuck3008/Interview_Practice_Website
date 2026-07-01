@@ -121,6 +121,9 @@ model Score {
 
   promptVersion String? // Version của SCORING_PROMPT tại thời điểm chấm — trace khi đổi prompt/model. Null = tạo trước khi có tính năng này.
 
+  flaggedAt  DateTime? // User báo điểm chấm sai lúc nào — null = chưa bị báo cáo
+  flagReason String?   // Lý do user ghi khi báo cáo (tùy chọn)
+
   createdAt DateTime @default(now())
 }
 

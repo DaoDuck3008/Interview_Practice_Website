@@ -1,0 +1,2 @@
+ALTER TABLE "Score" ADD COLUMN "flaggedAt" TIMESTAMP(3);
+ALTER TABLE "Score" ADD COLUMN "flagReason" TEXT;

@@ -258,6 +258,31 @@ export class SessionsService {
   }
 
   /**
+   * User báo điểm chấm sai/khiếu nại cho 1 session đã chấm — lưu lại để admin xem xét sau.
+   * Idempotent: flag lại chỉ cập nhật thời gian + lý do mới nhất, không lỗi nếu đã flag trước đó.
+   */
+  async flagScore(sessionId: string, userId: string, reason?: string) {
+    const session = await this.prisma.session.findFirst({
+      where: { id: sessionId, userId },
+      include: { score: true },
+    });
+    if (!session) throw new NotFoundException('Session không tồn tại');
+    if (!session.score) {
+      throw new BadRequestException('Session chưa được chấm điểm.');
+    }
+
+    await this.prisma.score.update({
+      where: { sessionId },
+      data: {
+        flaggedAt: new Date(),
+        flagReason: reason?.trim() || null,
+      },
+    });
+
+    return { flagged: true };
+  }
+
+  /**
    * Bước 2: chấm điểm 1 session bằng DeepSeek. Cache: đã có score thì trả luôn.
    */
   async score(sessionId: string, userId: string) {

@@ -380,7 +380,7 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
 
       {/*  Evaluation pane  */}
       {phase === "evaluated" && evaluation && (
-        <AnswerEvaluation evaluation={evaluation} />
+        <AnswerEvaluation evaluation={evaluation} sessionId={sessionId} />
       )}
 
       {/*  Evaluation error  */}

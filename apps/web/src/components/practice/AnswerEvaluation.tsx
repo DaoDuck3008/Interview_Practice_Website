@@ -1,8 +1,11 @@
-import { ChevronRight, Lightbulb, MessageSquareQuote, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { ChevronRight, Flag, Lightbulb, MessageSquareQuote, Sparkles } from "lucide-react";
 import type { Score } from "@/lib/api/sessions";
+import FlagScoreModal from "@/components/practice/FlagScoreModal";
 
 interface Props {
   evaluation: Score;
+  sessionId: string;
 }
 
 /** Bảng màu theo mức điểm: <5 đỏ, 5–7 vàng, ≥7 xanh lá */
@@ -53,7 +56,10 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
   );
 }
 
-export default function AnswerEvaluation({ evaluation }: Props) {
+export default function AnswerEvaluation({ evaluation, sessionId }: Props) {
+  const [flagOpen, setFlagOpen] = useState(false);
+  const [flagged, setFlagged] = useState(false);
+
   const avg =
     (evaluation.technicalScore +
       evaluation.completenessScore +
@@ -63,10 +69,24 @@ export default function AnswerEvaluation({ evaluation }: Props) {
 
   return (
     <section className="px-6 py-6 flex flex-col gap-5 eval-enter">
-      <p className="flex items-center gap-1.5 text-xs font-medium text-[#9898aa]">
-        <Sparkles size={13} className="text-[#8b5cf6]" />
-        AI đánh giá
-      </p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="flex items-center gap-1.5 text-xs font-medium text-[#9898aa]">
+          <Sparkles size={13} className="text-[#8b5cf6]" />
+          AI đánh giá
+        </p>
+
+        {evaluation.id && (
+          <button
+            type="button"
+            onClick={() => setFlagOpen(true)}
+            disabled={flagged}
+            className="flex items-center gap-1.5 text-xs text-[#606072] transition-colors enabled:cursor-pointer enabled:hover:text-[#f59e0b] disabled:cursor-not-allowed"
+          >
+            <Flag size={12} />
+            {flagged ? "Đã báo cáo" : "Báo điểm sai"}
+          </button>
+        )}
+      </div>
 
       {/* Điểm tổng (trái) + các thanh điểm (phải) */}
       <div className="flex items-center gap-5">
@@ -128,6 +148,13 @@ export default function AnswerEvaluation({ evaluation }: Props) {
           </ul>
         </div>
       )}
+
+      <FlagScoreModal
+        open={flagOpen}
+        sessionId={sessionId}
+        onClose={() => setFlagOpen(false)}
+        onFlagged={() => setFlagged(true)}
+      />
     </section>
   );
 }

@@ -61,6 +61,18 @@ export async function improveSession(sessionId: string): Promise<Improvement> {
   return res.data.data;
 }
 
+/** Báo điểm chấm sai/khiếu nại cho 1 session đã chấm. `reason` không bắt buộc. */
+export async function flagScore(
+  sessionId: string,
+  reason?: string,
+): Promise<{ flagged: boolean }> {
+  const res = await api.post<ApiResponse<{ flagged: boolean }>>(
+    `/sessions/${sessionId}/score/flag`,
+    { reason },
+  );
+  return res.data.data;
+}
+
 // ─── Dashboard cá nhân ──────────────────────────────
 
 export interface DashboardStats {
