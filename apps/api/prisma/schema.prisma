@@ -83,6 +83,8 @@ model Question {
   isFeatured Boolean @default(false)
 
   sessions Session[]
+
+  @@index([isActive, topicId]) // browse/random/admin-list: luôn lọc isActive, thường kèm topicId
 }
 
 model Session {
@@ -102,6 +104,7 @@ model Session {
   improvement Improvement?
 
   @@index([userId, createdAt]) // dashboard: thống kê/lịch sử/heatmap theo user + thời gian
+  @@index([questionId]) // findByQuestion + admin filter theo topic (join qua questionId)
 }
 
 model Score {
@@ -132,6 +135,8 @@ model Score {
   reviewedBy       User?     @relation("ScoreReviewedBy", fields: [reviewedById], references: [id])
 
   createdAt DateTime @default(now())
+
+  @@index([flaggedAt, flagResolvedAt]) // admin: lọc hàng đợi báo cáo (đang chờ/đã xử lý)
 }
 
 model Improvement {
@@ -225,7 +230,9 @@ model Order {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
-  @@index([status])
+  @@index([status, expiresAt]) // cron dọn đơn PENDING hết hạn; cũng phục vụ lọc riêng theo status
+  @@index([createdAt]) // admin: sổ cái sắp theo ngày tạo (không luôn lọc theo userId)
+  @@index([subscriptionId]) // admin: lịch sử đơn theo 1 subscription
 }
 
 // 1 dòng = 1 lượt luyện tập, ghi khi tạo session (ghi âm) thành công.
