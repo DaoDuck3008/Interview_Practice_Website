@@ -73,6 +73,134 @@ export async function flagScore(
   return res.data.data;
 }
 
+// ─── Admin: quản lý session của mọi user ──────────────────────────────
+
+export interface AdminSessionListItem {
+  id: string;
+  duration: number;
+  createdAt: string;
+  user: { id: string; name: string; email: string };
+  question: {
+    id: string;
+    content: string;
+    level: Level;
+    topic: { name: string; slug: string };
+  };
+  score: {
+    id: string;
+    technicalScore: number;
+    completenessScore: number;
+    clarityScore: number;
+    flaggedAt: string | null;
+    flagReason: string | null;
+    flagResolvedAt: string | null;
+    manuallyEditedAt: string | null;
+  } | null;
+}
+
+export interface AdminSessionDetail {
+  id: string;
+  transcript: string;
+  audioUrl: string;
+  duration: number;
+  createdAt: string;
+  user: { id: string; name: string; email: string };
+  question: {
+    id: string;
+    content: string;
+    answerKeySummary: string;
+    answerKeywords: string[];
+    level: Level;
+    topic: { name: string; slug: string };
+  };
+  score:
+    | (Score & {
+        promptVersion: string | null;
+        flaggedAt: string | null;
+        flagReason: string | null;
+        flagResolvedAt: string | null;
+        adminNote: string | null;
+        manuallyEditedAt: string | null;
+        reviewedBy: { id: string; name: string; email: string } | null;
+      })
+    | null;
+  improvement: Improvement | null;
+}
+
+export interface AdminSessionQuery {
+  search?: string;
+  topicId?: string;
+  level?: Level;
+  flagged?: "all" | "none" | "pending" | "resolved";
+  order?: "asc" | "desc";
+  page?: number;
+  limit?: number;
+}
+
+export interface ReviewScorePayload {
+  note?: string;
+  resolved?: boolean;
+}
+
+export interface ManualScorePayload {
+  technicalScore: number;
+  completenessScore: number;
+  clarityScore: number;
+  summary: string;
+  improvements: string[];
+}
+
+/** Admin: liệt kê session của mọi user (phân trang, filter theo user/topic/level/trạng thái báo cáo). */
+export async function getSessionsAdmin(
+  query: AdminSessionQuery = {},
+): Promise<Paginated<AdminSessionListItem>> {
+  const params: Record<string, string | number> = {};
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== null && value !== "") {
+      params[key] = value as string | number;
+    }
+  }
+  const res = await api.get<ApiResponse<Paginated<AdminSessionListItem>>>(
+    "/sessions/admin",
+    { params },
+  );
+  return res.data.data;
+}
+
+/** Admin: xem chi tiết đầy đủ 1 session. */
+export async function getSessionAdminDetail(
+  id: string,
+): Promise<AdminSessionDetail> {
+  const res = await api.get<ApiResponse<AdminSessionDetail>>(
+    `/sessions/admin/${id}`,
+  );
+  return res.data.data;
+}
+
+/** Admin: ghi chú nội bộ + đánh dấu đã xử lý xong report bị flag. */
+export async function reviewSessionFlag(
+  id: string,
+  payload: ReviewScorePayload,
+) {
+  const res = await api.patch<ApiResponse<Score>>(
+    `/sessions/admin/${id}/review`,
+    payload,
+  );
+  return res.data.data;
+}
+
+/** Admin: chấm lại điểm + nhận xét thủ công, ghi đè kết quả AI. */
+export async function manualRescoreSession(
+  id: string,
+  payload: ManualScorePayload,
+) {
+  const res = await api.patch<ApiResponse<Score>>(
+    `/sessions/admin/${id}/score`,
+    payload,
+  );
+  return res.data.data;
+}
+
 // ─── Dashboard cá nhân ──────────────────────────────
 
 export interface DashboardStats {

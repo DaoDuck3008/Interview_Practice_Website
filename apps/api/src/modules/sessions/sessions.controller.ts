@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   UploadedFile,
@@ -11,12 +12,18 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Role } from '@prisma/client';
 import { SessionsService } from './sessions.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { QueryHistoryDto } from './dto/query-history.dto';
 import { QueryMonthlyDto } from './dto/query-monthly.dto';
 import { FlagScoreDto } from './dto/flag-score.dto';
+import { QueryAdminSessionDto } from './dto/query-admin-session.dto';
+import { ReviewScoreDto } from './dto/review-score.dto';
+import { ManualScoreDto } from './dto/manual-score.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { QuotaGuard } from '../quota/quota.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { fileUploadOptions } from '../../common/upload/file-upload.options';
@@ -49,19 +56,13 @@ export class SessionsController {
 
   /** Lịch sử luyện tập (phân trang). */
   @Get('me/history')
-  getMyHistory(
-    @CurrentUser() user: AuthUser,
-    @Query() query: QueryHistoryDto,
-  ) {
+  getMyHistory(@CurrentUser() user: AuthUser, @Query() query: QueryHistoryDto) {
     return this.sessions.getMyHistory(user.id, query);
   }
 
   /** Dữ liệu biểu đồ tiến bộ trong 1 tháng. */
   @Get('me/monthly')
-  getMyMonthly(
-    @CurrentUser() user: AuthUser,
-    @Query() query: QueryMonthlyDto,
-  ) {
+  getMyMonthly(@CurrentUser() user: AuthUser, @Query() query: QueryMonthlyDto) {
     return this.sessions.getMyMonthly(user.id, query.month);
   }
 
@@ -89,7 +90,8 @@ export class SessionsController {
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: CreateSessionDto,
   ) {
-    if (!file) throw new BadRequestException('Không có file audio được gửi lên.');
+    if (!file)
+      throw new BadRequestException('Không có file audio được gửi lên.');
     return this.sessions.create(user.id, file, dto);
   }
 
@@ -113,5 +115,41 @@ export class SessionsController {
   @UseInterceptors(ConcurrencyInterceptor)
   improve(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.sessions.improve(id, user.id);
+  }
+
+  @Get('admin')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  findAllAdmin(@Query() query: QueryAdminSessionDto) {
+    return this.sessions.findAllAdmin(query);
+  }
+
+  @Get('admin/:id')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  getAdminDetail(@Param('id') id: string) {
+    return this.sessions.getAdminDetail(id);
+  }
+
+  @Patch('admin/:id/review')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  reviewFlag(
+    @CurrentUser() admin: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: ReviewScoreDto,
+  ) {
+    return this.sessions.reviewFlag(id, dto, admin.id);
+  }
+
+  @Patch('admin/:id/score')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  manualRescore(
+    @CurrentUser() admin: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: ManualScoreDto,
+  ) {
+    return this.sessions.manualRescore(id, dto, admin.id);
   }
 }

@@ -47,11 +47,12 @@ model User {
   avatarUrl    String? //         Ảnh đại diện (lấy từ Google "picture")
   createdAt    DateTime @default(now())
 
-  sessions      Session[]
-  subscription  Subscription? // 1–1: mỗi user tối đa 1 subscription
-  orders        Order[]
-  grantedOrders Order[]       @relation("OrderGrantedBy") // các đơn admin này cấp thủ công
-  usageLogs     UsageLog[]
+  sessions       Session[]
+  subscription   Subscription? // 1–1: mỗi user tối đa 1 subscription
+  orders         Order[]
+  grantedOrders  Order[]       @relation("OrderGrantedBy") // các đơn admin này cấp thủ công
+  usageLogs      UsageLog[]
+  reviewedScores Score[]       @relation("ScoreReviewedBy") // các Score admin này đã review/chấm lại thủ công
 }
 
 model Topic {
@@ -121,8 +122,14 @@ model Score {
 
   promptVersion String? // Version của SCORING_PROMPT tại thời điểm chấm — trace khi đổi prompt/model. Null = tạo trước khi có tính năng này.
 
-  flaggedAt  DateTime? // User báo điểm chấm sai lúc nào — null = chưa bị báo cáo
-  flagReason String?   // Lý do user ghi khi báo cáo (tùy chọn)
+  flaggedAt      DateTime? // User báo điểm chấm sai lúc nào — null = chưa bị báo cáo
+  flagReason     String?   // Lý do user ghi khi báo cáo (tùy chọn)
+  flagResolvedAt DateTime? // Admin xử lý xong report lúc nào — null = đang chờ (chỉ có ý nghĩa khi flaggedAt khác null)
+  adminNote      String?   // Ghi chú nội bộ của admin khi xem xét report
+
+  manuallyEditedAt DateTime? // Lúc admin ghi đè điểm/nhận xét thủ công — null = điểm gốc từ AI
+  reviewedById     String?   // Admin thao tác review/rescore gần nhất
+  reviewedBy       User?     @relation("ScoreReviewedBy", fields: [reviewedById], references: [id])
 
   createdAt DateTime @default(now())
 }

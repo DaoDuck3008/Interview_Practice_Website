@@ -1,0 +1,6 @@
+ALTER TABLE "Score" ADD COLUMN "flagResolvedAt" TIMESTAMP(3);
+ALTER TABLE "Score" ADD COLUMN "adminNote" TEXT;
+ALTER TABLE "Score" ADD COLUMN "manuallyEditedAt" TIMESTAMP(3);
+ALTER TABLE "Score" ADD COLUMN "reviewedById" TEXT;
+
+ALTER TABLE "Score" ADD CONSTRAINT "Score_reviewedById_fkey" FOREIGN KEY ("reviewedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;

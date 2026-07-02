@@ -18,6 +18,9 @@ import {
 } from '../scoring/prompts/scoring.prompt';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { QueryHistoryDto } from './dto/query-history.dto';
+import { QueryAdminSessionDto } from './dto/query-admin-session.dto';
+import { ReviewScoreDto } from './dto/review-score.dto';
+import { ManualScoreDto } from './dto/manual-score.dto';
 
 // Việt Nam cố định UTC+7 — dùng để gom nhóm theo "ngày/tháng" giờ VN.
 const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
@@ -452,6 +455,150 @@ export class SessionsService {
       }
       throw err;
     }
+  }
+
+  /** Admin: liệt kê session của mọi user (phân trang, filter theo user/topic/level/trạng thái báo cáo). */
+  async findAllAdmin(query: QueryAdminSessionDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const order = query.order ?? 'desc';
+
+    const where: Prisma.SessionWhereInput = {
+      ...(query.search && {
+        user: {
+          OR: [
+            { name: { contains: query.search, mode: 'insensitive' } },
+            { email: { contains: query.search, mode: 'insensitive' } },
+          ],
+        },
+      }),
+      ...((query.topicId || query.level) && {
+        question: {
+          ...(query.topicId && { topicId: query.topicId }),
+          ...(query.level && { level: query.level }),
+        },
+      }),
+      ...(query.flagged === 'pending' && {
+        score: { flaggedAt: { not: null }, flagResolvedAt: null },
+      }),
+      ...(query.flagged === 'resolved' && {
+        score: { flaggedAt: { not: null }, flagResolvedAt: { not: null } },
+      }),
+      ...(query.flagged === 'none' && {
+        OR: [{ score: null }, { score: { flaggedAt: null } }],
+      }),
+    };
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.session.findMany({
+        where,
+        select: {
+          id: true,
+          duration: true,
+          createdAt: true,
+          user: { select: { id: true, name: true, email: true } },
+          question: {
+            select: {
+              id: true,
+              content: true,
+              level: true,
+              topic: { select: { name: true, slug: true } },
+            },
+          },
+          score: {
+            select: {
+              id: true,
+              technicalScore: true,
+              completenessScore: true,
+              clarityScore: true,
+              flaggedAt: true,
+              flagReason: true,
+              flagResolvedAt: true,
+              manuallyEditedAt: true,
+            },
+          },
+        },
+        orderBy: { createdAt: order },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.session.count({ where }),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 1,
+    };
+  }
+
+  /** Admin: xem chi tiết đầy đủ 1 session (transcript, câu hỏi, điểm, cải thiện). */
+  async getAdminDetail(sessionId: string) {
+    const session = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        question: {
+          select: {
+            id: true,
+            content: true,
+            answerKeySummary: true,
+            answerKeywords: true,
+            level: true,
+            topic: { select: { name: true, slug: true } },
+          },
+        },
+        score: {
+          include: {
+            reviewedBy: { select: { id: true, name: true, email: true } },
+          },
+        },
+        improvement: true,
+      },
+    });
+    if (!session) throw new NotFoundException('Session không tồn tại');
+    return session;
+  }
+
+  /** Admin: ghi chú nội bộ + đánh dấu đã xử lý xong report bị flag. Idempotent. */
+  async reviewFlag(sessionId: string, dto: ReviewScoreDto, adminId: string) {
+    const score = await this.prisma.score.findUnique({ where: { sessionId } });
+    if (!score) throw new NotFoundException('Session chưa được chấm điểm.');
+    if (dto.resolved === true && !score.flaggedAt) {
+      throw new BadRequestException('Session này chưa bị báo cáo.');
+    }
+
+    return this.prisma.score.update({
+      where: { sessionId },
+      data: {
+        ...(dto.note !== undefined && { adminNote: dto.note?.trim() || null }),
+        ...(dto.resolved !== undefined && {
+          flagResolvedAt: dto.resolved ? new Date() : null,
+        }),
+        reviewedById: adminId,
+      },
+    });
+  }
+
+  /** Admin: chấm lại điểm + nhận xét thủ công, ghi đè kết quả AI khi report được xác nhận là đúng. */
+  async manualRescore(sessionId: string, dto: ManualScoreDto, adminId: string) {
+    const score = await this.prisma.score.findUnique({ where: { sessionId } });
+    if (!score) throw new NotFoundException('Session chưa được chấm điểm.');
+
+    return this.prisma.score.update({
+      where: { sessionId },
+      data: {
+        technicalScore: dto.technicalScore,
+        completenessScore: dto.completenessScore,
+        clarityScore: dto.clarityScore,
+        summary: dto.summary,
+        improvements: dto.improvements,
+        manuallyEditedAt: new Date(),
+        reviewedById: adminId,
+      },
+    });
   }
 }
 
