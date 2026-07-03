@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ConfigService } from '@nestjs/config';
+import { ConfiguredIoAdapter } from './websocket/websocket.adapter';
 
 const cookieParser = require('cookie-parser');
 
@@ -25,12 +26,18 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalInterceptors(new LoggingInterceptor(), new ResponseInterceptor());
+  app.useGlobalInterceptors(
+    new LoggingInterceptor(),
+    new ResponseInterceptor(),
+  );
 
   app.enableCors({
     origin: config.get('FRONTEND_URL'),
     credentials: true,
   });
+
+  // Cho phép frontend giao tiếp qua websocket
+  app.useWebSocketAdapter(new ConfiguredIoAdapter(app));
 
   const PORT = config.get<string>('PORT') ?? 3001;
   await app.listen(PORT);

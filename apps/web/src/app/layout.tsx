@@ -3,6 +3,7 @@ import { Be_Vietnam_Pro } from "next/font/google";
 import "./globals.css";
 import AuthHydrator from "@/components/providers/authHydrator";
 import QueryProvider from "@/components/providers/queryProvider";
+import SocketProvider from "@/components/providers/socketProvider";
 import { ToastContainer } from "react-toastify";
 
 const beVietnam = Be_Vietnam_Pro({
@@ -32,8 +33,10 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <QueryProvider>
           <AuthHydrator>
-            {children}
-            <ToastContainer />
+            <SocketProvider>
+              {children}
+              <ToastContainer />
+            </SocketProvider>
           </AuthHydrator>
         </QueryProvider>
       </body>

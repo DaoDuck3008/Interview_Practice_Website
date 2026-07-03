@@ -17,6 +17,7 @@ import { PlansModule } from './modules/plans/plans.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { QuotaModule } from './modules/quota/quota.module';
+import { WebsocketModule } from './websocket/websocket.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 @Module({
@@ -41,6 +42,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
     PaymentsModule,
     SubscriptionsModule,
     QuotaModule,
+    WebsocketModule,
   ],
   providers: [
     {
