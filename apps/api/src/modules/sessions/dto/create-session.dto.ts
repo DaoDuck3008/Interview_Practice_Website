@@ -11,7 +11,7 @@ export class CreateSessionDto {
   @IsInt()
   @Min(0)
   @Max(MAX_AUDIO_DURATION_SEC, {
-    message: 'Audio không được vượt quá 5 phút.',
+    message: 'Audio không được vượt quá 4 phút.',
   })
   duration: number;
 }

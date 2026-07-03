@@ -23,9 +23,13 @@ export class SpeechService {
 
   /**
    * Transcribe an audio file using Groq Whisper (whisper-large-v3-turbo).
-   * Language is auto-detected. Returns the recognized text.
+   * Language is auto-detected. Returns the recognized text + độ dài audio thật
+   * (đo bởi Groq từ chính file, không phải giá trị `duration` client tự khai báo)
+   * để chặn trường hợp client gọi thẳng API và khai gian độ dài ngắn hơn thực tế.
    */
-  async transcribe(file: Express.Multer.File): Promise<{ transcript: string }> {
+  async transcribe(
+    file: Express.Multer.File,
+  ): Promise<{ transcript: string; duration: number | null }> {
     try {
       const audioFile = await toFile(file.buffer, file.originalname, {
         type: file.mimetype,
@@ -34,11 +38,17 @@ export class SpeechService {
       const result = await this.groq.audio.transcriptions.create({
         file: audioFile,
         model: 'whisper-large-v3-turbo',
-        response_format: 'json',
+        response_format: 'verbose_json',
       });
+      // Type của SDK chỉ khai báo `text` cho response_format 'json', nhưng
+      // 'verbose_json' thực tế trả thêm `duration` (giây) — Groq không type field này.
+      const duration = (result as { duration?: number }).duration;
 
       // Cắt trần độ dài để chặn chi phí chấm điểm/cải thiện tăng đột biến nếu
-      return { transcript: result.text.trim().slice(0, MAX_TRANSCRIPT_CHARS) };
+      return {
+        transcript: result.text.trim().slice(0, MAX_TRANSCRIPT_CHARS),
+        duration: typeof duration === 'number' ? Math.round(duration) : null,
+      };
     } catch (err) {
       this.logger.error(`Groq transcription failed: ${String(err)}`);
 

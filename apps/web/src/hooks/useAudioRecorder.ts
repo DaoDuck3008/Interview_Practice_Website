@@ -7,7 +7,7 @@ export type RecorderStatus = "idle" | "recording" | "error";
 
 // Độ dài ghi âm tối đa (giây) — 5 phút. Khớp với MAX_AUDIO_DURATION_SEC ở backend.
 // Chạm mốc này thì tự dừng để không vượt giới hạn.
-export const MAX_RECORDING_SEC = 300;
+export const MAX_RECORDING_SEC = 240;
 
 interface UseAudioRecorderOptions {
   /** Called after a recording finishes, with the recorded blob and its duration (s). */

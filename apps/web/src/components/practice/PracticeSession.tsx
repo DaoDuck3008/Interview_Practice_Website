@@ -32,10 +32,10 @@ import ImprovementPanel from "@/components/practice/ImprovementPanel";
 type Phase = "idle" | "processing" | "evaluating" | "evaluated";
 
 // Ghi âm ngắn hơn mức này coi như bấm nhầm — không upload để khỏi tốn lượt phiên âm.
-const MIN_DURATION = 2; // giây
+const MIN_DURATION = 10; // giây
 
-// Khi tới 4 phút thì cảnh báo sắp chạm trần 5 phút (hook tự dừng ở 5 phút).
-const WARN_DURATION = 240; // giây
+// Khi tới 3 phút thì cảnh báo sắp chạm trần 4 phút (hook tự dừng ở 4 phút).
+const WARN_DURATION = 180; // giây
 
 interface Props {
   questionId: string;
@@ -212,7 +212,9 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
               <>
                 <button
                   onClick={() => {
-                    new Audio("/sounds/record_start.mp3").play().catch(() => {});
+                    new Audio("/sounds/record_start.mp3")
+                      .play()
+                      .catch(() => {});
                     recorder.start();
                   }}
                   className="w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"

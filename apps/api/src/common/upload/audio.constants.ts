@@ -5,8 +5,8 @@
  */
 export const MAX_AUDIO_BYTES = 15 * 1024 * 1024; // 15 MB
 
-/** Độ dài audio tối đa (giây) — 5 phút. Khớp với auto-stop ở frontend. */
-export const MAX_AUDIO_DURATION_SEC = 300;
+/** Độ dài audio tối đa (giây) — 4 phút. Khớp với auto-stop ở frontend. */
+export const MAX_AUDIO_DURATION_SEC = 240;
 
 /**
  * Số ký tự transcript tối đa gửi sang DeepSeek. ~5 phút nói ≈ 4–5k ký tự;
