@@ -40,6 +40,8 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
   // set này để tránh emit trùng (đè message cụ thể bằng message chung chung).
   private readonly notifiedFailures = new Set<string>();
 
+  private readonly isDev: boolean;
+
   constructor(
     private prisma: PrismaService,
     private storage: StorageService,
@@ -49,10 +51,36 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
     private config: ConfigService,
   ) {
     super();
+    this.isDev = this.config.get<string>('NODE_ENV') !== 'production';
   }
 
   onModuleInit() {
     this.worker.concurrency = this.config.get<number>('aiQueue.concurrency', 3);
+  }
+
+  /** Lỗi kết nối/nội bộ của Worker (khác lỗi job) — vd Redis rớt kết nối. */
+  @OnWorkerEvent('error')
+  onError(err: Error) {
+    this.logger.error(`Lỗi Worker AiJobsProcessor: ${err.message}`, err.stack);
+  }
+
+  /** Chỉ log dev — theo dõi job bắt đầu/xong để biết queue có tồn đọng không. */
+  @OnWorkerEvent('active')
+  onActive(job: Job<ScoreJobData | ImproveJobData>) {
+    if (!this.isDev) return;
+    this.logger.debug(`Bắt đầu xử lý job ${job.name} (${job.id})`);
+  }
+
+  @OnWorkerEvent('completed')
+  onCompleted(job: Job<ScoreJobData | ImproveJobData>) {
+    if (!this.isDev) return;
+    const durationMs =
+      job.finishedOn && job.processedOn
+        ? job.finishedOn - job.processedOn
+        : undefined;
+    this.logger.debug(
+      `Xong job ${job.name} (${job.id})${durationMs !== undefined ? ` sau ${durationMs}ms` : ''}`,
+    );
   }
 
   async process(job: Job<ScoreJobData | ImproveJobData>): Promise<void> {
@@ -247,6 +275,11 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
     if (jobId) this.notifiedFailures.add(jobId);
     const message =
       err instanceof HttpException ? err.message : GENERIC_FAILURE_MESSAGE;
+    const jobKind = event.startsWith('score') ? 'score' : 'improve';
+    this.logger.error(
+      `Job ${jobKind} thất bại — session ${sessionId}: ${message}`,
+      err instanceof Error ? err.stack : undefined,
+    );
     this.websocket.emitToUser(userId, event, { sessionId, message });
   }
 

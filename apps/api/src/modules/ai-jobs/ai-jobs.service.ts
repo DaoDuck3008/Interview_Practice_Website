@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
 import {
@@ -15,10 +15,19 @@ const REMOVE_ON_FAIL_AGE_SEC = 24 * 3600;
 
 @Injectable()
 export class AiJobsService {
+  private readonly logger = new Logger(AiJobsService.name);
+  private readonly isDev: boolean;
+
   constructor(
     @InjectQueue(AI_JOBS_QUEUE) private queue: Queue,
     private readonly config: ConfigService,
-  ) {}
+  ) {
+    this.isDev = this.config.get<string>('NODE_ENV') !== 'production';
+    // Lỗi kết nối Redis phía Queue (producer) — khác lỗi job, vd Redis rớt kết nối.
+    this.queue.on('error', (err) => {
+      this.logger.error(`Lỗi kết nối Redis (BullMQ Queue): ${err.message}`);
+    });
+  }
 
   enqueueScore(sessionId: string, userId: string): Promise<void> {
     const data: ScoreJobData = { sessionId, userId };
@@ -47,8 +56,16 @@ export class AiJobsService {
     if (existing) {
       const state = await existing.getState();
       if (state === 'failed') {
+        if (this.isDev) {
+          this.logger.debug(`Job ${jobId} đã fail trước đó — xóa để tạo lại`);
+        }
         await existing.remove(); // delete failed job
       } else {
+        if (this.isDev) {
+          this.logger.debug(
+            `Job ${jobId} đang ở trạng thái "${state}" — bỏ qua, không add lại (dedup)`,
+          );
+        }
         return; // đang waiting/active — đúng ý đồ dedup, không add lại
       }
     }
@@ -61,5 +78,9 @@ export class AiJobsService {
       removeOnComplete: true,
       removeOnFail: isProd ? { age: REMOVE_ON_FAIL_AGE_SEC } : false,
     });
+
+    if (this.isDev) {
+      this.logger.debug(`Đã thêm job ${jobName} (${jobId}) vào hàng đợi`);
+    }
   }
 }
