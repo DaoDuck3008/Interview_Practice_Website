@@ -211,7 +211,10 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
             ) : (
               <>
                 <button
-                  onClick={recorder.start}
+                  onClick={() => {
+                    new Audio("/sounds/record_start.mp3").play().catch(() => {});
+                    recorder.start();
+                  }}
                   className="w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
                   style={{
                     background: "#7c3aed",
