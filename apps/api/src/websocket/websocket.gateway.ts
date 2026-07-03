@@ -4,7 +4,6 @@ import { JwtService } from '@nestjs/jwt';
 import {
   OnGatewayConnection,
   OnGatewayDisconnect,
-  SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
@@ -57,12 +56,6 @@ export class WebsocketGateway
 
   handleDisconnect(_client: Socket) {
     // socket.io tự rời khỏi mọi room khi disconnect — không cần dọn thủ công.
-  }
-
-  /** Handler test — kiểm chứng round-trip lúc dựng hạ tầng. Gỡ sau giai đoạn 2. */
-  @SubscribeMessage('ping')
-  handlePing(): string {
-    return 'pong';
   }
 
   /** Đẩy 1 event tới mọi kết nối (mọi tab) đang mở của 1 user. */

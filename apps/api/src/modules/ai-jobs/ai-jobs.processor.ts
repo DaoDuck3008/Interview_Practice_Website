@@ -1,4 +1,9 @@
-import { HttpException, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  HttpException,
+  Logger,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import type { Job } from 'bullmq';
@@ -101,8 +106,18 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
         where: { id: sessionId },
         include: { question: true },
       });
-      // Session có thể đã bị xóa (vd điểm 0 ở lần thử trước) — bỏ qua êm.
-      if (!session) return;
+      // Session có thể đã bị xóa (vd điểm 0 ở lần thử trước) — báo lỗi thay vì
+      // im lặng, để frontend không phải đợi hết JOB_WAIT_TIMEOUT_MS mới biết.
+      if (!session) {
+        this.emitFailure(
+          job.id,
+          userId,
+          sessionId,
+          'score:failed',
+          new NotFoundException('Session không tồn tại (có thể đã bị xóa).'),
+        );
+        return;
+      }
 
       const existing = await this.prisma.score.findUnique({
         where: { sessionId },
@@ -153,7 +168,18 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
         where: { id: sessionId },
         include: { question: true, score: true },
       });
-      if (!session || !session.score) return;
+      if (!session || !session.score) {
+        this.emitFailure(
+          job.id,
+          userId,
+          sessionId,
+          'improve:failed',
+          new NotFoundException(
+            'Session hoặc điểm chấm không tồn tại (có thể đã bị xóa).',
+          ),
+        );
+        return;
+      }
 
       const existing = await this.prisma.improvement.findUnique({
         where: { sessionId },

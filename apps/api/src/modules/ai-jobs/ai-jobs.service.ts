@@ -70,13 +70,11 @@ export class AiJobsService {
       }
     }
 
-    const isProd = this.config.get<string>('NODE_ENV') === 'production';
-
     await this.queue.add(jobName, data, {
       jobId,
       attempts: 1,
       removeOnComplete: true,
-      removeOnFail: isProd ? { age: REMOVE_ON_FAIL_AGE_SEC } : false,
+      removeOnFail: this.isDev ? false : { age: REMOVE_ON_FAIL_AGE_SEC },
     });
 
     if (this.isDev) {

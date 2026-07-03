@@ -23,16 +23,7 @@ export default function SocketProvider({
       return;
     }
 
-    const socket = connectSocket(accessToken);
-
-    // Kiểm tra tạm thời hạ tầng WebSocket (giai đoạn 1) — gỡ khi nối BullMQ.
-    if (process.env.NODE_ENV !== "production") {
-      socket.on("connect", () => {
-        socket.emit("ping", (response: string) => {
-          console.log("[ws] ping ->", response);
-        });
-      });
-    }
+    connectSocket(accessToken);
 
     return () => {
       disconnectSocket();
