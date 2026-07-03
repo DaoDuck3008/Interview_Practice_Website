@@ -98,7 +98,7 @@ export class SessionsController {
   @Post(':id/score')
   @UseInterceptors(ConcurrencyInterceptor)
   score(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.sessions.score(id, user.id);
+    return this.sessions.enqueueScore(id, user.id);
   }
 
   /** User báo điểm chấm sai/khiếu nại cho session đã chấm. */
@@ -114,7 +114,7 @@ export class SessionsController {
   @Post(':id/improve')
   @UseInterceptors(ConcurrencyInterceptor)
   improve(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.sessions.improve(id, user.id);
+    return this.sessions.enqueueImprove(id, user.id);
   }
 
   @Get('admin')
@@ -151,5 +151,16 @@ export class SessionsController {
     @Body() dto: ManualScoreDto,
   ) {
     return this.sessions.manualRescore(id, dto, admin.id);
+  }
+
+  /**
+   * Fallback cho frontend khi mất kết nối WebSocket lúc job score/improve xử lý
+   * xong — phải khai báo SAU CÙNG: NestJS/Express khớp route theo thứ tự khai
+   * báo, đặt `:id` trước sẽ "nuốt" mất các route literal phía trên (vd `admin`
+   * bị hiểu nhầm thành `id = 'admin'`).
+   */
+  @Get(':id')
+  getOwned(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.sessions.getOwned(id, user.id);
   }
 }

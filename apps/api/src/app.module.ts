@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import configuration, { validationSchema } from './config/configuration';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
+import { BullMqModule } from './queue/bullmq.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { TopicsModule } from './modules/topics/topics.module';
@@ -30,6 +31,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
     ScheduleModule.forRoot(),
     PrismaModule,
     RedisModule,
+    BullMqModule,
     AuthModule,
     UsersModule,
     TopicsModule,

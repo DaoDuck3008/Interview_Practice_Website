@@ -1,26 +1,22 @@
 import {
   BadRequestException,
-  ConflictException,
-  Inject,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import type { Prisma } from '@prisma/client';
-import type { Redis } from 'ioredis';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { SpeechService } from '../speech/speech.service';
-import { ScoringService } from '../scoring/scoring.service';
-import { ImprovementService } from '../scoring/improvement.service';
 import { QuotaService } from '../quota/quota.service';
-import { REDIS_CLIENT } from '../../redis/redis.module';
+import { AiJobsService } from '../ai-jobs/ai-jobs.service';
 import { MAX_AUDIO_DURATION_SEC } from '../../common/upload/audio.constants';
 import {
   SCORING_PROMPT_VERSION,
   type ScoreResult,
 } from '../scoring/prompts/scoring.prompt';
+import { deleteSessionAndAudio, transientZeroScore } from './session-score.utils';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { QueryHistoryDto } from './dto/query-history.dto';
 import { QueryAdminSessionDto } from './dto/query-admin-session.dto';
@@ -30,14 +26,6 @@ import { ManualScoreDto } from './dto/manual-score.dto';
 // Việt Nam cố định UTC+7 — dùng để gom nhóm theo "ngày/tháng" giờ VN.
 const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
 
-/**
- * TTL của lock chống double-submit AI (score/improve) trên 1 session.
- * Đủ lớn để phủ hết trường hợp xấu nhất: DeepSeekClient tự retry 1 lần lỗi
- * mạng/timeout (15s timeout x2) CỘNG retry 1 lần lỗi schema ở Scoring/ImprovementService
- * (thêm 15s x2 nữa) — worst-case ~60s. Đặt 70s để có biên an toàn.
- */
-const AI_LOCK_TTL_MS = 70_000;
-
 @Injectable()
 export class SessionsService {
   private readonly logger = new Logger(SessionsService.name);
@@ -46,37 +34,9 @@ export class SessionsService {
     private prisma: PrismaService,
     private storage: StorageService,
     private speech: SpeechService,
-    private scoring: ScoringService,
-    private improvement: ImprovementService,
     private quota: QuotaService,
-    @Inject(REDIS_CLIENT) private redis: Redis,
+    private aiJobs: AiJobsService,
   ) {}
-
-  /** Lock chống 2 request cùng gọi AI (score/improve) cho đúng 1 session. */
-  private lockKey(action: 'score' | 'improve', sessionId: string): string {
-    return `lock:session:${action}:${sessionId}`;
-  }
-
-  private async acquireAiLock(
-    action: 'score' | 'improve',
-    sessionId: string,
-  ): Promise<boolean> {
-    const res = await this.redis.set(
-      this.lockKey(action, sessionId),
-      '1',
-      'PX',
-      AI_LOCK_TTL_MS,
-      'NX',
-    );
-    return res === 'OK';
-  }
-
-  private async releaseAiLock(
-    action: 'score' | 'improve',
-    sessionId: string,
-  ): Promise<void> {
-    await this.redis.del(this.lockKey(action, sessionId));
-  }
 
   /** Liệt kê các lần luyện tập của user cho 1 câu hỏi. */
   findByQuestion(userId: string, questionId: string) {
@@ -334,146 +294,58 @@ export class SessionsService {
   }
 
   /**
-   * Bước 2: chấm điểm 1 session bằng DeepSeek. Cache: đã có score thì trả luôn.
-   * Lock theo sessionId: double-click/2 tab cùng lúc chỉ 1 request thật sự gọi
-   * DeepSeek, request kia bị chặn ngay (409) thay vì cả 2 cùng tốn tiền AI.
+   * Bước 2: chấm điểm 1 session bằng DeepSeek — chạy qua hàng đợi (AiJobsService),
+   * kết quả đẩy về frontend qua WebSocket khi xong (xem AiJobsProcessor).
+   * Cache: đã có score thì trả luôn, không đụng hàng đợi.
    */
-  async score(sessionId: string, userId: string) {
+  async enqueueScore(sessionId: string, userId: string) {
     const session = await this.prisma.session.findFirst({
       where: { id: sessionId, userId },
       include: { question: true, score: true },
     });
     if (!session) throw new NotFoundException('Session không tồn tại');
-    if (session.score) return session.score;
-
-    const locked = await this.acquireAiLock('score', sessionId);
-    if (!locked) {
-      throw new ConflictException(
-        'Session này đang được chấm điểm, vui lòng đợi trong giây lát.',
-      );
+    if (session.score) {
+      return { status: 'ready' as const, data: session.score };
     }
 
-    try {
-      // Re-check sau khi giữ lock: request trước có thể vừa ghi xong.
-      const existing = await this.prisma.score.findUnique({
-        where: { sessionId },
-      });
-      if (existing) return existing;
-
-      // Transcript rỗng (im lặng / Whisper không nhận được gì): chấm 0 ngay,
-      // không tốn 1 lượt gọi DeepSeek vì kết quả chắc chắn là 0 điểm.
-      let result: ScoreResult;
-      if (!session.transcript.trim()) {
-        result = {
-          technicalScore: 0,
-          completenessScore: 0,
-          clarityScore: 0,
-          overallScore: 0,
-          matchedKeywords: [],
-          missedKeywords: session.question.answerKeywords,
-          feedback: {
-            summary:
-              'Mình chưa nghe được câu trả lời nào. Bạn thử ghi âm lại và trả lời câu hỏi nhé!',
-            improvements: [],
-          },
-          promptVersion: SCORING_PROMPT_VERSION,
-        };
-      } else {
-        result = await this.scoring.score(session.transcript, {
-          content: session.question.content,
-          answerKeySummary: session.question.answerKeySummary,
-          answerKeywords: session.question.answerKeywords,
-        });
-      }
-
-      // Điểm 0 (trống / lạc đề / sai hoàn toàn): KHÔNG lưu vào DB. Xóa session +
-      // audio rồi trả kết quả tạm để frontend vẫn hiển thị nhận xét, nhưng không
-      // vào lịch sử luyện tập.
-      if (
-        result.technicalScore +
-          result.completenessScore +
-          result.clarityScore ===
-        0
-      ) {
-        await this.deleteSessionAndAudio(session.id, session.audioUrl);
-        return this.transientZeroScore(result); // trả kết quả luôn, không lưu DB
-      }
-
-      return await this.createScore(sessionId, result);
-    } finally {
-      await this.releaseAiLock('score', sessionId);
-    }
-  }
-
-  /** Xóa session + file audio trên R2 (dùng khi không muốn lưu, vd điểm 0). */
-  private async deleteSessionAndAudio(sessionId: string, audioUrl: string) {
-    await this.prisma.session.delete({ where: { id: sessionId } });
-    await this.storage.delete(this.storage.keyFromUrl(audioUrl));
-  }
-
-  /** Kết quả điểm 0 trả về cho frontend hiển thị nhưng KHÔNG persist (id rỗng). */
-  private transientZeroScore(result: ScoreResult) {
-    return {
-      id: '',
-      technicalScore: result.technicalScore,
-      completenessScore: result.completenessScore,
-      clarityScore: result.clarityScore,
-      matchedKeywords: result.matchedKeywords,
-      missedKeywords: result.missedKeywords,
-      summary: result.feedback.summary,
-      improvements: result.feedback.improvements,
-    };
-  }
-
-  /**
-   * Tạo Score, chịu được race: nếu 2 request song song (double-click) cùng qua
-   * check `session.score` rồi cùng create, request thua sẽ vi phạm unique
-   * `sessionId` (P2002) — bắt lỗi đó và trả về bản ghi đã tồn tại thay vì 500.
-   */
-  private async createScore(sessionId: string, result: ScoreResult) {
-    try {
-      return await this.prisma.score.create({
-        data: {
-          sessionId,
-          technicalScore: result.technicalScore,
-          completenessScore: result.completenessScore,
-          clarityScore: result.clarityScore,
-          matchedKeywords: result.matchedKeywords ?? [],
-          missedKeywords: result.missedKeywords ?? [],
-          summary: result.feedback.summary,
-          improvements: result.feedback.improvements ?? [],
-          promptVersion: result.promptVersion,
+    // Transcript rỗng (im lặng / Whisper không nhận được gì): chấm 0 ngay tại
+    // chỗ, không tốn 1 lượt gọi DeepSeek/hàng đợi vì kết quả chắc chắn là 0 điểm.
+    if (!session.transcript.trim()) {
+      const result: ScoreResult = {
+        technicalScore: 0,
+        completenessScore: 0,
+        clarityScore: 0,
+        overallScore: 0,
+        matchedKeywords: [],
+        missedKeywords: session.question.answerKeywords,
+        feedback: {
+          summary:
+            'Mình chưa nghe được câu trả lời nào. Bạn thử ghi âm lại và trả lời câu hỏi nhé!',
+          improvements: [],
         },
-      });
-    } catch (err) {
-      if (this.isUniqueViolation(err)) {
-        const existing = await this.prisma.score.findUnique({
-          where: { sessionId },
-        });
-        if (existing) return existing;
-      }
-      throw err;
+        promptVersion: SCORING_PROMPT_VERSION,
+      };
+      await deleteSessionAndAudio(
+        this.prisma,
+        this.storage,
+        session.id,
+        session.audioUrl,
+      );
+      return { status: 'ready' as const, data: transientZeroScore(result) };
     }
-  }
 
-  /** True nếu là lỗi vi phạm ràng buộc unique của Prisma (P2002). */
-  private isUniqueViolation(err: unknown): boolean {
-    return (
-      typeof err === 'object' &&
-      err !== null &&
-      (err as { code?: string }).code === 'P2002'
-    );
+    await this.aiJobs.enqueueScore(sessionId, userId);
+    return { status: 'queued' as const };
   }
 
   /**
-   * Bước 3 (on-demand): viết lại câu trả lời tốt hơn. Cần đã chấm điểm trước.
-   * Cache: đã có improvement thì trả luôn, không gọi lại DeepSeek.
-   * Lock theo sessionId: cùng lý do như `score()` — chặn double-submit gọi trùng AI.
+   * Bước 3 (on-demand): viết lại câu trả lời tốt hơn — chạy qua hàng đợi, cần
+   * đã chấm điểm trước. Cache: đã có improvement thì trả luôn, không gọi lại DeepSeek.
    */
-  async improve(sessionId: string, userId: string) {
+  async enqueueImprove(sessionId: string, userId: string) {
     const session = await this.prisma.session.findFirst({
       where: { id: sessionId, userId },
-      include: { question: true, score: true, improvement: true },
+      include: { score: true, improvement: true },
     });
     if (!session) throw new NotFoundException('Session không tồn tại');
     if (!session.score) {
@@ -481,67 +353,22 @@ export class SessionsService {
         'Cần chấm điểm trước khi cải thiện câu trả lời.',
       );
     }
-    if (session.improvement) return session.improvement;
-
-    const locked = await this.acquireAiLock('improve', sessionId);
-    if (!locked) {
-      throw new ConflictException(
-        'Session này đang được tạo bản cải thiện, vui lòng đợi trong giây lát.',
-      );
+    if (session.improvement) {
+      return { status: 'ready' as const, data: session.improvement };
     }
 
-    try {
-      const existing = await this.prisma.improvement.findUnique({
-        where: { sessionId },
-      });
-      if (existing) return existing;
+    await this.aiJobs.enqueueImprove(sessionId, userId);
+    return { status: 'queued' as const };
+  }
 
-      const result = await this.improvement.improve(
-        session.transcript,
-        {
-          content: session.question.content,
-          answerKeySummary: session.question.answerKeySummary,
-          answerKeywords: session.question.answerKeywords,
-        },
-        {
-          technicalScore: session.score.technicalScore,
-          completenessScore: session.score.completenessScore,
-          clarityScore: session.score.clarityScore,
-          overallScore: 0,
-          matchedKeywords: session.score.matchedKeywords,
-          missedKeywords: session.score.missedKeywords,
-          feedback: {
-            summary: session.score.summary,
-            improvements: session.score.improvements,
-          },
-          promptVersion: session.score.promptVersion ?? SCORING_PROMPT_VERSION,
-        },
-      );
-
-      try {
-        return await this.prisma.improvement.create({
-          data: {
-            sessionId,
-            improvedAnswer: result.improvedAnswer,
-            annotations:
-              result.annotations as unknown as Prisma.InputJsonValue,
-            keyChanges: result.keyChanges ?? [],
-            promptVersion: result.promptVersion,
-          },
-        });
-      } catch (err) {
-        // Race hiếm (lock hết hạn giữa chừng): request khác đã tạo trước -> trả bản ghi đã có.
-        if (this.isUniqueViolation(err)) {
-          const existing = await this.prisma.improvement.findUnique({
-            where: { sessionId },
-          });
-          if (existing) return existing;
-        }
-        throw err;
-      }
-    } finally {
-      await this.releaseAiLock('improve', sessionId);
-    }
+  /** Xem 1 session của chính user — dùng làm fallback khi mất kết nối WebSocket. */
+  async getOwned(id: string, userId: string) {
+    const session = await this.prisma.session.findFirst({
+      where: { id, userId },
+      include: { score: true, improvement: true },
+    });
+    if (!session) throw new NotFoundException('Session không tồn tại');
+    return session;
   }
 
   /** Admin: liệt kê session của mọi user (phân trang, filter theo user/topic/level/trạng thái báo cáo). */

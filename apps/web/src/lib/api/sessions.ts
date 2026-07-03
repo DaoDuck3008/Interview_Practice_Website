@@ -51,13 +51,33 @@ export async function createSession(formData: FormData): Promise<Session> {
   return res.data.data;
 }
 
-export async function scoreSession(sessionId: string): Promise<Score> {
-  const res = await api.post<ApiResponse<Score>>(`/sessions/${sessionId}/score`);
+/** Chấm điểm bằng DeepSeek chạy qua hàng đợi — `ready` nếu đã có sẵn (cache/điểm 0 tức thì),
+ *  `queued` thì phải chờ sự kiện `score:ready`/`score:failed` qua WebSocket. */
+export type ScoreResponse = { status: "ready"; data: Score } | { status: "queued" };
+
+export type ImprovementResponse =
+  | { status: "ready"; data: Improvement }
+  | { status: "queued" };
+
+export async function scoreSession(sessionId: string): Promise<ScoreResponse> {
+  const res = await api.post<ApiResponse<ScoreResponse>>(
+    `/sessions/${sessionId}/score`,
+  );
   return res.data.data;
 }
 
-export async function improveSession(sessionId: string): Promise<Improvement> {
-  const res = await api.post<ApiResponse<Improvement>>(`/sessions/${sessionId}/improve`);
+export async function improveSession(
+  sessionId: string,
+): Promise<ImprovementResponse> {
+  const res = await api.post<ApiResponse<ImprovementResponse>>(
+    `/sessions/${sessionId}/improve`,
+  );
+  return res.data.data;
+}
+
+/** Lấy 1 session của chính user — dùng làm fallback khi mất kết nối WebSocket. */
+export async function getSession(id: string): Promise<Session> {
+  const res = await api.get<ApiResponse<Session>>(`/sessions/${id}`);
   return res.data.data;
 }
 

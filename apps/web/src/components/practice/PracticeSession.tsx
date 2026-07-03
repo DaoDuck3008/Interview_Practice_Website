@@ -18,12 +18,14 @@ import {
   createSession,
   scoreSession,
   improveSession,
+  getSession,
 } from "@/lib/api/sessions";
 import type { Score, Improvement, Session } from "@/lib/api/sessions";
 import { quotaDescriptor } from "@/lib/api/quota";
 import { formatTime } from "@/lib/utils/format";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { useQuota } from "@/hooks/useQuota";
+import { getSocket, waitForEvent } from "@/lib/ws/socket";
 import TranscriptPanel from "@/components/practice/TranscriptPanel";
 import AnswerEvaluation from "@/components/practice/AnswerEvaluation";
 import EvaluationSkeleton from "@/components/practice/EvaluationSkeleton";
@@ -37,9 +39,73 @@ const MIN_DURATION = 10; // giây
 // Khi tới 3 phút thì cảnh báo sắp chạm trần 4 phút (hook tự dừng ở 4 phút).
 const WARN_DURATION = 180; // giây
 
+// score()/improve() chạy qua hàng đợi BullMQ — đợi tối đa ngần này qua
+// WebSocket trước khi coi là "lâu hơn dự kiến" và fallback fetch lại 1 lần
+// (không phải vòng lặp polling định kỳ).
+const JOB_WAIT_TIMEOUT_MS = 90_000;
+
 interface Props {
   questionId: string;
   onSessionSaved?: (session: Session) => void;
+}
+
+interface ScoreReadyPayload {
+  sessionId: string;
+  score: Score;
+}
+interface ImproveReadyPayload {
+  sessionId: string;
+  improvement: Improvement;
+}
+interface JobFailedPayload {
+  sessionId: string;
+  message: string;
+}
+
+type JobWaitResult<T> =
+  | { status: "ready"; data: T }
+  | { status: "failed"; message: string }
+  | { status: "timeout" };
+
+/** Đợi kết quả score() chạy qua hàng đợi, đẩy về qua WebSocket khi xong. */
+async function waitForScoreResult(
+  sessionId: string,
+): Promise<JobWaitResult<Score>> {
+  const socket = getSocket();
+  if (!socket) return { status: "timeout" };
+  const result = await waitForEvent<ScoreReadyPayload | JobFailedPayload>(
+    socket,
+    ["score:ready", "score:failed"],
+    (_event, payload) => payload.sessionId === sessionId,
+    JOB_WAIT_TIMEOUT_MS,
+  );
+  if (!result) return { status: "timeout" };
+  if (result.event === "score:failed") {
+    return { status: "failed", message: (result.payload as JobFailedPayload).message };
+  }
+  return { status: "ready", data: (result.payload as ScoreReadyPayload).score };
+}
+
+/** Đợi kết quả improve() chạy qua hàng đợi, đẩy về qua WebSocket khi xong. */
+async function waitForImproveResult(
+  sessionId: string,
+): Promise<JobWaitResult<Improvement>> {
+  const socket = getSocket();
+  if (!socket) return { status: "timeout" };
+  const result = await waitForEvent<ImproveReadyPayload | JobFailedPayload>(
+    socket,
+    ["improve:ready", "improve:failed"],
+    (_event, payload) => payload.sessionId === sessionId,
+    JOB_WAIT_TIMEOUT_MS,
+  );
+  if (!result) return { status: "timeout" };
+  if (result.event === "improve:failed") {
+    return { status: "failed", message: (result.payload as JobFailedPayload).message };
+  }
+  return {
+    status: "ready",
+    data: (result.payload as ImproveReadyPayload).improvement,
+  };
 }
 
 export default function PracticeSession({ questionId, onSessionSaved }: Props) {
@@ -57,6 +123,24 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
   const { status: quotaStatus, refresh: refreshQuota } = useQuota();
   const quota = quotaDescriptor(quotaStatus);
   const outOfQuota = quota !== null && quota.remaining <= 0;
+
+  const applyScore = useCallback(
+    (session: Session, score: Score) => {
+      setEvaluation(score);
+      setEvaluationError("");
+      // Điểm 0 (trống/lạc đề) không được backend lưu -> đừng thêm vào lịch sử.
+      const isZero =
+        score.technicalScore === 0 &&
+        score.completenessScore === 0 &&
+        score.clarityScore === 0;
+      if (!isZero) {
+        const saved = { ...session, score };
+        setCurrentSession(saved);
+        onSessionSaved?.(saved);
+      }
+    },
+    [onSessionSaved],
+  );
 
   const handleRecordingComplete = useCallback(
     async (blob: Blob, duration: number) => {
@@ -97,21 +181,32 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
         return;
       }
 
-      // Bước 2: chấm điểm
+      // Bước 2: chấm điểm — chạy qua hàng đợi BullMQ, kết quả đẩy về qua WebSocket
       setPhase("evaluating");
       try {
-        const score = await scoreSession(createdSession.id);
-        setEvaluation(score);
-        setEvaluationError("");
-        // Điểm 0 (trống/lạc đề) không được backend lưu -> đừng thêm vào lịch sử.
-        const isZero =
-          score.technicalScore === 0 &&
-          score.completenessScore === 0 &&
-          score.clarityScore === 0;
-        if (!isZero) {
-          const saved = { ...createdSession, score };
-          setCurrentSession(saved);
-          onSessionSaved?.(saved);
+        const res = await scoreSession(createdSession.id);
+        if (res.status === "ready") {
+          applyScore(createdSession, res.data);
+        } else {
+          const result = await waitForScoreResult(createdSession.id);
+          if (result.status === "ready") {
+            applyScore(createdSession, result.data);
+          } else if (result.status === "failed") {
+            setEvaluationError(result.message);
+            onSessionSaved?.(createdSession);
+          } else {
+            // Mất kết nối WS đúng lúc job xong (hoặc chưa kịp connect) — thử
+            // fetch lại 1 lần thay vì vòng lặp polling.
+            const fresh = await getSession(createdSession.id).catch(() => null);
+            if (fresh?.score) {
+              applyScore(createdSession, fresh.score);
+            } else {
+              setEvaluationError(
+                "Đang xử lý lâu hơn dự kiến — bạn thử tải lại trang sau ít phút nhé.",
+              );
+              onSessionSaved?.(createdSession);
+            }
+          }
         }
       } catch (err) {
         const serverMsg = axios.isAxiosError(err)
@@ -124,22 +219,47 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
       }
       setPhase("evaluated");
     },
-    [questionId, onSessionSaved, refreshQuota],
+    [questionId, onSessionSaved, refreshQuota, applyScore],
   );
 
   const recorder = useAudioRecorder({ onComplete: handleRecordingComplete });
 
-  const handleImprove = useCallback(async () => {
-    setIsImproving(true);
-    try {
-      const result = await improveSession(sessionId);
-      setImprovement(result);
+  const applyImprovement = useCallback(
+    (improvement: Improvement) => {
+      setImprovement(improvement);
       setImprovementError("");
       // Đồng bộ vào lịch sử để khung "Phiên bản cải thiện" hiện ngay, không cần reload.
       if (currentSession) {
-        const updated = { ...currentSession, improvement: result };
+        const updated = { ...currentSession, improvement };
         setCurrentSession(updated);
         onSessionSaved?.(updated);
+      }
+    },
+    [currentSession, onSessionSaved],
+  );
+
+  const handleImprove = useCallback(async () => {
+    setIsImproving(true);
+    try {
+      const res = await improveSession(sessionId);
+      if (res.status === "ready") {
+        applyImprovement(res.data);
+      } else {
+        const result = await waitForImproveResult(sessionId);
+        if (result.status === "ready") {
+          applyImprovement(result.data);
+        } else if (result.status === "failed") {
+          setImprovementError(result.message);
+        } else {
+          const fresh = await getSession(sessionId).catch(() => null);
+          if (fresh?.improvement) {
+            applyImprovement(fresh.improvement);
+          } else {
+            setImprovementError(
+              "Đang xử lý lâu hơn dự kiến — bạn thử tải lại trang sau ít phút nhé.",
+            );
+          }
+        }
       }
     } catch (err) {
       const serverMsg = axios.isAxiosError(err)
@@ -150,7 +270,7 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
       );
     }
     setIsImproving(false);
-  }, [sessionId, currentSession, onSessionSaved]);
+  }, [sessionId, applyImprovement]);
 
   const handleReset = useCallback(() => {
     recorder.reset();

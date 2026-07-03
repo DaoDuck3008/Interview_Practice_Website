@@ -44,6 +44,7 @@ next-env.d.ts
 /images
 /tasks
 /agent-plans
+/docs
 
 # Standalone question-importer tooling (kept off git)
 /tools/

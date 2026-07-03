@@ -3,7 +3,7 @@ import { SessionsService } from './sessions.service';
 import { SessionsController } from './sessions.controller';
 import { StorageModule } from '../storage/storage.module';
 import { SpeechModule } from '../speech/speech.module';
-import { ScoreModule } from '../scoring/score.module';
+import { AiJobsModule } from '../ai-jobs/ai-jobs.module';
 import { QuotaModule } from '../quota/quota.module';
 import { ConcurrencyModule } from '../../common/concurrency/concurrency.module';
 
@@ -11,7 +11,7 @@ import { ConcurrencyModule } from '../../common/concurrency/concurrency.module';
   imports: [
     StorageModule,
     SpeechModule,
-    ScoreModule,
+    AiJobsModule,
     QuotaModule,
     ConcurrencyModule,
   ],
