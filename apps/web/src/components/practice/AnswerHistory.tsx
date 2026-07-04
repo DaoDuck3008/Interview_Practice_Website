@@ -34,13 +34,11 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
 function SessionCard({
   session,
   index,
-  defaultOpen = false,
 }: {
   session: Session;
   index: number;
-  defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [open, setOpen] = useState(false);
 
   return (
     <div
@@ -198,11 +196,7 @@ export default function AnswerHistory({ sessions }: Props) {
         </div>
       )}
 
-      <SessionCard
-        session={recent}
-        index={sessions.length - 1}
-        defaultOpen
-      />
+      <SessionCard key={recent.id} session={recent} index={sessions.length - 1} />
     </section>
   );
 }

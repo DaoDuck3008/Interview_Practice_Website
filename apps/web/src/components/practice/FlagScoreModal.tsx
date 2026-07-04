@@ -67,7 +67,7 @@ export default function FlagScoreModal({
           onMouseDown={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-            <h2 className="flex items-center gap-2 text-base font-semibold text-[var(--color-text-primary)]">
+            <h2 className="flex items-center gap-2 text-white font-semibold text-[var(--color-text-primary)]">
               <Flag size={16} className="text-[#f59e0b]" />
               Báo điểm chấm sai
             </h2>
