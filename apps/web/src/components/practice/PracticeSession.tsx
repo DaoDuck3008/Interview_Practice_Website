@@ -25,7 +25,7 @@ import { quotaDescriptor } from "@/lib/api/quota";
 import { formatTime } from "@/lib/utils/format";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { useQuota } from "@/hooks/useQuota";
-import { getSocket, waitForEvent } from "@/lib/ws/socket";
+import { waitForScoreResult, waitForImproveResult } from "@/lib/ws/jobs";
 import TranscriptPanel from "@/components/practice/TranscriptPanel";
 import AnswerEvaluation from "@/components/practice/AnswerEvaluation";
 import EvaluationSkeleton from "@/components/practice/EvaluationSkeleton";
@@ -39,73 +39,9 @@ const MIN_DURATION = 10; // giây
 // Khi tới 3 phút thì cảnh báo sắp chạm trần 4 phút (hook tự dừng ở 4 phút).
 const WARN_DURATION = 180; // giây
 
-// score()/improve() chạy qua hàng đợi BullMQ — đợi tối đa ngần này qua
-// WebSocket trước khi coi là "lâu hơn dự kiến" và fallback fetch lại 1 lần
-// (không phải vòng lặp polling định kỳ).
-const JOB_WAIT_TIMEOUT_MS = 90_000;
-
 interface Props {
   questionId: string;
   onSessionSaved?: (session: Session) => void;
-}
-
-interface ScoreReadyPayload {
-  sessionId: string;
-  score: Score;
-}
-interface ImproveReadyPayload {
-  sessionId: string;
-  improvement: Improvement;
-}
-interface JobFailedPayload {
-  sessionId: string;
-  message: string;
-}
-
-type JobWaitResult<T> =
-  | { status: "ready"; data: T }
-  | { status: "failed"; message: string }
-  | { status: "timeout" };
-
-/** Đợi kết quả score() chạy qua hàng đợi, đẩy về qua WebSocket khi xong. */
-async function waitForScoreResult(
-  sessionId: string,
-): Promise<JobWaitResult<Score>> {
-  const socket = getSocket();
-  if (!socket) return { status: "timeout" };
-  const result = await waitForEvent<ScoreReadyPayload | JobFailedPayload>(
-    socket,
-    ["score:ready", "score:failed"],
-    (_event, payload) => payload.sessionId === sessionId,
-    JOB_WAIT_TIMEOUT_MS,
-  );
-  if (!result) return { status: "timeout" };
-  if (result.event === "score:failed") {
-    return { status: "failed", message: (result.payload as JobFailedPayload).message };
-  }
-  return { status: "ready", data: (result.payload as ScoreReadyPayload).score };
-}
-
-/** Đợi kết quả improve() chạy qua hàng đợi, đẩy về qua WebSocket khi xong. */
-async function waitForImproveResult(
-  sessionId: string,
-): Promise<JobWaitResult<Improvement>> {
-  const socket = getSocket();
-  if (!socket) return { status: "timeout" };
-  const result = await waitForEvent<ImproveReadyPayload | JobFailedPayload>(
-    socket,
-    ["improve:ready", "improve:failed"],
-    (_event, payload) => payload.sessionId === sessionId,
-    JOB_WAIT_TIMEOUT_MS,
-  );
-  if (!result) return { status: "timeout" };
-  if (result.event === "improve:failed") {
-    return { status: "failed", message: (result.payload as JobFailedPayload).message };
-  }
-  return {
-    status: "ready",
-    data: (result.payload as ImproveReadyPayload).improvement,
-  };
 }
 
 export default function PracticeSession({ questionId, onSessionSaved }: Props) {

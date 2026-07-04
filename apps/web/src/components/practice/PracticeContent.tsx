@@ -32,37 +32,40 @@ export default function PracticeContent({ questionId, keywords }: Props) {
   return (
     <>
       {sessions.length > 0 && keywords.length > 0 && (
-        <section
-          className="rounded-2xl px-5 py-5"
-          style={{
-            background: "rgba(255,255,255,0.025)",
-            border: "1px solid rgba(255,255,255,0.06)",
-          }}
-        >
-          <div className="flex flex-col gap-3">
-            <p className="flex items-center gap-1.5 text-xs font-medium text-[#9898aa]">
-              <Tags size={13} className="text-[#8b5cf6]" />
-              Từ khóa
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {keywords.map((kw) => (
-                <span
-                  key={kw}
-                  className="font-mono text-xs px-2.5 py-1 rounded-md border"
-                  style={{
-                    background: "rgba(124,58,237,0.08)",
-                    borderColor: "rgba(124,58,237,0.25)",
-                    color: "#a78bfa",
-                  }}
-                >
-                  {kw}
-                </span>
-              ))}
-            </div>
-          </div>
-        </section>
+        // Từ khóa
+        <section></section>
+        // <section
+        //   className="rounded-2xl px-5 py-5"
+        //   style={{
+        //     background: "rgba(255,255,255,0.025)",
+        //     border: "1px solid rgba(255,255,255,0.06)",
+        //   }}
+        // >
+        //   <div className="flex flex-col gap-3">
+        //     <p className="flex items-center gap-1.5 text-xs font-medium text-[#9898aa]">
+        //       <Tags size={13} className="text-[#8b5cf6]" />
+        //       Từ khóa
+        //     </p>
+        //     <div className="flex flex-wrap gap-1.5">
+        //       {keywords.map((kw) => (
+        //         <span
+        //           key={kw}
+        //           className="font-mono text-xs px-2.5 py-1 rounded-md border"
+        //           style={{
+        //             background: "rgba(124,58,237,0.08)",
+        //             borderColor: "rgba(124,58,237,0.25)",
+        //             color: "#a78bfa",
+        //           }}
+        //         >
+        //           {kw}
+        //         </span>
+        //       ))}
+        //     </div>
+        //   </div>
+        // </section>
       )}
 
+      {/* Lịch sử câu trả lời */}
       {sessions.length > 0 && <AnswerHistory sessions={sessions} />}
 
       <PracticeSession

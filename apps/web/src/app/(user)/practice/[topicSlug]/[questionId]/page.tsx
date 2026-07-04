@@ -19,7 +19,6 @@ export default async function QuestionPage({
   if (!question) notFound();
 
   const order = await getQuestionOrder(question.topicId);
-  const currentIndex = order.findIndex((q) => q.id === questionId);
   const topicName = formatTopicName(topicSlug);
   const levelStyle = LEVEL_STYLE[question.level];
 
@@ -58,25 +57,22 @@ export default async function QuestionPage({
                 {topicName}
               </Link>
               <ChevronRight size={12} className="flex-shrink-0" />
-              <span className="text-[#9898aa] truncate">{question.content}</span>
+              <span className="text-[#9898aa] truncate">
+                {question.content}
+              </span>
             </nav>
 
-            {/* Level + question index */}
-            <div className="flex items-center gap-3">
+            {/* Question text + level */}
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-xl sm:text-2xl font-bold text-[#f4f4f6] leading-snug">
+                {question.content}
+              </p>
               <span
-                className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full ${levelStyle.className}`}
+                className={`flex-shrink-0 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full ${levelStyle.className}`}
               >
                 {levelStyle.label}
               </span>
-              <span className="font-mono text-xs text-[#606072]">
-                #{String(currentIndex + 1).padStart(2, "0")} / {order.length}
-              </span>
             </div>
-
-            {/* Question text */}
-            <p className="text-xl sm:text-2xl font-bold text-[#f4f4f6] leading-snug">
-              {question.content}
-            </p>
           </section>
 
           {/* Keywords + history + recorder/transcript/evaluation */}
@@ -93,6 +89,7 @@ export default async function QuestionPage({
           order={order}
           currentQuestionId={questionId}
           topicSlug={topicSlug}
+          questionTitle={question.content}
         />
       </Suspense>
     </main>

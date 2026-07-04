@@ -9,12 +9,14 @@ interface Props {
   order: QuestionOrderItem[];
   currentQuestionId: string;
   topicSlug: string;
+  questionTitle: string;
 }
 
 export default function PracticeNavFooter({
   order,
   currentQuestionId,
   topicSlug,
+  questionTitle,
 }: Props) {
   const searchParams = useSearchParams();
   const level = searchParams.get("level") as Level | null;
@@ -53,16 +55,10 @@ export default function PracticeNavFooter({
         </span>
       )}
 
-      {/* Center counter */}
-      <div className="flex flex-col items-center gap-0.5">
-        <span className="font-mono text-xs text-[#f4f4f6] tabular-nums">
-          {String(currentIdx + 1).padStart(2, "0")}
-          <span className="text-[#606072]"> / {String(filtered.length).padStart(2, "0")}</span>
-        </span>
-        {level && (
-          <span className="font-mono text-[10px] text-[#606072]">{level.toLowerCase()}</span>
-        )}
-      </div>
+      {/* Question title */}
+      <p className="flex-1 min-w-0 px-4 text-center text-xs text-[#9898aa] truncate">
+        {questionTitle}
+      </p>
 
       {/* Next */}
       {nextHref ? (
