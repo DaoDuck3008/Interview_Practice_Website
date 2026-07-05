@@ -62,7 +62,9 @@ model Topic {
   iconUrl  String? // URL ảnh icon trên Cloudflare R2 (chỉ có ở child topic)
   parentId String? // null = parent topic (nhóm); non-null = child topic
 
-  parent   Topic?  @relation("TopicHierarchy", fields: [parentId], references: [id])
+  // Restrict: xóa topic cha khi còn topic con phải bị chặn — buộc admin chuyển/xóa con trước,
+  // tránh con bị "mồ côi" (parentId = null) mà vẫn mang iconUrl kiểu con, sai lệch phân cấp hiển thị.
+  parent   Topic?  @relation("TopicHierarchy", fields: [parentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   children Topic[] @relation("TopicHierarchy")
 
   questions Question[]
@@ -71,7 +73,7 @@ model Topic {
 model Question {
   id      String @id @default(uuid())
   topicId String
-  topic   Topic  @relation(fields: [topicId], references: [id])
+  topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   content          String // Nội dung câu hỏi
   detailAnswerKey  String @default("") // Đáp án chi tiết (markdown)
@@ -90,9 +92,9 @@ model Question {
 model Session {
   id         String   @id @default(uuid())
   userId     String
-  user       User     @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   questionId String
-  question   Question @relation(fields: [questionId], references: [id])
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   audioUrl   String // URL file audio trên Cloudflare R2
   transcript String // Transcript từ Groq Whisper
@@ -110,7 +112,9 @@ model Session {
 model Score {
   id        String  @id @default(uuid())
   sessionId String  @unique
-  session   Session @relation(fields: [sessionId], references: [id])
+  // Cascade: Score là bảng chi tiết phụ thuộc Session, không có ý nghĩa đứng riêng —
+  // xóa Session (DELETE /sessions/:id) phải tự dọn theo, không được chặn bởi FK.
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   // Điểm chấm bởi DeepSeek (0–10)
   technicalScore    Int
@@ -132,7 +136,7 @@ model Score {
 
   manuallyEditedAt DateTime? // Lúc admin ghi đè điểm/nhận xét thủ công — null = điểm gốc từ AI
   reviewedById     String?   // Admin thao tác review/rescore gần nhất
-  reviewedBy       User?     @relation("ScoreReviewedBy", fields: [reviewedById], references: [id])
+  reviewedBy       User?     @relation("ScoreReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   createdAt DateTime @default(now())
 
@@ -142,7 +146,8 @@ model Score {
 model Improvement {
   id        String  @id @default(uuid())
   sessionId String  @unique
-  session   Session @relation(fields: [sessionId], references: [id])
+  // Cascade: cùng lý do với Score — Improvement chỉ có ý nghĩa gắn liền với Session gốc.
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   improvedAnswer String   // Bản câu trả lời đã được DeepSeek viết lại tốt hơn
   annotations    Json     // Annotation[]: { originalSegment, issue, suggestion }
@@ -179,9 +184,9 @@ model Plan {
 model Subscription {
   id     String @id @default(uuid())
   userId String @unique //                        1 user ↔ 1 subscription (tái sử dụng dòng khi gia hạn)
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   planId String
-  plan   Plan   @relation(fields: [planId], references: [id])
+  plan   Plan   @relation(fields: [planId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   status     SubscriptionStatus @default(ACTIVE)
   startedAt  DateTime           @default(now())
@@ -203,12 +208,12 @@ model Subscription {
 model Order {
   id     String @id @default(uuid())
   userId String
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   planId String
-  plan   Plan   @relation(fields: [planId], references: [id])
+  plan   Plan   @relation(fields: [planId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   subscriptionId String? //                gán sau khi kích hoạt/gia hạn
-  subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   amountVnd Int //                            số tiền kỳ vọng (snapshot từ Plan tại thời điểm tạo)
   status    OrderStatus @default(PENDING)
@@ -217,7 +222,7 @@ model Order {
   // ── Cấp gói thủ công (admin / hỗ trợ KH) ──
   note        String? //          lý do cấp thủ công
   grantedById String? //          admin thực hiện cấp tay (null nếu đơn mua thường)
-  grantedBy   User?   @relation("OrderGrantedBy", fields: [grantedById], references: [id])
+  grantedBy   User?   @relation("OrderGrantedBy", fields: [grantedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   transferCode  String  @unique // mã nhúng trong nội dung VietQR để khớp webhook (alphanumeric, ngắn)
   providerTxnId String? @unique // id giao dịch Sepay — idempotency khi webhook lặp
@@ -239,7 +244,7 @@ model Order {
 model UsageLog {
   id     String @id @default(uuid())
   userId String
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   sessionId String? //  tham chiếu lỏng (không FK — session có thể bị xóa ở nhánh điểm 0)
   createdAt DateTime @default(now())
