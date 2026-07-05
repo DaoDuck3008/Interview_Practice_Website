@@ -32,6 +32,15 @@ export function formatDateTime(iso: string | null | undefined): string {
   });
 }
 
+/** Giờ:phút theo giờ Việt Nam (vd "14:05") — dùng cho tin nhắn chat. */
+export function formatClock(iso: string): string {
+  return new Date(iso).toLocaleTimeString("vi-VN", {
+    timeZone: VN_TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 /** Nhóm chữ số theo định dạng VN, không kèm ký hiệu (vd "50.000"). */
 export function formatNumber(value: number): string {
   return value.toLocaleString("vi-VN");

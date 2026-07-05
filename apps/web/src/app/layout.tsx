@@ -4,6 +4,7 @@ import "./globals.css";
 import AuthHydrator from "@/components/providers/authHydrator";
 import QueryProvider from "@/components/providers/queryProvider";
 import SocketProvider from "@/components/providers/socketProvider";
+import SupportWidget from "@/components/layout/SupportWidget";
 import { ToastContainer } from "react-toastify";
 
 const beVietnam = Be_Vietnam_Pro({
@@ -36,6 +37,7 @@ export default function RootLayout({
             <SocketProvider>
               {children}
               <ToastContainer />
+              <SupportWidget />
             </SocketProvider>
           </AuthHydrator>
         </QueryProvider>

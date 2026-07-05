@@ -11,6 +11,7 @@ import {
   Repeat,
   Wallet,
   Flag,
+  MessageCircle,
   Home,
   ChevronLeft,
   ChevronRight,
@@ -22,6 +23,12 @@ const NAV = [
   { href: "/admin/topics", label: "Chủ đề", icon: FolderTree, exact: false },
   { href: "/admin/questions", label: "Câu hỏi", icon: ListChecks, exact: false },
   { href: "/admin/sessions", label: "Báo cáo điểm", icon: Flag, exact: false },
+  {
+    href: "/admin/support",
+    label: "Hỗ trợ",
+    icon: MessageCircle,
+    exact: false,
+  },
   { href: "/admin/plans", label: "Gói", icon: CreditCard, exact: false },
   {
     href: "/admin/subscriptions",

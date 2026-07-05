@@ -47,12 +47,13 @@ model User {
   avatarUrl    String? //         Ảnh đại diện (lấy từ Google "picture")
   createdAt    DateTime @default(now())
 
-  sessions       Session[]
-  subscription   Subscription? // 1–1: mỗi user tối đa 1 subscription
-  orders         Order[]
-  grantedOrders  Order[]       @relation("OrderGrantedBy") // các đơn admin này cấp thủ công
-  usageLogs      UsageLog[]
-  reviewedScores Score[]       @relation("ScoreReviewedBy") // các Score admin này đã review/chấm lại thủ công
+  sessions        Session[]
+  subscription    Subscription? // 1–1: mỗi user tối đa 1 subscription
+  orders          Order[]
+  grantedOrders   Order[]          @relation("OrderGrantedBy") // các đơn admin này cấp thủ công
+  usageLogs       UsageLog[]
+  reviewedScores  Score[]          @relation("ScoreReviewedBy") // các Score admin này đã review/chấm lại thủ công
+  supportMessages SupportMessage[] // hội thoại hỗ trợ (1 thread liên tục / user, cả tin user gửi lẫn admin trả lời)
 }
 
 model Topic {
@@ -250,4 +251,21 @@ model UsageLog {
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt]) // COUNT lượt dùng theo kỳ (ngày/tháng)
+}
+
+// 1 thread liên tục / user (không có khái niệm "ticket" riêng) — gồm cả tin
+// user gửi lẫn admin trả lời, phân biệt qua senderRole.
+model SupportMessage {
+  id     String @id @default(uuid())
+  userId String
+  // Cascade: tin nhắn hỗ trợ chỉ có ý nghĩa gắn với user còn tồn tại — không
+  // phải dữ liệu tài chính/audit cần giữ lại như Order.
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  senderRole Role // USER = user gửi cho admin; ADMIN = admin trả lời user này
+  content    String
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt]) // load lịch sử theo thread, sắp theo thời gian
 }
