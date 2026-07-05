@@ -9,10 +9,44 @@ import {
   ChevronDown,
   LayoutDashboard,
   CreditCard,
+  Zap,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
+import { usePracticeCountStore } from "@/stores/practiceCount.store";
 import { logoutApi } from "@/lib/api/auth";
 import { useRouter } from "next/navigation";
+
+// Mốc số câu đã luyện hôm nay -> màu + lời động viên (min giảm dần, khớp mốc đầu tiên đạt được).
+const COUNT_TIERS: { min: number; color: string; message: string }[] = [
+  { min: 4, color: "#8b5cf6", message: "Xuất sắc! Bạn đang rất chăm chỉ hôm nay." },
+  { min: 2, color: "#22c55e", message: "Đang vào phong độ!" },
+  { min: 1, color: "#3b82f6", message: "Khởi động tốt!" },
+  { min: 0, color: "#606072", message: "Luyện câu đầu tiên hôm nay nào!" },
+];
+
+function PracticeCountBadge() {
+  const count = usePracticeCountStore((s) => s.count);
+  const tier = COUNT_TIERS.find((t) => count >= t.min)!;
+
+  return (
+    <div
+      title={tier.message}
+      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg flex-shrink-0"
+      style={{
+        border: `1px solid ${tier.color}33`,
+        background: `${tier.color}14`,
+      }}
+    >
+      <Zap size={13} style={{ color: tier.color }} />
+      <span
+        className="text-xs font-bold font-mono tabular-nums"
+        style={{ color: tier.color }}
+      >
+        {count}
+      </span>
+    </div>
+  );
+}
 
 const NAV_LINKS = [
   { href: "/learning/javascript/questions", label: "Câu Hỏi" },
@@ -232,11 +266,14 @@ export default function Header() {
         <div className="hidden md:flex items-center gap-3">
           {hydrated &&
             (user ? (
-              <UserDropdown
-                name={user.name}
-                role={user.role}
-                avatarUrl={user.avatarUrl}
-              />
+              <>
+                <PracticeCountBadge />
+                <UserDropdown
+                  name={user.name}
+                  role={user.role}
+                  avatarUrl={user.avatarUrl}
+                />
+              </>
             ) : (
               <>
                 <Link

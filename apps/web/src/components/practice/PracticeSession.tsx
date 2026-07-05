@@ -25,6 +25,7 @@ import { quotaDescriptor } from "@/lib/api/quota";
 import { formatTime } from "@/lib/utils/format";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { useQuota } from "@/hooks/useQuota";
+import { usePracticeCountStore } from "@/stores/practiceCount.store";
 import { waitForScoreResult, waitForImproveResult } from "@/lib/ws/jobs";
 import TranscriptPanel from "@/components/practice/TranscriptPanel";
 import AnswerEvaluation from "@/components/practice/AnswerEvaluation";
@@ -59,6 +60,7 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
   const { status: quotaStatus, refresh: refreshQuota } = useQuota();
   const quota = quotaDescriptor(quotaStatus);
   const outOfQuota = quota !== null && quota.remaining <= 0;
+  const refreshPracticeCount = usePracticeCountStore((s) => s.refresh);
 
   const applyScore = useCallback(
     (session: Session, score: Score) => {
@@ -103,6 +105,7 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
         setTranscript(createdSession.transcript);
         setTranscriptError("");
         refreshQuota(); // đã tốn 1 lượt — cập nhật số còn lại
+        refreshPracticeCount(); // cập nhật số câu đã luyện hôm nay hiển thị ở Header
       } catch (err) {
         // Ưu tiên message tiếng Việt từ backend (vd: hết hạn mức trong ngày)
         const serverMsg = axios.isAxiosError(err)
@@ -155,7 +158,7 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
       }
       setPhase("evaluated");
     },
-    [questionId, onSessionSaved, refreshQuota, applyScore],
+    [questionId, onSessionSaved, refreshQuota, refreshPracticeCount, applyScore],
   );
 
   const recorder = useAudioRecorder({ onComplete: handleRecordingComplete });

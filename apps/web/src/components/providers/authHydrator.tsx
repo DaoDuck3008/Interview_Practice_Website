@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useAuthStore } from "@/stores/auth.store";
+import { usePracticeCountStore } from "@/stores/practiceCount.store";
 import { refreshApi } from "@/lib/api/auth";
 
 export default function AuthHydrator({
@@ -13,6 +14,7 @@ export default function AuthHydrator({
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const setHydrated = useAuthStore((s) => s.setHydrated);
   const hasSession = useAuthStore((s) => s.hasSession);
+  const refreshPracticeCount = usePracticeCountStore((s) => s.refresh);
 
   useEffect(() => {
     const hydrate = async () => {
@@ -26,6 +28,7 @@ export default function AuthHydrator({
         const { accessToken, user } = await refreshApi();
 
         setAuth(accessToken, user);
+        refreshPracticeCount();
       } catch {
         clearAuth();
       } finally {

@@ -77,13 +77,19 @@ export class QuotaService {
     });
   }
 
-  /** Trạng thái hạn mức cho frontend hiển thị (used/limit theo ngày & tuần). */
+  /**
+   * Trạng thái hạn mức cho frontend hiển thị (used/limit theo ngày & tuần).
+   * `todayCount` luôn có giá trị (kể cả gói unlimited) — dùng cho các hiển thị
+   * mang tính động viên (vd số câu đã luyện hôm nay ở Header), tách biệt khỏi
+   * ngữ nghĩa "còn bao nhiêu lượt" của daily/weekly.
+   */
   async getStatus(userId: string) {
     const limits = await this.getLimits(userId);
-    if (limits.isUnlimited) {
-      return { unlimited: true, daily: null, weekly: null };
-    }
     const usage = await this.getUsage(userId);
+
+    if (limits.isUnlimited) {
+      return { unlimited: true, daily: null, weekly: null, todayCount: usage.daily };
+    }
     return {
       unlimited: false,
       daily:
@@ -94,6 +100,7 @@ export class QuotaService {
         limits.weeklyLimit === null
           ? null
           : { used: usage.weekly, limit: limits.weeklyLimit },
+      todayCount: usage.daily,
     };
   }
 

@@ -9,6 +9,7 @@ export interface QuotaStatus {
   unlimited: boolean;
   daily: QuotaWindow | null; //  null = không giới hạn theo ngày
   weekly: QuotaWindow | null; // null = không giới hạn theo tuần
+  todayCount: number; // số lượt đã luyện hôm nay — luôn có, kể cả gói unlimited
 }
 
 /** Hạn mức luyện tập còn lại của user hiện tại. */
