@@ -1,17 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Loader2, Send } from "lucide-react";
+import { Loader2, Send, ImagePlus, X } from "lucide-react";
+import { toast } from "react-toastify";
 import {
   getSupportThreads,
   getSupportThread,
+  uploadSupportImage,
   type SupportMessage,
   type SupportThreadSummary,
 } from "@/lib/api/support";
 import { sendSupportMessage } from "@/lib/ws/support";
 import { getSocket } from "@/lib/ws/socket";
 import { formatClock, formatDay } from "@/lib/utils/format";
+import { useImageAttachment } from "@/hooks/useImageAttachment";
 import Avatar from "@/components/ui/Avatar";
+import ImageLightbox from "@/components/ui/ImageLightbox";
 
 const controlClass = "bg-surface border border-border";
 
@@ -22,8 +26,12 @@ export default function AdminSupportPage() {
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [input, setInput] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const attachment = useImageAttachment();
 
   // Tự giãn chiều cao ô nhập theo nội dung, tối đa ~5 dòng rồi cuộn.
   useEffect(() => {
@@ -76,11 +84,31 @@ export default function AdminSupportPage() {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
   }, [messages]);
 
-  function handleSend() {
+  async function handleSend() {
     const content = input.trim();
-    if (!content || !selectedUserId) return;
-    sendSupportMessage(content, selectedUserId);
+    if ((!content && !attachment.file) || !selectedUserId || uploading) return;
+
+    let imageUrl: string | undefined;
+    if (attachment.file) {
+      setUploading(true);
+      try {
+        imageUrl = (await uploadSupportImage(attachment.file)).imageUrl;
+      } catch {
+        toast.error("Không gửi được ảnh. Vui lòng thử lại.");
+        setUploading(false);
+        return;
+      }
+      setUploading(false);
+    }
+
+    sendSupportMessage({
+      content: content || undefined,
+      imageUrl,
+      targetUserId: selectedUserId,
+    });
     setInput("");
+    attachment.clear();
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   const selectedThread = threads.find((t) => t.userId === selectedUserId);
@@ -184,14 +212,27 @@ export default function AdminSupportPage() {
                           />
                         )}
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                          <div
-                            className={`rounded-lg px-3 py-2 text-sm leading-relaxed wrap-break-word ${
-                              isAdmin
-                                ? "bg-accent text-white"
-                                : "bg-elevated text-text-primary"
-                            }`}
-                          >
-                            {m.content}
+                          <div className="flex flex-col gap-1">
+                            {m.imageUrl && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={m.imageUrl}
+                                alt="Ảnh đính kèm"
+                                onClick={() => setLightboxSrc(m.imageUrl)}
+                                className="max-w-[220px] cursor-pointer rounded-lg"
+                              />
+                            )}
+                            {m.content && (
+                              <div
+                                className={`rounded-lg px-3 py-2 text-sm leading-relaxed wrap-break-word ${
+                                  isAdmin
+                                    ? "bg-accent text-white"
+                                    : "bg-elevated text-text-primary"
+                                }`}
+                              >
+                                {m.content}
+                              </div>
+                            )}
                           </div>
                           <span className="whitespace-nowrap text-[10px] text-text-muted">
                             {formatDay(m.createdAt)} {formatClock(m.createdAt)}
@@ -203,34 +244,79 @@ export default function AdminSupportPage() {
                 )}
               </div>
 
-              <div className="flex items-end gap-2 px-4 py-3 border-t border-border shrink-0">
-                <textarea
-                  ref={textareaRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend();
-                    }
-                  }}
-                  rows={1}
-                  placeholder="Trả lời..."
-                  className={`flex-1 resize-none px-3 py-2 rounded-lg text-sm text-text-primary outline-none overflow-y-hidden ${controlClass}`}
-                />
-                <button
-                  onClick={handleSend}
-                  disabled={!input.trim()}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed bg-accent hover:bg-accent-light"
-                  aria-label="Gửi"
-                >
-                  <Send size={15} className="text-white" />
-                </button>
+              <div className="px-4 py-3 border-t border-border shrink-0">
+                {attachment.preview && (
+                  <div className="relative mb-2 inline-block">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={attachment.preview}
+                      alt="Ảnh chờ gửi"
+                      className="max-h-24 rounded-lg border border-border"
+                    />
+                    <button
+                      onClick={attachment.clear}
+                      aria-label="Bỏ ảnh"
+                      className="absolute -right-2 -top-2 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-elevated text-text-secondary transition-colors hover:text-text-primary"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                )}
+                <div className="flex items-end gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) attachment.setFromFile(f);
+                    }}
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    aria-label="Đính kèm ảnh"
+                    className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-elevated hover:text-text-secondary"
+                  >
+                    <ImagePlus size={17} />
+                  </button>
+                  <textarea
+                    ref={textareaRef}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onPaste={attachment.onPaste}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                      }
+                    }}
+                    rows={1}
+                    placeholder="Trả lời..."
+                    className={`flex-1 resize-none px-3 py-2 rounded-lg text-sm text-text-primary outline-none overflow-y-hidden ${controlClass}`}
+                  />
+                  <button
+                    onClick={handleSend}
+                    disabled={(!input.trim() && !attachment.file) || uploading}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed bg-accent hover:bg-accent-light"
+                    aria-label="Gửi"
+                  >
+                    {uploading ? (
+                      <Loader2 size={15} className="animate-spin text-white" />
+                    ) : (
+                      <Send size={15} className="text-white" />
+                    )}
+                  </button>
+                </div>
               </div>
             </>
           )}
         </div>
       </div>
+
+      {lightboxSrc && (
+        <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
+      )}
     </div>
   );
 }

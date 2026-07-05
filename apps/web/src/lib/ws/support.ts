@@ -1,9 +1,14 @@
 import { getSocket } from "@/lib/ws/socket";
 
-/**
- * Gửi tin nhắn hỗ trợ qua WebSocket. `targetUserId` bắt buộc khi gửi với vai
- * trò ADMIN (chọn đúng thread đang trả lời) — user gửi không cần truyền.
- */
-export function sendSupportMessage(content: string, targetUserId?: string) {
-  getSocket()?.emit("support:send", { content, targetUserId });
+interface SendSupportPayload {
+  content?: string;
+  /** URL ảnh đã upload qua POST /support/upload — tùy chọn. */
+  imageUrl?: string;
+  /** Bắt buộc khi gửi với vai trò ADMIN (chọn đúng thread đang trả lời). */
+  targetUserId?: string;
+}
+
+/** Gửi tin nhắn hỗ trợ (text và/hoặc ảnh) qua WebSocket. */
+export function sendSupportMessage(payload: SendSupportPayload) {
+  getSocket()?.emit("support:send", payload);
 }

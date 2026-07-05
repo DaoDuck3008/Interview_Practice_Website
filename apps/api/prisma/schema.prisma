@@ -263,7 +263,8 @@ model SupportMessage {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   senderRole Role // USER = user gửi cho admin; ADMIN = admin trả lời user này
-  content    String
+  content    String  @default("") // caption/text; rỗng nếu tin chỉ có ảnh
+  imageUrl   String? //             URL ảnh trên R2; null nếu tin chỉ có text
 
   createdAt DateTime @default(now())
 

@@ -7,6 +7,7 @@ export interface SupportMessage {
   userId: string;
   senderRole: SenderRole;
   content: string;
+  imageUrl: string | null;
   createdAt: string;
 }
 
@@ -38,6 +39,19 @@ export async function getSupportThread(
 ): Promise<SupportMessage[]> {
   const res = await api.get<ApiResponse<SupportMessage[]>>(
     `/support/threads/${userId}`,
+  );
+  return res.data.data;
+}
+
+/** Upload ảnh đính kèm chat, trả về URL công khai trên R2. */
+export async function uploadSupportImage(
+  file: File,
+): Promise<{ imageUrl: string }> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await api.post<ApiResponse<{ imageUrl: string }>>(
+    "/support/upload",
+    form,
   );
   return res.data.data;
 }

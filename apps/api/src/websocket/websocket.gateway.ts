@@ -20,7 +20,9 @@ interface JwtPayload {
 }
 
 interface SupportSendPayload {
-  content: string;
+  content?: string;
+  /** URL ảnh đã upload lên R2 (qua POST /support/upload) — tùy chọn. */
+  imageUrl?: string;
   /** Bắt buộc khi người gửi là ADMIN — chỉ định trả lời thread của user nào. */
   targetUserId?: string;
 }
@@ -90,8 +92,21 @@ export class WebsocketGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() data: SupportSendPayload,
   ) {
-    const content = data?.content?.trim();
-    if (!content || content.length > 2000) return;
+    const content = data?.content?.trim() ?? '';
+    if (content.length > 2000) return;
+
+    // Chỉ chấp nhận imageUrl trỏ vào chính bucket R2 của mình (đã upload qua
+    // POST /support/upload) — chặn client chèn URL ảnh tùy ý từ nơi khác.
+    const publicUrl = this.config
+      .getOrThrow<string>('r2.publicUrl')
+      .replace(/\/$/, '');
+    const imageUrl =
+      data.imageUrl && data.imageUrl.startsWith(`${publicUrl}/`)
+        ? data.imageUrl
+        : undefined;
+
+    // Tin phải có ít nhất text hoặc ảnh.
+    if (!content && !imageUrl) return;
 
     const isAdmin = client.data.role === 'ADMIN';
     const threadUserId = isAdmin ? data.targetUserId : client.data.userId;
@@ -101,6 +116,7 @@ export class WebsocketGateway
       threadUserId,
       isAdmin ? 'ADMIN' : 'USER',
       content,
+      imageUrl,
     );
 
     this.server.to(`user:${threadUserId}`).emit('support:message', message);
