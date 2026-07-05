@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2, Search, X, AlertTriangle, CheckCircle2 } from "lucide-react";
+import {
+  Loader2,
+  Search,
+  SearchX,
+  X,
+  AlertTriangle,
+  CheckCircle2,
+} from "lucide-react";
 import { toast } from "react-toastify";
 import {
   getSessionsAdmin,
@@ -13,6 +20,7 @@ import { getTopics, type Topic } from "@/lib/api/topics";
 import type { Paginated } from "@/lib/api/questions";
 import Pagination from "@/components/admin/Pagination";
 import SessionDetailModal from "@/components/admin/SessionDetailModal";
+import EmptyState from "@/components/ui/EmptyState";
 import { formatDate, formatDuration } from "@/lib/utils/format";
 import { LEVELS } from "@/lib/utils/levels";
 
@@ -235,9 +243,24 @@ export default function AdminSessionsPage() {
             <Loader2 size={18} className="animate-spin" />
           </div>
         ) : data.items.length === 0 ? (
-          <p className="text-center py-16 text-sm text-[var(--color-text-muted)]">
-            Không có session nào khớp bộ lọc.
-          </p>
+          hasFilters ? (
+            <EmptyState
+              icon={SearchX}
+              title="Không tìm thấy báo cáo phù hợp"
+              description="Không có session nào khớp với bộ lọc hiện tại. Thử điều chỉnh hoặc xóa bớt điều kiện lọc."
+              action={{ label: "Xóa bộ lọc", onClick: resetFilters }}
+            />
+          ) : (
+            <EmptyState
+              icon={CheckCircle2}
+              title="Không có báo cáo nào đang chờ xử lý"
+              description="Mọi báo cáo điểm chấm sai đều đã được giải quyết. Bạn có thể xem lại toàn bộ session bên dưới."
+              action={{
+                label: "Xem tất cả session",
+                onClick: () => changeFilter(setFlagged, "all"),
+              }}
+            />
+          )
         ) : (
           data.items.map((s) => {
             const avg = s.score

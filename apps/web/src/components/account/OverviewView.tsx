@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Dumbbell, Clock, Star, type LucideIcon } from "lucide-react";
+import { Dumbbell, Clock, Star, Sparkles } from "lucide-react";
 import {
   getMyStats,
   getMyMonthly,
@@ -12,6 +12,7 @@ import {
 } from "@/lib/api/sessions";
 import { formatNumber, formatHoursMinutes } from "@/lib/utils/format";
 import StatCard from "@/components/ui/StatsCard";
+import EmptyState from "@/components/ui/EmptyState";
 import ActivityHeatmap from "./ActivityHeatmap";
 import ProgressChart from "./ProgressChart";
 import PracticeHistoryList from "./PracticeHistoryList";
@@ -60,6 +61,19 @@ export default function OverviewView() {
             10,
         ) / 10
       : null;
+
+  if (!statsLoading && stats && stats.totalSessions === 0) {
+    return (
+      <div className={cardClass} style={cardBg}>
+        <EmptyState
+          icon={Sparkles}
+          title="Bắt đầu hành trình luyện tập của bạn"
+          description="Bạn chưa có buổi luyện tập nào. Chọn một câu hỏi và ghi âm câu trả lời đầu tiên để bắt đầu theo dõi tiến độ tại đây."
+          action={{ label: "Khám phá câu hỏi", href: "/learning" }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col gap-6">
