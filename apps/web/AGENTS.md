@@ -51,9 +51,9 @@ NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID=   # Google OAuth Client ID (ID token flow �
 
 ## Design System
 
-### Colors — use CSS custom properties, never hard-coded hex
+### Colors — use canonical Tailwind classes, never hard-coded hex or `var()`
 
-All color values are defined as CSS custom properties in `src/app/globals.css`. Always reference them via Tailwind arbitrary values with `var()`. **Never write hex codes directly in component className or style.**
+All color values are defined in the `@theme` block in `src/app/globals.css`, so Tailwind v4 auto-generates a canonical utility class for each token. Always use those canonical classes directly. **Never write raw hex codes, and never wrap a token in arbitrary-value `var()` syntax** — `text-[var(--color-text-primary)]` is redundant, the plain `text-text-primary` class already exists and does the same thing.
 
 ```
 --color-base             #06060c   dark navy — page background
@@ -64,21 +64,24 @@ All color values are defined as CSS custom properties in `src/app/globals.css`. 
 --color-text-primary     #f4f4f6   main text
 --color-text-secondary   #9898aa   secondary / label text
 --color-text-muted       #606072   placeholder / tertiary text
+--color-text-faint       #3d3d54   very faint text (placeholder-level)
 
 --color-accent           #7c3aed   primary purple (buttons, focus rings, highlights)
 --color-accent-light     #8b5cf6   lighter purple (hover states)
 
 --color-success          #22c55e   success / active state
+--color-danger           #ef4444   error / warning / destructive
 ```
 
 ```tsx
 // Correct
-<p className="text-[var(--color-text-primary)]">
-<div className="bg-[var(--color-surface)] border border-[var(--color-border)]">
-<button className="bg-[var(--color-accent)] hover:bg-[var(--color-accent-light)]">
+<p className="text-text-primary">
+<div className="bg-surface border border-border">
+<button className="bg-accent hover:bg-accent-light">
 
 // Wrong — do not do this
 <p className="text-[#f4f4f6]">
+<p className="text-[var(--color-text-primary)]">
 <div style={{ backgroundColor: '#0d0d14' }}>
 ```
 
@@ -101,7 +104,7 @@ Do not use CSS gradients (`gradient-to-r`, `bg-gradient-*`, `linear-gradient`, `
 ## Tailwind CSS Rules
 
 1. **Tailwind first.** Use Tailwind utility classes for all styling. Only write raw CSS in `globals.css` when Tailwind cannot express it (e.g., complex keyframe animations, `::before`/`::after` content tricks, third-party library overrides).
-2. **CSS custom properties** for all color values — see Design System above.
+2. **Canonical color classes** (`text-text-primary`, `bg-surface`, etc.) for all color values — see Design System above.
 3. **Mobile-first responsive**: write base styles for mobile, add `md:` / `lg:` breakpoints as needed.
 4. **No `@apply`** — write utilities directly in className, not in CSS files.
 5. Consistent spacing scale: `gap-2`, `gap-3`, `gap-4`, `gap-6`, `gap-8`, `p-4`, `p-6`, `px-4`, `px-6`.
@@ -349,7 +352,7 @@ showModal({
 
 ## What NOT to Do
 
-- **No hex values in className or style** — use `var(--color-*)` tokens.
+- **No hex values or `var(--color-*)` arbitrary values in className or style** — use the canonical Tailwind classes (`text-text-primary`, `bg-surface`, etc.).
 - **No gradients** — neither Tailwind `bg-gradient-*` nor inline `linear-gradient`.
 - **No additional fonts** — Be Vietnam Pro is the only typeface.
 - **No `"use client"` by default** — add it only when the component actually needs hooks or browser APIs.

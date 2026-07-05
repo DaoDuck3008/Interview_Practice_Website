@@ -40,7 +40,7 @@ const NAV_ITEMS: NavItem[] = [
     href: "/saved",
     label: "Câu hỏi đã lưu",
     icon: Bookmark,
-    enabled: false,
+    enabled: true,
   },
 ];
 

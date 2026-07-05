@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useAuthStore } from "@/stores/auth.store";
 import { usePracticeCountStore } from "@/stores/practiceCount.store";
+import { useFavoritesStore } from "@/stores/favorites.store";
 import { refreshApi } from "@/lib/api/auth";
 
 export default function AuthHydrator({
@@ -15,6 +16,8 @@ export default function AuthHydrator({
   const setHydrated = useAuthStore((s) => s.setHydrated);
   const hasSession = useAuthStore((s) => s.hasSession);
   const refreshPracticeCount = usePracticeCountStore((s) => s.refresh);
+  const fetchFavorites = useFavoritesStore((s) => s.fetchAll);
+  const resetFavorites = useFavoritesStore((s) => s.reset);
 
   useEffect(() => {
     const hydrate = async () => {
@@ -29,8 +32,10 @@ export default function AuthHydrator({
 
         setAuth(accessToken, user);
         refreshPracticeCount();
+        fetchFavorites();
       } catch {
         clearAuth();
+        resetFavorites();
       } finally {
         // đánh dấu đã hydrate xong
         setHydrated();

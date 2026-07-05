@@ -6,14 +6,18 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { ChevronDown, ArrowUpRight, Star } from "lucide-react";
+import { ChevronDown, ArrowUpRight, Star, Bookmark } from "lucide-react";
 import type { Question } from "@/lib/api/questions";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
+import { useAuthStore } from "@/stores/auth.store";
+import { useFavoritesStore } from "@/stores/favorites.store";
 
 interface QuestionCardProps {
   question: Question;
   index: number;
   searchQuery?: string;
+  /** Gọi sau khi bỏ lưu thành công — dùng để trang /saved xóa item khỏi danh sách ngay. */
+  onFavoriteRemoved?: (questionId: string) => void;
 }
 
 function escapeRegex(str: string) {
@@ -174,10 +178,22 @@ export default function QuestionCard({
   question,
   index,
   searchQuery,
+  onFavoriteRemoved,
 }: QuestionCardProps) {
   const [open, setOpen] = useState(false);
   const levelStyle = LEVEL_STYLE[question.level];
   const topicSlug = question.topic?.slug ?? "";
+
+  const loggedIn = useAuthStore((s) => s.hydrated && !!s.user);
+  const isFavorited = useFavoritesStore((s) => s.ids.has(question.id));
+  const toggleFavorite = useFavoritesStore((s) => s.toggleFavorite);
+
+  async function handleToggleFavorite(e: React.SyntheticEvent) {
+    e.stopPropagation();
+    const wasFavorited = isFavorited;
+    await toggleFavorite(question);
+    if (wasFavorited) onFavoriteRemoved?.(question.id);
+  }
 
   return (
     <div
@@ -214,6 +230,29 @@ export default function QuestionCard({
         >
           {levelStyle.label}
         </span>
+
+        {/* Bookmark toggle — chỉ hiện khi đã đăng nhập.
+            Dùng span[role=button] thay vì <button> thật vì hàng cha (Row) đã
+            là một <button> — lồng button trong button là HTML không hợp lệ,
+            trình duyệt sẽ tự đóng button cha sớm và phá vỡ cả hàng. */}
+        {loggedIn && (
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={handleToggleFavorite}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleToggleFavorite(e);
+              }
+            }}
+            className="flex-shrink-0 transition-colors duration-100 cursor-pointer"
+            style={{ color: isFavorited ? "#fbbf24" : "#606072" }}
+            title={isFavorited ? "Bỏ lưu" : "Lưu câu hỏi"}
+          >
+            <Bookmark size={14} fill={isFavorited ? "currentColor" : "none"} />
+          </span>
+        )}
 
         {/* Practice link */}
         {topicSlug && (

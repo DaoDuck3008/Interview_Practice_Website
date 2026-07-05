@@ -10,15 +10,22 @@ import {
   LayoutDashboard,
   CreditCard,
   Zap,
+  Bookmark,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
 import { usePracticeCountStore } from "@/stores/practiceCount.store";
+import { useFavoritesStore } from "@/stores/favorites.store";
 import { logoutApi } from "@/lib/api/auth";
 import { useRouter } from "next/navigation";
+import FavoritesDrawer from "./FavoritesDrawer";
 
 // Mốc số câu đã luyện hôm nay -> màu + lời động viên (min giảm dần, khớp mốc đầu tiên đạt được).
 const COUNT_TIERS: { min: number; color: string; message: string }[] = [
-  { min: 4, color: "#8b5cf6", message: "Xuất sắc! Bạn đang rất chăm chỉ hôm nay." },
+  {
+    min: 4,
+    color: "#8b5cf6",
+    message: "Xuất sắc! Bạn đang rất chăm chỉ hôm nay.",
+  },
   { min: 2, color: "#22c55e", message: "Đang vào phong độ!" },
   { min: 1, color: "#3b82f6", message: "Khởi động tốt!" },
   { min: 0, color: "#606072", message: "Luyện câu đầu tiên hôm nay nào!" },
@@ -103,6 +110,7 @@ function UserDropdown({
 }) {
   const [open, setOpen] = useState(false);
   const clearAuth = useAuthStore((s) => s.clearAuth);
+  const resetFavorites = useFavoritesStore((s) => s.reset);
   const router = useRouter();
   const ref = useRef<HTMLDivElement>(null);
 
@@ -122,6 +130,7 @@ function UserDropdown({
       await logoutApi();
     } catch {}
     clearAuth();
+    resetFavorites();
     router.push("/login");
   }
 
@@ -192,9 +201,11 @@ function UserDropdown({
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [favDrawerOpen, setFavDrawerOpen] = useState(false);
   const user = useAuthStore((s) => s.user);
   const hydrated = useAuthStore((s) => s.hydrated);
   const clearAuth = useAuthStore((s) => s.clearAuth);
+  const resetFavorites = useFavoritesStore((s) => s.reset);
   const router = useRouter();
 
   const headerRef = useRef<HTMLElement>(null);
@@ -205,6 +216,7 @@ export default function Header() {
       await logoutApi();
     } catch {}
     clearAuth();
+    resetFavorites();
   }
 
   useEffect(() => {
@@ -268,6 +280,14 @@ export default function Header() {
             (user ? (
               <>
                 <PracticeCountBadge />
+                <button
+                  onClick={() => setFavDrawerOpen(true)}
+                  className="flex items-center justify-center w-8 h-8 rounded-lg text-[#a1a1aa] hover:text-[#f4f4f6] hover:bg-[#13131c] transition-colors duration-200 cursor-pointer"
+                  aria-label="Câu hỏi đã lưu"
+                  title="Câu hỏi đã lưu"
+                >
+                  <Bookmark size={16} />
+                </button>
                 <UserDropdown
                   name={user.name}
                   role={user.role}
@@ -344,6 +364,16 @@ export default function Header() {
                         Trang quản trị
                       </Link>
                     )}
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        setFavDrawerOpen(true);
+                      }}
+                      className="flex items-center justify-center gap-2 text-sm text-[#a1a1aa] hover:text-[#fafafa] transition-colors duration-200 cursor-pointer py-2 border border-[#1c1c28] rounded-lg"
+                    >
+                      <Bookmark size={14} />
+                      Câu hỏi đã lưu
+                    </button>
                     <Link
                       href="/billing"
                       onClick={() => setMenuOpen(false)}
@@ -383,6 +413,11 @@ export default function Header() {
           </ul>
         </div>
       )}
+
+      <FavoritesDrawer
+        open={favDrawerOpen}
+        onClose={() => setFavDrawerOpen(false)}
+      />
     </header>
   );
 }

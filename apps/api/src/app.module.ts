@@ -19,6 +19,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { QuotaModule } from './modules/quota/quota.module';
 import { SupportModule } from './modules/support/support.module';
+import { FavoritesModule } from './modules/favorites/favorites.module';
 import { WebsocketModule } from './websocket/websocket.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
@@ -47,6 +48,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
     QuotaModule,
     SupportModule,
     WebsocketModule,
+    FavoritesModule,
   ],
   providers: [
     {
