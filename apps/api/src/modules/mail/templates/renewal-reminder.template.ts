@@ -1,3 +1,5 @@
+import { escapeHtml, formatDateVn } from '../../../common/utils/format.util';
+
 /**
  * Template email nhắc gia hạn khi gói đăng ký sắp hết hạn (còn ~2 ngày).
  * Có nút CTA dẫn về trang pricing để gia hạn. URL truyền vào từ config (không hardcode).
@@ -47,30 +49,4 @@ export function renewalReminderEmailTemplate(
       </div>
     </div>
   </div>`;
-}
-
-/** Định dạng ngày giờ theo giờ Việt Nam (UTC+7). */
-function formatDateVn(d: Date): string {
-  return new Intl.DateTimeFormat('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Asia/Ho_Chi_Minh',
-  }).format(d);
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(
-    /[&<>"']/g,
-    (c) =>
-      ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;',
-      })[c] ?? c,
-  );
 }

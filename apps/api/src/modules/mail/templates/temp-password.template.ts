@@ -1,3 +1,5 @@
+import { escapeHtml } from '../../../common/utils/format.util';
+
 /**
  * Template email gửi mật khẩu tạm khi admin reset mật khẩu hộ người dùng.
  * Nhấn mạnh người dùng nên đổi lại mật khẩu sau khi đăng nhập.
@@ -33,18 +35,4 @@ export function tempPasswordEmailTemplate(
       </div>
     </div>
   </div>`;
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(
-    /[&<>"']/g,
-    (c) =>
-      ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;',
-      })[c] ?? c,
-  );
 }

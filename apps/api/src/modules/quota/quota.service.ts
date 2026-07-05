@@ -1,10 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import {
-  FREE_TIER_LIMITS,
-  QuotaLimits,
-  vnPeriodStarts,
-} from './quota.constants';
+import { FREE_TIER_LIMITS, QuotaLimits } from './quota.constants';
+import { vnStartOfDay, vnStartOfWeek } from '../../common/utils/vn-time.util';
 
 @Injectable()
 export class QuotaService {
@@ -41,7 +38,8 @@ export class QuotaService {
 
   /** Số lượt đã dùng trong hôm nay & tuần này (giờ VN). */
   async getUsage(userId: string): Promise<{ daily: number; weekly: number }> {
-    const { startOfDay, startOfWeek } = vnPeriodStarts();
+    const startOfDay = vnStartOfDay();
+    const startOfWeek = vnStartOfWeek();
     const [daily, weekly] = await Promise.all([
       this.prisma.usageLog.count({
         where: { userId, createdAt: { gte: startOfDay } },

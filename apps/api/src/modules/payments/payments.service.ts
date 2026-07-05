@@ -13,9 +13,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { QueryOrderDto, OrderDateField } from './dto/query-order.dto';
 import { SepayClient, type SepayTransaction } from './sepay.client';
 import { MailService } from '../mail/mail.service';
-
-// Việt Nam cố định UTC+7 — dùng để tính mốc "hôm nay/tháng này" theo giờ VN.
-const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
+import { vnStartOfDay, vnStartOfMonth } from '../../common/utils/vn-time.util';
 
 // Đơn hết hiệu lực (QR) sau 10 phút — chỉ để UX tạo lại; tiền về trễ vẫn được honor ở webhook.
 const ORDER_TTL_MS = 10 * 60 * 1000;
@@ -277,19 +275,8 @@ export class PaymentsService {
 
   /** Thẻ thống kê: doanh thu (tổng / tháng này / hôm nay) + đếm theo trạng thái. */
   async getStats() {
-    const nowMs = Date.now();
-    const vnNow = new Date(nowMs + VN_OFFSET_MS);
-    // Mốc đầu ngày/tháng theo giờ VN, quy về Date (UTC) để so với paidAt đã lưu UTC.
-    const startOfDay = new Date(
-      Date.UTC(
-        vnNow.getUTCFullYear(),
-        vnNow.getUTCMonth(),
-        vnNow.getUTCDate(),
-      ) - VN_OFFSET_MS,
-    );
-    const startOfMonth = new Date(
-      Date.UTC(vnNow.getUTCFullYear(), vnNow.getUTCMonth(), 1) - VN_OFFSET_MS,
-    );
+    const startOfDay = vnStartOfDay();
+    const startOfMonth = vnStartOfMonth();
 
     // Promise.all (không dùng $transaction) để giữ kiểu trả về chính xác của groupBy.
     const [byStatus, totalAgg, monthAgg, todayAgg] = await Promise.all([

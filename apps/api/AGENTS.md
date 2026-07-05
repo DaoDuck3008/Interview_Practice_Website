@@ -81,9 +81,12 @@ src/
 │   ├── guards/
 │   │   ├── jwt-auth.guard.ts           # Verifies Bearer access token
 │   │   └── roles.guard.ts              # Checks role metadata
-│   └── interceptors/
-│       ├── response.interceptor.ts     # Wraps all success responses
-│       └── logging.interceptor.ts      # Logs method/URL/status/duration
+│   ├── interceptors/
+│   │   ├── response.interceptor.ts     # Wraps all success responses
+│   │   └── logging.interceptor.ts      # Logs method/URL/status/duration
+│   └── utils/
+│       ├── vn-time.util.ts             # VN_OFFSET_MS, vnDayKey, vnStartOfDay/Week/Month
+│       └── format.util.ts              # formatDateVn, formatVnd, escapeHtml (mail templates)
 ├── prisma/
 │   ├── prisma.module.ts       # @Global() — no need to import in feature modules
 │   └── prisma.service.ts      # Extends PrismaClient, connects on init
@@ -201,6 +204,21 @@ Each feature lives under `src/modules/<feature>/` with this layout:
 - **DTOs** — all request bodies and query params must be typed DTOs with class-validator decorators. Enums import from `@prisma/client`.
 
 Register every new module in `app.module.ts`.
+
+---
+
+## Shared Utilities (`common/utils`)
+
+Pure helper functions used by **more than one module** go in `src/common/utils/`, one file per domain (mirrors the frontend's `lib/utils/` convention). Do not redefine a VN-timezone or formatting helper locally in a service/template — import from here.
+
+| File | Exports | Used by |
+|---|---|---|
+| `vn-time.util.ts` | `VN_OFFSET_MS`, `vnDayKey`, `vnStartOfDay`, `vnStartOfWeek`, `vnStartOfMonth` | `sessions`, `quota`, `payments` — all Vietnam-timezone (UTC+7, no DST) day/week/month boundary math for `where: { createdAt: { gte: ... } }` queries |
+| `format.util.ts` | `formatDateVn`, `formatVnd`, `escapeHtml` | `mail/templates/*` — human-facing string formatting inside email HTML |
+
+Vietnam is fixed at UTC+7 (no DST) — always compute boundaries by shifting to VN wall-clock via `VN_OFFSET_MS`, applying `Date.UTC(...)`, then shifting back, exactly as `vn-time.util.ts` does. Never call `.getHours()`/`.getDate()` etc. directly on a `Date` for VN-day grouping — those read the **server's local timezone**, not VN.
+
+Business-logic parsing that happens to use these primitives (e.g. `resolveMonth` in `sessions.service.ts`, which parses an optional `"YYYY-MM"` query param) stays in its own service — only the generic boundary math is shared.
 
 ---
 
@@ -377,3 +395,4 @@ Both models exist in `schema.prisma`. Follow the standard module conventions abo
 - **Do not expose `passwordHash`** in any response. Select or exclude it explicitly if returning user objects.
 - **Do not use `RolesGuard` without `JwtAuthGuard`.** They must always be applied together.
 - **Do not use `prisma.$transaction` for single operations.** Only use it for count+findMany pairs or multi-step atomic writes.
+- **Do not redefine `VN_OFFSET_MS`, `vnDayKey`, `formatDateVn`, `formatVnd`, or `escapeHtml` locally.** Import from `common/utils/vn-time.util.ts` / `common/utils/format.util.ts`.

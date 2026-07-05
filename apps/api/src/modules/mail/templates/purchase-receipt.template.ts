@@ -1,3 +1,9 @@
+import {
+  escapeHtml,
+  formatDateVn,
+  formatVnd,
+} from '../../../common/utils/format.util';
+
 /**
  * Template email biên nhận thanh toán + xác nhận mua gói thành công.
  * Gửi sau khi đơn được đánh dấu PAID và subscription được kích hoạt/gia hạn.
@@ -58,35 +64,4 @@ function row(label: string, value: string, last = false): string {
       <span style="font-size:13px;color:#9898aa;">${label}</span>
       <span style="font-size:14px;font-weight:600;color:#f4f4f6;text-align:right;">${value}</span>
     </div>`;
-}
-
-/** 1290000 → "1.290.000₫" */
-function formatVnd(amount: number): string {
-  return amount.toLocaleString('vi-VN') + '₫';
-}
-
-/** Định dạng ngày giờ theo giờ Việt Nam (UTC+7). */
-function formatDateVn(d: Date): string {
-  return new Intl.DateTimeFormat('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Asia/Ho_Chi_Minh',
-  }).format(d);
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(
-    /[&<>"']/g,
-    (c) =>
-      ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;',
-      })[c] ?? c,
-  );
 }

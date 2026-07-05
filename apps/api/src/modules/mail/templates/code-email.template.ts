@@ -1,3 +1,5 @@
+import { escapeHtml } from '../../../common/utils/format.util';
+
 /**
  * Template email chứa mã OTP 6 số (dùng cho xác thực email & đặt lại mật khẩu).
  * Dùng inline-style để hiển thị ổn định trên mọi mail client.
@@ -33,18 +35,4 @@ export function codeEmailTemplate(opts: CodeEmailOptions): string {
       </div>
     </div>
   </div>`;
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(
-    /[&<>"']/g,
-    (c) =>
-      ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;',
-      })[c] ?? c,
-  );
 }

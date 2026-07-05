@@ -22,9 +22,7 @@ import { QueryHistoryDto } from './dto/query-history.dto';
 import { QueryAdminSessionDto } from './dto/query-admin-session.dto';
 import { ReviewScoreDto } from './dto/review-score.dto';
 import { ManualScoreDto } from './dto/manual-score.dto';
-
-// Việt Nam cố định UTC+7 — dùng để gom nhóm theo "ngày/tháng" giờ VN.
-const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
+import { VN_OFFSET_MS, vnDayKey } from '../../common/utils/vn-time.util';
 
 @Injectable()
 export class SessionsService {
@@ -538,10 +536,4 @@ function resolveMonth(month?: string): { key: string; start: Date; end: Date } {
   const start = new Date(Date.UTC(y, m - 1, 1) - VN_OFFSET_MS);
   const end = new Date(Date.UTC(y, m, 1) - VN_OFFSET_MS);
   return { key: `${y}-${String(m).padStart(2, '0')}`, start, end };
-}
-
-/** Key ngày 'YYYY-MM-DD' theo giờ VN từ một Date (lưu UTC). */
-function vnDayKey(d: Date): string {
-  const vn = new Date(d.getTime() + VN_OFFSET_MS);
-  return `${vn.getUTCFullYear()}-${String(vn.getUTCMonth() + 1).padStart(2, '0')}-${String(vn.getUTCDate()).padStart(2, '0')}`;
 }
