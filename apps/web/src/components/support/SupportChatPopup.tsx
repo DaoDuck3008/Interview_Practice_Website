@@ -82,7 +82,7 @@ export default function SupportChatPopup({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex h-[110] w-80 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
+    <div className="fixed bottom-4 right-4 z-50 flex h-[110] w-80 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
       <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
         <p className="text-sm font-bold text-text-primary">Hỗ trợ trực tiếp</p>
         <button
@@ -127,14 +127,13 @@ export default function SupportChatPopup({ onClose }: { onClose: () => void }) {
                   />
                 )}
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col items-end gap-1">
                     {m.imageUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={m.imageUrl}
                         alt="Ảnh đính kèm"
                         onClick={() => setLightboxSrc(m.imageUrl)}
-                        className="max-w-[50] cursor-pointer rounded-lg"
+                        className="max-w-[100] cursor-pointer rounded-lg"
                       />
                     )}
                     {m.content && (
