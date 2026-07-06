@@ -17,6 +17,7 @@ import type { Paginated } from "@/lib/api/questions";
 import Pagination from "@/components/admin/Pagination";
 import OrderDetailModal from "@/components/admin/OrderDetailModal";
 import ReconcileView from "@/components/admin/ReconcileView";
+import RevenueChart from "@/components/admin/RevenueChart";
 import { formatDateTime, formatVnd } from "@/lib/utils/format";
 import { ORDER_STATUS_META } from "@/lib/utils/subscriptions";
 
@@ -54,7 +55,7 @@ export default function AdminPaymentsPage() {
   const router = useRouter();
   const sp = useSearchParams();
 
-  const [tab, setTab] = useState<"orders" | "reconcile">("orders");
+  const [tab, setTab] = useState<"orders" | "stats" | "reconcile">("orders");
   const [data, setData] = useState<Paginated<AdminOrder>>(EMPTY);
   const [stats, setStats] = useState<OrderStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -222,6 +223,7 @@ export default function AdminPaymentsPage() {
         {(
           [
             ["orders", "Đơn hàng"],
+            ["stats", "Thống kê"],
             ["reconcile", "Đối soát ngân hàng"],
           ] as const
         ).map(([key, label]) => (
@@ -241,6 +243,8 @@ export default function AdminPaymentsPage() {
 
       {tab === "reconcile" ? (
         <ReconcileView />
+      ) : tab === "stats" ? (
+        <RevenueChart />
       ) : (
         <>
           <div className="flex justify-end mb-4">

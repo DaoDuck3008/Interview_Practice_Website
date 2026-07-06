@@ -138,6 +138,35 @@ export class QuestionsService {
     return groups.map((g) => ({ topicId: g.topicId, count: g._count._all }));
   }
 
+  /** Admin: top N câu hỏi được ghi âm (Session) nhiều nhất, mới nhiều nhất trước. */
+  async getTopRecorded(limit = 10) {
+    const groups = await this.prisma.session.groupBy({
+      by: ['questionId'],
+      _count: { questionId: true },
+      orderBy: { _count: { questionId: 'desc' } },
+      take: limit,
+    });
+    if (groups.length === 0) return [];
+
+    const questions = await this.prisma.question.findMany({
+      where: { id: { in: groups.map((g) => g.questionId) } },
+      select: {
+        id: true,
+        content: true,
+        level: true,
+        topic: { select: { name: true, slug: true } },
+      },
+    });
+    const byId = new Map(questions.map((q) => [q.id, q]));
+
+    return groups
+      .map((g) => {
+        const q = byId.get(g.questionId);
+        return q ? { ...q, sessionCount: g._count.questionId } : null;
+      })
+      .filter((q): q is NonNullable<typeof q> => q !== null);
+  }
+
   async findOne(id: string) {
     const question = await this.prisma.question.findUnique({
       where: { id },

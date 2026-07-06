@@ -13,7 +13,12 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { QueryOrderDto, OrderDateField } from './dto/query-order.dto';
 import { SepayClient, type SepayTransaction } from './sepay.client';
 import { MailService } from '../mail/mail.service';
-import { vnStartOfDay, vnStartOfMonth } from '../../common/utils/vn-time.util';
+import {
+  vnStartOfDay,
+  vnStartOfMonth,
+  vnDayKey,
+  vnLastNDays,
+} from '../../common/utils/vn-time.util';
 
 // Đơn hết hiệu lực (QR) sau 10 phút — chỉ để UX tạo lại; tiền về trễ vẫn được honor ở webhook.
 const ORDER_TTL_MS = 10 * 60 * 1000;
@@ -308,6 +313,26 @@ export class PaymentsService {
       revenueToday: todayAgg._sum.amountVnd ?? 0,
       counts,
     };
+  }
+
+  /** Doanh thu theo ngày (giờ VN) trong `days` ngày gần nhất, zero-fill ngày không có giao dịch. */
+  async getRevenueDaily(days = 30) {
+    const since = vnStartOfDay(new Date(Date.now() - (days - 1) * DAY_MS));
+    const orders = await this.prisma.order.findMany({
+      where: { status: 'PAID', paidAt: { gte: since } },
+      select: { paidAt: true, amountVnd: true },
+    });
+
+    const map = new Map<string, number>();
+    for (const o of orders) {
+      const day = vnDayKey(o.paidAt!);
+      map.set(day, (map.get(day) ?? 0) + o.amountVnd);
+    }
+
+    return vnLastNDays(days).map((date) => ({
+      date,
+      revenue: map.get(date) ?? 0,
+    }));
   }
 
   // ─── Admin: đối soát ngân hàng (Sepay) ──────────────

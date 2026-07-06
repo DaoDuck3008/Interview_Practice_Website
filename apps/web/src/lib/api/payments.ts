@@ -140,6 +140,20 @@ export async function getOrderStats(): Promise<OrderStats> {
   return res.data.data;
 }
 
+export interface RevenuePoint {
+  date: string;
+  revenue: number;
+}
+
+/** Doanh thu theo ngày (mặc định 30 ngày gần nhất). */
+export async function getRevenueDaily(days?: number): Promise<RevenuePoint[]> {
+  const res = await api.get<ApiResponse<RevenuePoint[]>>(
+    "/payments/admin/orders/revenue-daily",
+    { params: days ? { days } : undefined },
+  );
+  return res.data.data;
+}
+
 /** Toàn bộ đơn khớp bộ lọc (không phân trang) để xuất CSV. */
 export async function getOrdersForExport(
   query: AdminOrderQuery = {},

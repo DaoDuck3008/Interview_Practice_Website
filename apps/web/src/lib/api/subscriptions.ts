@@ -109,6 +109,21 @@ export async function activateSubscription(
   return res.data.data;
 }
 
+export interface SubscriptionStats {
+  active: number;
+  expired: number;
+  canceled: number;
+  byPlan: { planName: string; count: number }[];
+}
+
+/** Thẻ thống kê: đếm theo trạng thái + đếm theo từng gói. */
+export async function getSubscriptionStats(): Promise<SubscriptionStats> {
+  const res = await api.get<ApiResponse<SubscriptionStats>>(
+    "/subscriptions/stats",
+  );
+  return res.data.data;
+}
+
 /** Cấp gói thủ công (admin / hỗ trợ KH). days bỏ trống → dùng kỳ hạn gói. */
 export interface GrantInput {
   userId: string;

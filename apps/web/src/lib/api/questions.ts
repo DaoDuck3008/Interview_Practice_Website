@@ -117,6 +117,25 @@ export async function getTopicQuestionCounts(): Promise<
   return map;
 }
 
+export interface TopRecordedQuestion {
+  id: string;
+  content: string;
+  level: Level;
+  topic: { name: string; slug: string } | null;
+  sessionCount: number;
+}
+
+/** Admin: top N câu hỏi được ghi âm (Session) nhiều nhất, mặc định 10. */
+export async function getTopRecordedQuestions(
+  limit?: number,
+): Promise<TopRecordedQuestion[]> {
+  const res = await api.get<ApiResponse<TopRecordedQuestion[]>>(
+    "/questions/top-recorded",
+    { params: limit ? { limit } : undefined },
+  );
+  return res.data.data;
+}
+
 // Admin: lấy 1 câu hỏi theo id
 export async function getQuestionAdmin(id: string): Promise<Question> {
   const res = await api.get<ApiResponse<Question>>(`/questions/${id}`);

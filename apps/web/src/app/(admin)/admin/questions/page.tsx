@@ -28,6 +28,7 @@ import {
 } from "@/lib/api/questions";
 import { getTopics, Topic } from "@/lib/api/topics";
 import Pagination from "@/components/admin/Pagination";
+import QuestionsStatsView from "@/components/admin/QuestionsStatsView";
 import { useStatusModal } from "@/components/ui/useStatusModal";
 import { buildTopicOptions } from "@/lib/utils/topics";
 
@@ -61,6 +62,7 @@ export default function AdminQuestionsPage() {
   const [loading, setLoading] = useState(true);
 
   const { confirm, statusModal } = useStatusModal();
+  const [tab, setTab] = useState<"list" | "stats">("list");
 
   // Bộ lọc — khởi tạo từ URL search params
   const [topicFilter, setTopicFilter] = useState(sp.get("topic") ?? "");
@@ -262,6 +264,32 @@ export default function AdminQuestionsPage() {
         </Link>
       </div>
 
+      {/* Tabs */}
+      <div className="flex items-center gap-1 mb-6 border-b border-[#1c1c28]">
+        {(
+          [
+            ["list", "Câu hỏi"],
+            ["stats", "Thống kê"],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className="px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer -mb-px border-b-2"
+            style={{
+              color: tab === key ? "#f4f4f6" : "#9898aa",
+              borderColor: tab === key ? "#7c3aed" : "transparent",
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "stats" ? (
+        <QuestionsStatsView />
+      ) : (
+        <>
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="relative flex-1 min-w-[220px]">
@@ -454,6 +482,8 @@ export default function AdminQuestionsPage() {
           />
         )}
       </div>
+        </>
+      )}
 
       {statusModal}
     </div>

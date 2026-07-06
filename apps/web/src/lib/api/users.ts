@@ -118,3 +118,35 @@ export async function resetUserPassword(
   );
   return res.data.data;
 }
+
+export interface UserStats {
+  total: number;
+  newToday: number;
+  newWeek: number;
+  newMonth: number;
+  locked: number;
+  googleCount: number;
+  localCount: number;
+}
+
+/** Thẻ thống kê người dùng: tổng số, mới hôm nay/tuần/tháng, đã khóa, kênh đăng ký. */
+export async function getUserStats(): Promise<UserStats> {
+  const res = await api.get<ApiResponse<UserStats>>("/users/admin/stats");
+  return res.data.data;
+}
+
+export interface RegistrationPoint {
+  date: string;
+  count: number;
+}
+
+/** User đăng ký mới theo ngày (mặc định 30 ngày gần nhất). */
+export async function getUserRegistrationsDaily(
+  days?: number,
+): Promise<RegistrationPoint[]> {
+  const res = await api.get<ApiResponse<RegistrationPoint[]>>(
+    "/users/admin/registrations-daily",
+    { params: days ? { days } : undefined },
+  );
+  return res.data.data;
+}

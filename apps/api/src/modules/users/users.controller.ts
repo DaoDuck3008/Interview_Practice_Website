@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { QueryUserDto } from './dto/query-user.dto';
+import { QueryDailyDto } from './dto/query-daily.dto';
 import { LockUserDto } from './dto/lock-user.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -25,6 +26,16 @@ export class UsersController {
   @Get('admin')
   findAllAdmin(@Query() query: QueryUserDto) {
     return this.usersService.findAllAdmin(query);
+  }
+
+  @Get('admin/stats')
+  getStats() {
+    return this.usersService.getStats();
+  }
+
+  @Get('admin/registrations-daily')
+  getRegistrationsDaily(@Query() query: QueryDailyDto) {
+    return this.usersService.getRegistrationsDaily(query.days);
   }
 
   @Get('admin/:id')

@@ -36,6 +36,13 @@ export class SubscriptionsController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
+  @Get('stats')
+  getStats() {
+    return this.subscriptionsService.getStats();
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
   @Get(':id/orders')
   getOrders(@Param('id') id: string) {
     return this.subscriptionsService.getOrders(id);

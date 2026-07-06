@@ -11,6 +11,15 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { QueryUserDto } from './dto/query-user.dto';
 import { RefreshTokenStore } from '../auth/refresh-token.store';
 import { MailService } from '../mail/mail.service';
+import {
+  vnStartOfDay,
+  vnStartOfWeek,
+  vnStartOfMonth,
+  vnDayKey,
+  vnLastNDays,
+} from '../../common/utils/vn-time.util';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Các field an toàn để trả về client
 const publicSelect = {
@@ -190,6 +199,55 @@ export class UsersService {
       limit,
       totalPages: Math.ceil(total / limit) || 1,
     };
+  }
+
+  /** Thẻ thống kê: tổng số user, mới hôm nay/tuần/tháng, đã khóa, kênh đăng ký. */
+  async getStats() {
+    const startOfDay = vnStartOfDay();
+    const startOfWeek = vnStartOfWeek();
+    const startOfMonth = vnStartOfMonth();
+
+    const [total, newToday, newWeek, newMonth, locked, googleCount] =
+      await Promise.all([
+        this.prisma.user.count(),
+        this.prisma.user.count({ where: { createdAt: { gte: startOfDay } } }),
+        this.prisma.user.count({ where: { createdAt: { gte: startOfWeek } } }),
+        this.prisma.user.count({
+          where: { createdAt: { gte: startOfMonth } },
+        }),
+        this.prisma.user.count({ where: { isLock: true } }),
+        this.prisma.user.count({ where: { googleId: { not: null } } }),
+      ]);
+
+    return {
+      total,
+      newToday,
+      newWeek,
+      newMonth,
+      locked,
+      googleCount,
+      localCount: total - googleCount,
+    };
+  }
+
+  /** User đăng ký mới theo ngày (giờ VN) trong `days` ngày gần nhất, zero-fill. */
+  async getRegistrationsDaily(days = 30) {
+    const since = vnStartOfDay(new Date(Date.now() - (days - 1) * DAY_MS));
+    const users = await this.prisma.user.findMany({
+      where: { createdAt: { gte: since } },
+      select: { createdAt: true },
+    });
+
+    const map = new Map<string, number>();
+    for (const u of users) {
+      const day = vnDayKey(u.createdAt);
+      map.set(day, (map.get(day) ?? 0) + 1);
+    }
+
+    return vnLastNDays(days).map((date) => ({
+      date,
+      count: map.get(date) ?? 0,
+    }));
   }
 
   // Lấy user (nội bộ admin) + chặn thao tác lên tài khoản không tồn tại.

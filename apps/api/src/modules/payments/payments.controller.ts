@@ -14,6 +14,7 @@ import { Request } from 'express';
 import { PaymentsService } from './payments.service';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
 import { QueryOrderDto } from './dto/query-order.dto';
+import { QueryDailyDto } from './dto/query-daily.dto';
 import { ReconcileQueryDto } from './dto/reconcile-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -63,6 +64,13 @@ export class PaymentsController {
   @Get('admin/orders/stats')
   getStats() {
     return this.paymentsService.getStats();
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Get('admin/orders/revenue-daily')
+  getRevenueDaily(@Query() query: QueryDailyDto) {
+    return this.paymentsService.getRevenueDaily(query.days);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

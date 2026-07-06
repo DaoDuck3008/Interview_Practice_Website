@@ -15,6 +15,7 @@ import { UpdateQuestionDto } from './dto/update-question.dto';
 import { QueryQuestionDto } from './dto/query-question.dto';
 import { QueryCursorQuestionDto } from './dto/query-cursor-question.dto';
 import { QueryAdminQuestionDto } from './dto/query-admin-question.dto';
+import { QueryTopRecordedDto } from './dto/query-top-recorded.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -61,6 +62,13 @@ export class QuestionsController {
   @Get('topic-counts')
   countByTopic() {
     return this.questionsService.countByTopic();
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Get('top-recorded')
+  getTopRecorded(@Query() query: QueryTopRecordedDto) {
+    return this.questionsService.getTopRecorded(query.limit);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

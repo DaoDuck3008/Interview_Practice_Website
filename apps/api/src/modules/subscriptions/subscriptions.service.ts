@@ -179,6 +179,40 @@ export class SubscriptionsService {
     };
   }
 
+  /** Thẻ thống kê: đếm theo trạng thái + đếm theo từng gói. */
+  async getStats() {
+    const [byStatus, byPlan] = await Promise.all([
+      this.prisma.subscription.groupBy({
+        by: ['status'],
+        _count: { status: true },
+      }),
+      this.prisma.subscription.groupBy({
+        by: ['planId'],
+        _count: { planId: true },
+        orderBy: { _count: { planId: 'desc' } },
+      }),
+    ]);
+
+    const counts: Record<string, number> = {};
+    for (const row of byStatus) counts[row.status] = row._count.status;
+
+    const plans = await this.prisma.plan.findMany({
+      where: { id: { in: byPlan.map((p) => p.planId) } },
+      select: { id: true, name: true },
+    });
+    const planNameById = new Map(plans.map((p) => [p.id, p.name]));
+
+    return {
+      active: counts.ACTIVE ?? 0,
+      expired: counts.EXPIRED ?? 0,
+      canceled: counts.CANCELED ?? 0,
+      byPlan: byPlan.map((p) => ({
+        planName: planNameById.get(p.planId) ?? '—',
+        count: p._count.planId,
+      })),
+    };
+  }
+
   /** Lịch sử đơn của một subscription (admin) — mới nhất trước, mọi trạng thái. */
   async getOrders(id: string) {
     const sub = await this.prisma.subscription.findUnique({ where: { id } });

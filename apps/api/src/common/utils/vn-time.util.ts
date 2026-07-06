@@ -34,3 +34,14 @@ export function vnStartOfMonth(d: Date = new Date()): Date {
     Date.UTC(vn.getUTCFullYear(), vn.getUTCMonth(), 1) - VN_OFFSET_MS,
   );
 }
+
+/** Dãy `days` ngày liên tục (giờ VN), từ `days - 1` ngày trước đến hôm nay — dùng
+ *  làm khung zero-fill cho chart time-series (đảm bảo ngày không có dữ liệu vẫn xuất hiện). */
+export function vnLastNDays(days: number): string[] {
+  const today = vnStartOfDay();
+  const keys: string[] = [];
+  for (let i = days - 1; i >= 0; i -= 1) {
+    keys.push(vnDayKey(new Date(today.getTime() - i * DAY_MS)));
+  }
+  return keys;
+}

@@ -8,8 +8,10 @@ import {
   getSubscriptionsAdmin,
   cancelSubscription,
   activateSubscription,
+  getSubscriptionStats,
   type AdminSubscription,
   type SubscriptionStatus,
+  type SubscriptionStats,
 } from "@/lib/api/subscriptions";
 import type { Paginated } from "@/lib/api/questions";
 import Pagination from "@/components/admin/Pagination";
@@ -41,6 +43,7 @@ export default function AdminSubscriptionsPage() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [ordersOf, setOrdersOf] = useState<AdminSubscription | null>(null);
+  const [stats, setStats] = useState<SubscriptionStats | null>(null);
 
   const { confirm, statusModal } = useStatusModal();
 
@@ -115,6 +118,13 @@ export default function AdminSubscriptionsPage() {
     load();
   }, [load]);
 
+  // Thống kê (tải 1 lần)
+  useEffect(() => {
+    getSubscriptionStats()
+      .then(setStats)
+      .catch(() => setStats(null));
+  }, []);
+
   function setFilter<T>(setter: (v: T) => void) {
     return (v: T) => {
       setter(v);
@@ -182,6 +192,28 @@ export default function AdminSubscriptionsPage() {
           Theo dõi và quản lý gói đăng ký của người dùng.
         </p>
       </div>
+
+      {/* Thống kê */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+        <StatCard label="Đang dùng" value={stats?.active} />
+        <StatCard label="Hết hạn" value={stats?.expired} />
+        <StatCard label="Đã hủy" value={stats?.canceled} />
+      </div>
+      {stats && stats.byPlan.length > 0 && (
+        <div className="rounded-2xl border border-[#1c1c28] bg-[#0d0d14] px-4 py-3 mb-6 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <p className="text-xs text-[#606072]">Theo gói</p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {stats.byPlan.map((p) => (
+              <span
+                key={p.planName}
+                className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#8b5cf6]/10 text-[#8b5cf6] border border-[#8b5cf6]/30"
+              >
+                {p.planName} {p.count}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -386,6 +418,25 @@ export default function AdminSubscriptionsPage() {
       />
 
       {statusModal}
+    </div>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: number | null | undefined;
+}) {
+  return (
+    <div className="rounded-2xl border border-[#1c1c28] bg-[#0d0d14] px-4 py-3">
+      <p className="text-xs text-[#606072] mb-1">{label}</p>
+      {value !== null && value !== undefined ? (
+        <p className="text-xl font-bold text-[#f4f4f6]">{value}</p>
+      ) : (
+        <div className="h-7 w-16 rounded bg-[#1c1c28] animate-pulse" />
+      )}
     </div>
   );
 }
