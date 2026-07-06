@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   Menu,
@@ -253,11 +254,12 @@ export default function Header() {
     >
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link
-          href="/"
-          className="font-extrabold text-lg text-[#fafafa] tracking-tight"
-        >
-          Phỏng vấn <span className="text-[#8b5cf6]">IT</span>
+        <Link href="/" className="flex-shrink-0">
+          <img
+            src="/logo.png"
+            alt="Phỏng vấn IT"
+            className="h-14 sm:h-16 w-auto"
+          />
         </Link>
 
         {/* Desktop links */}
