@@ -19,6 +19,7 @@ import { QueryHistoryDto } from './dto/query-history.dto';
 import { QueryMonthlyDto } from './dto/query-monthly.dto';
 import { FlagScoreDto } from './dto/flag-score.dto';
 import { QueryAdminSessionDto } from './dto/query-admin-session.dto';
+import { QueryActiveUsersDto } from './dto/query-active-users.dto';
 import { ReviewScoreDto } from './dto/review-score.dto';
 import { ManualScoreDto } from './dto/manual-score.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -122,6 +123,20 @@ export class SessionsController {
   @Roles(Role.ADMIN)
   findAllAdmin(@Query() query: QueryAdminSessionDto) {
     return this.sessions.findAllAdmin(query);
+  }
+
+  @Get('admin/active-users')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  getActiveUsersStats() {
+    return this.sessions.getActiveUsersStats();
+  }
+
+  @Get('admin/active-users-daily')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  getActiveUsersDaily(@Query() query: QueryActiveUsersDto) {
+    return this.sessions.getActiveUsersDaily(query.days);
   }
 
   @Get('admin/:id')

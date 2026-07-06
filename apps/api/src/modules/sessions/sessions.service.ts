@@ -22,7 +22,16 @@ import { QueryHistoryDto } from './dto/query-history.dto';
 import { QueryAdminSessionDto } from './dto/query-admin-session.dto';
 import { ReviewScoreDto } from './dto/review-score.dto';
 import { ManualScoreDto } from './dto/manual-score.dto';
-import { VN_OFFSET_MS, vnDayKey } from '../../common/utils/vn-time.util';
+import {
+  VN_OFFSET_MS,
+  vnDayKey,
+  vnStartOfDay,
+  vnStartOfWeek,
+  vnStartOfMonth,
+  vnLastNDays,
+} from '../../common/utils/vn-time.util';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class SessionsService {
@@ -444,6 +453,47 @@ export class SessionsService {
       limit,
       totalPages: Math.ceil(total / limit) || 1,
     };
+  }
+
+  /** Admin: DAU/WAU/MAU — số user khác nhau có ít nhất 1 session trong ngày/tuần/tháng hiện tại (giờ VN). */
+  async getActiveUsersStats() {
+    const [dau, wau, mau] = await Promise.all([
+      this.prisma.session.findMany({
+        where: { createdAt: { gte: vnStartOfDay() } },
+        distinct: ['userId'],
+        select: { userId: true },
+      }),
+      this.prisma.session.findMany({
+        where: { createdAt: { gte: vnStartOfWeek() } },
+        distinct: ['userId'],
+        select: { userId: true },
+      }),
+      this.prisma.session.findMany({
+        where: { createdAt: { gte: vnStartOfMonth() } },
+        distinct: ['userId'],
+        select: { userId: true },
+      }),
+    ]);
+    return { dau: dau.length, wau: wau.length, mau: mau.length };
+  }
+
+  /** Admin: số user hoạt động (distinct) theo từng ngày trong `days` ngày gần nhất, zero-fill. */
+  async getActiveUsersDaily(days = 30) {
+    const since = vnStartOfDay(new Date(Date.now() - (days - 1) * DAY_MS));
+    const rows = await this.prisma.session.findMany({
+      where: { createdAt: { gte: since } },
+      select: { userId: true, createdAt: true },
+    });
+    const map = new Map<string, Set<string>>();
+    for (const r of rows) {
+      const day = vnDayKey(r.createdAt);
+      if (!map.has(day)) map.set(day, new Set());
+      map.get(day)!.add(r.userId);
+    }
+    return vnLastNDays(days).map((date) => ({
+      date,
+      count: map.get(date)?.size ?? 0,
+    }));
   }
 
   /** Admin: xem chi tiết đầy đủ 1 session (transcript, câu hỏi, điểm, cải thiện). */

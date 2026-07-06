@@ -37,7 +37,7 @@ export class SpeechService {
 
       const result = await this.groq.audio.transcriptions.create({
         file: audioFile,
-        model: 'whisper-large-v3-turbo',
+        model: 'whisper-large-v3',
         response_format: 'verbose_json',
       });
       // Type của SDK chỉ khai báo `text` cho response_format 'json', nhưng

@@ -221,6 +221,36 @@ export async function manualRescoreSession(
   return res.data.data;
 }
 
+/** Admin: DAU/WAU/MAU hiện tại (số user khác nhau có luyện tập trong ngày/tuần/tháng). */
+export interface ActiveUserStats {
+  dau: number;
+  wau: number;
+  mau: number;
+}
+
+export async function getActiveUserStats(): Promise<ActiveUserStats> {
+  const res = await api.get<ApiResponse<ActiveUserStats>>(
+    "/sessions/admin/active-users",
+  );
+  return res.data.data;
+}
+
+/** Admin: số user hoạt động (distinct) theo ngày, cho chart. */
+export interface ActiveUserPoint {
+  date: string;
+  count: number;
+}
+
+export async function getActiveUsersDaily(
+  days?: number,
+): Promise<ActiveUserPoint[]> {
+  const res = await api.get<ApiResponse<ActiveUserPoint[]>>(
+    "/sessions/admin/active-users-daily",
+    { params: days ? { days } : undefined },
+  );
+  return res.data.data;
+}
+
 // ─── Dashboard cá nhân ──────────────────────────────
 
 export interface DashboardStats {
