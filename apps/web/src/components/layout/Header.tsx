@@ -257,7 +257,7 @@ export default function Header() {
           href="/"
           className="font-extrabold text-lg text-[#fafafa] tracking-tight"
         >
-          Interview<span className="text-[#8b5cf6]">Prep</span>
+          Phỏng vấn <span className="text-[#8b5cf6]">IT</span>
         </Link>
 
         {/* Desktop links */}

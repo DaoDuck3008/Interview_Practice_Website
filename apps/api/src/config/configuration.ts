@@ -26,7 +26,7 @@ export const validationSchema = Joi.object({
   SEPAY_ACCOUNT_NAME: Joi.string().default(''),
   SEPAY_API_KEY: Joi.string().allow('').default(''), // Userapi token để đối soát
   RESEND_API_KEY: Joi.string().allow('').default(''),
-  MAIL_FROM: Joi.string().default('InterviewPrep <onboarding@resend.dev>'),
+  MAIL_FROM: Joi.string().default('Phỏng vấn IT <onboarding@resend.dev>'),
   AI_QUEUE_CONCURRENCY: Joi.number().default(3),
 });
 
@@ -67,7 +67,7 @@ export default () => ({
   },
   resend: {
     apiKey: process.env.RESEND_API_KEY ?? '',
-    mailFrom: process.env.MAIL_FROM ?? 'InterviewPrep <onboarding@resend.dev>',
+    mailFrom: process.env.MAIL_FROM ?? 'Phỏng vấn IT <onboarding@resend.dev>',
   },
   aiQueue: {
     // Số job score/improve tối đa xử lý song song trên toàn hệ thống — nút

@@ -15,7 +15,7 @@ const beVietnam = Be_Vietnam_Pro({
 });
 
 export const metadata: Metadata = {
-  title: "InterviewPrep — Chinh Phục Phỏng Vấn IT",
+  title: "Phỏng vấn IT — Chinh Phục Mọi Cuộc Phỏng Vấn",
   description:
     "Luyện tập câu hỏi phỏng vấn IT thực tế với phản hồi từ AI. Lọc theo chủ đề và cấp độ kinh nghiệm.",
 };

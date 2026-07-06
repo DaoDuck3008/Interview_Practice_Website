@@ -39,13 +39,13 @@ export class MailService {
   async sendVerificationCode(to: string, name: string, code: string) {
     await this.send({
       to,
-      subject: `${code} là mã xác thực InterviewPrep của bạn`,
+      subject: `${code} là mã xác thực Phỏng vấn IT của bạn`,
       html: codeEmailTemplate({
         name,
         code,
         heading: 'Xác thực email của bạn',
         intro:
-          'Cảm ơn bạn đã đăng ký InterviewPrep. Nhập mã bên dưới để hoàn tất xác thực tài khoản.',
+          'Cảm ơn bạn đã đăng ký Phỏng vấn IT. Nhập mã bên dưới để hoàn tất xác thực tài khoản.',
       }),
     });
   }
@@ -53,7 +53,7 @@ export class MailService {
   async sendPasswordResetCode(to: string, name: string, code: string) {
     await this.send({
       to,
-      subject: `${code} là mã đặt lại mật khẩu InterviewPrep`,
+      subject: `${code} là mã đặt lại mật khẩu Phỏng vấn IT`,
       html: codeEmailTemplate({
         name,
         code,
@@ -67,7 +67,7 @@ export class MailService {
   async sendTempPassword(to: string, name: string, password: string) {
     await this.send({
       to,
-      subject: 'Mật khẩu InterviewPrep của bạn đã được đặt lại',
+      subject: 'Mật khẩu Phỏng vấn IT của bạn đã được đặt lại',
       html: tempPasswordEmailTemplate({ name, password }),
     });
   }
@@ -78,7 +78,7 @@ export class MailService {
   ) {
     await this.send({
       to,
-      subject: `Biên nhận thanh toán gói ${opts.planName} — InterviewPrep`,
+      subject: `Biên nhận thanh toán gói ${opts.planName} — Phỏng vấn IT`,
       html: purchaseReceiptEmailTemplate(opts),
     });
   }
@@ -89,7 +89,7 @@ export class MailService {
   ) {
     await this.send({
       to,
-      subject: `Gói ${opts.planName} của bạn sắp hết hạn — InterviewPrep`,
+      subject: `Gói ${opts.planName} của bạn sắp hết hạn — Phỏng vấn IT`,
       html: renewalReminderEmailTemplate(opts),
     });
   }

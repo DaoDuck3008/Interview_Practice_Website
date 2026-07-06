@@ -1,7 +1,7 @@
 import CheckoutView from "@/components/pricing/CheckoutView";
 
 export const metadata = {
-  title: "Thanh toán — InterviewPrep",
+  title: "Thanh toán — Phỏng vấn IT",
 };
 
 export default async function CheckoutPage({

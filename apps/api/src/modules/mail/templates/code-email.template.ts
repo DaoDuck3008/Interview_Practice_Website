@@ -18,7 +18,7 @@ export function codeEmailTemplate(opts: CodeEmailOptions): string {
     <div style="max-width:480px;margin:0 auto;background:#0d0d14;border:1px solid #1c1c28;border-radius:16px;overflow:hidden;">
       <div style="padding:32px 32px 8px;">
         <p style="margin:0;font-size:20px;font-weight:800;color:#f4f4f6;">
-          Interview<span style="color:#8b5cf6;">Prep</span>
+          Phỏng vấn <span style="color:#8b5cf6;">IT</span>
         </p>
       </div>
       <div style="padding:8px 32px 32px;">
@@ -31,7 +31,7 @@ export function codeEmailTemplate(opts: CodeEmailOptions): string {
         <p style="margin:24px 0 0;font-size:13px;color:#606072;">Mã có hiệu lực trong 10 phút. Tuyệt đối không chia sẻ mã này cho bất kỳ ai.</p>
       </div>
       <div style="padding:16px 32px;border-top:1px solid #1c1c28;">
-        <p style="margin:0;font-size:12px;color:#606072;">© 2026 InterviewPrep. Email tự động, vui lòng không trả lời.</p>
+        <p style="margin:0;font-size:12px;color:#606072;">© 2026 Phỏng vấn IT. Email tự động, vui lòng không trả lời.</p>
       </div>
     </div>
   </div>`;

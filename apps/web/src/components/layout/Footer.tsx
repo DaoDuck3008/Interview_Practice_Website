@@ -93,7 +93,7 @@ export default function Footer() {
               href="/"
               className="font-extrabold text-lg text-[#f4f4f6] tracking-tight"
             >
-              Interview<span className="text-[#8b5cf6]">Prep</span>
+              Phỏng vấn <span className="text-[#8b5cf6]">IT</span>
             </Link>
 
             <p className="text-sm text-[#606072] leading-relaxed max-w-[220px]">
@@ -152,7 +152,7 @@ export default function Footer() {
           style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
         >
           <p>
-            © {new Date().getFullYear()} InterviewPrep. All rights reserved.
+            © {new Date().getFullYear()} Phỏng vấn IT. All rights reserved.
           </p>
           <p>Made in Vietnam 🇻🇳 · Powered by DeepSeek AI & Groq</p>
         </div>

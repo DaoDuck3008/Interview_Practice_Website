@@ -3,7 +3,7 @@ import { AnimateOnScroll } from "@/components/ui/AnimateOnScroll";
 import PricingCards from "@/components/pricing/PricingCards";
 
 export const metadata = {
-  title: "Bảng giá — InterviewPrep",
+  title: "Bảng giá — Phỏng vấn IT",
   description:
     "Chọn gói luyện tập phù hợp: mở khóa chấm điểm AI không giới hạn, phân tích cải thiện và theo dõi tiến bộ.",
 };

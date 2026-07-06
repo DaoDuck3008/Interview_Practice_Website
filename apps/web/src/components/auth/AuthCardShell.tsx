@@ -28,7 +28,7 @@ export default function AuthCardShell({
           href="/"
           className="mb-8 inline-flex items-center gap-1.5 self-start text-sm text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
         >
-          Interview<span className="text-[var(--color-accent-light)]">Prep</span>
+          Phỏng vấn <span className="text-[var(--color-accent-light)]">IT</span>
         </Link>
 
         <AnimateOnScroll variant="fade-up">

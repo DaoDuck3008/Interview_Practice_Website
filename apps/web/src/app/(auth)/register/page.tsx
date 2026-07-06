@@ -104,13 +104,13 @@ function RegisterContent() {
             href="/"
             className="font-extrabold text-xl text-[#f4f4f6] tracking-tight"
           >
-            Interview<span className="text-[#8b5cf6]">Prep</span>
+            Phỏng vấn <span className="text-[#8b5cf6]">IT</span>
           </Link>
 
           <div className="flex flex-col gap-8">
             <div className="flex flex-col gap-3">
               <p className="font-mono text-xs text-[#606072]">
-                $ why interviewprep
+                $ why phong-van-it
               </p>
               <h2 className="text-3xl font-bold text-[#f4f4f6] leading-snug">
                 Luyện tập phỏng vấn
@@ -131,7 +131,7 @@ function RegisterContent() {
           </div>
 
           <p className="font-mono text-xs text-[#3d3d54]">
-            © 2025 InterviewPrep
+            © 2025 Phỏng vấn IT
           </p>
         </div>
       </div>
@@ -165,7 +165,7 @@ function RegisterContent() {
               href="/"
               className="md:hidden font-extrabold text-lg text-[#f4f4f6] tracking-tight"
             >
-              Interview<span className="text-[#8b5cf6]">Prep</span>
+              Phỏng vấn <span className="text-[#8b5cf6]">IT</span>
             </Link>
           </div>
 

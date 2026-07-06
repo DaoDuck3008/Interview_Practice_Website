@@ -91,10 +91,10 @@ export default function AdminSidebar({ collapsed, onToggle }: Props) {
           className="font-extrabold text-base text-[#f4f4f6] tracking-tight whitespace-nowrap"
         >
           {collapsed ? (
-            <span className="text-[#8b5cf6]">IP</span>
+            <span className="text-[#8b5cf6]">PV</span>
           ) : (
             <>
-              Interview<span className="text-[#8b5cf6]">Prep</span>
+              Phỏng vấn <span className="text-[#8b5cf6]">IT</span>
               <span className="ml-2 text-[10px] font-mono font-medium text-[#606072] uppercase tracking-wider">
                 admin
               </span>
