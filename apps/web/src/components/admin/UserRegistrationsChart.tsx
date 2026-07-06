@@ -10,7 +10,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Loader2 } from "lucide-react";
 import {
   getUserRegistrationsDaily,
   type RegistrationPoint,
@@ -35,9 +34,7 @@ export default function UserRegistrationsChart() {
 
       <div className="mt-5">
         {!data ? (
-          <div className="flex items-center justify-center py-24 text-text-muted">
-            <Loader2 size={18} className="animate-spin" />
-          </div>
+          <div className="h-[280px] rounded-lg bg-elevated animate-pulse" />
         ) : data.every((d) => d.count === 0) ? (
           <p className="py-24 text-center text-sm text-text-muted">
             Chưa có người dùng mới trong 30 ngày gần nhất.

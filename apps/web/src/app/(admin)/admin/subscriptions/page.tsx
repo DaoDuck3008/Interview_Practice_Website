@@ -199,18 +199,25 @@ export default function AdminSubscriptionsPage() {
         <StatCard label="Hết hạn" value={stats?.expired} />
         <StatCard label="Đã hủy" value={stats?.canceled} />
       </div>
-      {stats && stats.byPlan.length > 0 && (
+      {(!stats || stats.byPlan.length > 0) && (
         <div className="rounded-2xl border border-[#1c1c28] bg-[#0d0d14] px-4 py-3 mb-6 flex flex-wrap items-center gap-x-4 gap-y-2">
           <p className="text-xs text-[#606072]">Theo gói</p>
           <div className="flex flex-wrap items-center gap-1.5">
-            {stats.byPlan.map((p) => (
-              <span
-                key={p.planName}
-                className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#8b5cf6]/10 text-[#8b5cf6] border border-[#8b5cf6]/30"
-              >
-                {p.planName} {p.count}
-              </span>
-            ))}
+            {stats
+              ? stats.byPlan.map((p) => (
+                  <span
+                    key={p.planName}
+                    className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#8b5cf6]/10 text-[#8b5cf6] border border-[#8b5cf6]/30"
+                  >
+                    {p.planName} {p.count}
+                  </span>
+                ))
+              : Array.from({ length: 3 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-[18px] w-16 rounded bg-[#1c1c28] animate-pulse"
+                  />
+                ))}
           </div>
         </div>
       )}

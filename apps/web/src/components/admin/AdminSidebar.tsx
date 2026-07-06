@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import type { LucideIcon } from "lucide-react";
 import {
   LayoutDashboard,
   Users,
@@ -15,14 +16,41 @@ import {
   Home,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 
-const NAV = [
+interface LinkNavItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  exact: boolean;
+}
+
+interface GroupNavItem {
+  label: string;
+  icon: LucideIcon;
+  children: { href: string; label: string }[];
+}
+
+type NavItem = LinkNavItem | GroupNavItem;
+
+function isGroup(item: NavItem): item is GroupNavItem {
+  return "children" in item;
+}
+
+const NAV: NavItem[] = [
   { href: "/admin", label: "Tổng quan", icon: LayoutDashboard, exact: true },
   { href: "/admin/users", label: "Người dùng", icon: Users, exact: false },
   { href: "/admin/topics", label: "Chủ đề", icon: FolderTree, exact: false },
   { href: "/admin/questions", label: "Câu hỏi", icon: ListChecks, exact: false },
-  { href: "/admin/sessions", label: "Báo cáo điểm", icon: Flag, exact: false },
+  {
+    label: "Điểm số",
+    icon: Flag,
+    children: [
+      { href: "/admin/sessions", label: "Câu trả lời" },
+      { href: "/admin/sessions/reports", label: "Báo cáo điểm" },
+    ],
+  },
   {
     href: "/admin/support",
     label: "Hỗ trợ",
@@ -48,6 +76,7 @@ interface Props {
 
 export default function AdminSidebar({ collapsed, onToggle }: Props) {
   const pathname = usePathname();
+  const router = useRouter();
 
   return (
     <aside
@@ -75,7 +104,73 @@ export default function AdminSidebar({ collapsed, onToggle }: Props) {
       </div>
 
       <nav className="flex flex-col gap-1 p-3 overflow-y-auto">
-        {NAV.map(({ href, label, icon: Icon, exact }) => {
+        {NAV.map((item) => {
+          if (isGroup(item)) {
+            const { label, icon: Icon, children } = item;
+            const groupActive = children.some(
+              (c) => pathname === c.href || pathname.startsWith(`${c.href}/`),
+            );
+            return (
+              <div key={label}>
+                <button
+                  onClick={() => router.push(children[0].href)}
+                  title={collapsed ? label : undefined}
+                  className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 cursor-pointer"
+                  style={{
+                    background: groupActive ? "#13131c" : "transparent",
+                    borderLeft: groupActive
+                      ? "2px solid #7c3aed"
+                      : "2px solid transparent",
+                    color: groupActive ? "#f4f4f6" : "#9898aa",
+                    justifyContent: collapsed ? "center" : "flex-start",
+                  }}
+                >
+                  <Icon size={16} className="flex-shrink-0" />
+                  {!collapsed && (
+                    <>
+                      <span className="truncate flex-1 text-left">
+                        {label}
+                      </span>
+                      <ChevronDown
+                        size={14}
+                        className="flex-shrink-0 transition-transform duration-150"
+                        style={{
+                          transform: groupActive
+                            ? "rotate(180deg)"
+                            : "rotate(0deg)",
+                        }}
+                      />
+                    </>
+                  )}
+                </button>
+
+                {!collapsed && groupActive && (
+                  <div className="flex flex-col gap-1 mt-1 ml-4 pl-3 border-l border-[#1c1c28]">
+                    {children.map((c) => {
+                      const childActive = pathname === c.href;
+                      return (
+                        <Link
+                          key={c.href}
+                          href={c.href}
+                          className="px-3 py-2 rounded-lg text-sm transition-colors duration-150 truncate"
+                          style={{
+                            color: childActive ? "#f4f4f6" : "#9898aa",
+                            background: childActive
+                              ? "#13131c"
+                              : "transparent",
+                          }}
+                        >
+                          {c.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          const { href, label, icon: Icon, exact } = item;
           const active = exact
             ? pathname === href
             : pathname === href || pathname.startsWith(`${href}/`);

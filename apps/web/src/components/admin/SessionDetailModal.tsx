@@ -9,6 +9,7 @@ import {
   Save,
   Sparkles,
   MessageSquareQuote,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import Modal from "./Modal";
@@ -176,7 +177,18 @@ export default function SessionDetailModal({
           </div>
 
           {/* Audio */}
-          <audio controls src={detail.audioUrl} className="w-full h-10" />
+          <div className="flex flex-col gap-1.5">
+            <audio controls src={detail.audioUrl} className="w-full h-10" />
+            <a
+              href={detail.audioUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 self-start rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-accent)] transition-colors cursor-pointer"
+            >
+              <ExternalLink size={12} />
+              Mở file gốc
+            </a>
+          </div>
 
           {/* Transcript */}
           <blockquote className="border-l-2 border-[var(--color-accent)] pl-4">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Area,
   AreaChart,
@@ -10,14 +11,18 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Loader2 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import {
   getActiveUsersDaily,
   type ActiveUserPoint,
 } from "@/lib/api/sessions";
 import { formatDay } from "@/lib/utils/format";
 
-export default function ActiveUsersChart() {
+export default function ActiveUsersChart({
+  detailHref,
+}: {
+  detailHref?: string;
+} = {}) {
   const [data, setData] = useState<ActiveUserPoint[] | null>(null);
 
   useEffect(() => {
@@ -28,16 +33,27 @@ export default function ActiveUsersChart() {
 
   return (
     <div className="rounded-2xl border border-border bg-surface p-6">
-      <h3 className="text-lg font-bold text-text-primary">
-        User hoạt động theo ngày
-      </h3>
-      <p className="mt-0.5 text-xs text-text-muted">30 ngày gần nhất</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-bold text-text-primary">
+            User hoạt động theo ngày
+          </h3>
+          <p className="mt-0.5 text-xs text-text-muted">30 ngày gần nhất</p>
+        </div>
+        {detailHref && (
+          <Link
+            href={detailHref}
+            className="flex items-center gap-1 text-xs font-medium text-accent-light hover:underline flex-shrink-0"
+          >
+            Xem chi tiết
+            <ArrowRight size={12} />
+          </Link>
+        )}
+      </div>
 
       <div className="mt-5">
         {!data ? (
-          <div className="flex items-center justify-center py-24 text-text-muted">
-            <Loader2 size={18} className="animate-spin" />
-          </div>
+          <div className="h-[280px] rounded-lg bg-elevated animate-pulse" />
         ) : data.every((d) => d.count === 0) ? (
           <p className="py-24 text-center text-sm text-text-muted">
             Chưa có hoạt động luyện tập trong 30 ngày gần nhất.

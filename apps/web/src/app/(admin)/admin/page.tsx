@@ -2,33 +2,44 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { FolderTree, ListChecks, ArrowRight } from "lucide-react";
-import { getTopics } from "@/lib/api/topics";
+import { ListChecks, Users, Mic, Flag, ArrowRight } from "lucide-react";
 import { getAllQuestionsAdmin } from "@/lib/api/questions";
+import { getUserStats } from "@/lib/api/users";
+import { getSessionsAdmin } from "@/lib/api/sessions";
+import { formatNumber } from "@/lib/utils/format";
+import ActiveUsersChart from "@/components/admin/ActiveUsersChart";
+import RevenueChart from "@/components/admin/RevenueChart";
+import SubscriptionsPieChart from "@/components/admin/SubscriptionsPieChart";
+import TopicPieChart from "@/components/admin/TopicPieChart";
+import TopRecordedTable from "@/components/admin/TopRecordedTable";
 
 export default function AdminOverviewPage() {
-  const [topicCount, setTopicCount] = useState<number | null>(null);
   const [questionCount, setQuestionCount] = useState<number | null>(null);
-  const [activeCount, setActiveCount] = useState<number | null>(null);
+  const [userCount, setUserCount] = useState<number | null>(null);
+  const [answerCount, setAnswerCount] = useState<number | null>(null);
+  const [flaggedCount, setFlaggedCount] = useState<number | null>(null);
 
   useEffect(() => {
     let mounted = true;
     Promise.all([
-      getTopics(),
       getAllQuestionsAdmin({ limit: 1 }),
-      getAllQuestionsAdmin({ status: "active", limit: 1 }),
+      getUserStats(),
+      getSessionsAdmin({ limit: 1 }),
+      getSessionsAdmin({ flagged: "none", limit: 1 }),
     ])
-      .then(([topics, all, active]) => {
+      .then(([questions, users, allSessions, noneFlagged]) => {
         if (!mounted) return;
-        setTopicCount(topics.length);
-        setQuestionCount(all.total);
-        setActiveCount(active.total);
+        setQuestionCount(questions.total);
+        setUserCount(users.total);
+        setAnswerCount(allSessions.total);
+        setFlaggedCount(allSessions.total - noneFlagged.total);
       })
       .catch(() => {
         if (!mounted) return;
-        setTopicCount(0);
         setQuestionCount(0);
-        setActiveCount(0);
+        setUserCount(0);
+        setAnswerCount(0);
+        setFlaggedCount(0);
       });
     return () => {
       mounted = false;
@@ -37,34 +48,45 @@ export default function AdminOverviewPage() {
 
   const cards = [
     {
-      href: "/admin/topics",
-      icon: FolderTree,
-      label: "Chủ đề",
-      value: topicCount,
-      sub: "tổng số chủ đề",
-    },
-    {
       href: "/admin/questions",
       icon: ListChecks,
       label: "Câu hỏi",
       value: questionCount,
-      sub:
-        activeCount !== null && questionCount !== null
-          ? `${activeCount} đang hiển thị · ${questionCount - activeCount} đã ẩn`
-          : "tổng số câu hỏi",
+      sub: "tổng số câu hỏi",
+    },
+    {
+      href: "/admin/users",
+      icon: Users,
+      label: "Người dùng",
+      value: userCount,
+      sub: "đã đăng ký",
+    },
+    {
+      href: "/admin/sessions",
+      icon: Mic,
+      label: "Câu trả lời",
+      value: answerCount,
+      sub: "tổng số session",
+    },
+    {
+      href: "/admin/sessions/reports",
+      icon: Flag,
+      label: "Bị báo cáo",
+      value: flaggedCount,
+      sub: "câu bị báo cáo điểm sai",
     },
   ];
 
   return (
-    <div className="max-w-4xl">
+    <div>
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-[#f4f4f6]">Tổng quan</h2>
         <p className="text-sm text-[#606072] mt-1">
-          Quản lý chủ đề và câu hỏi luyện tập.
+          Số liệu tổng hợp toàn hệ thống.
         </p>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-5 grid-cols-2 lg:grid-cols-4 mb-6">
         {cards.map(({ href, icon: Icon, label, value, sub }) => (
           <Link
             key={href}
@@ -81,14 +103,34 @@ export default function AdminOverviewPage() {
               />
             </div>
             <div>
-              <p className="text-3xl font-bold text-[#f4f4f6]">
-                {value ?? "—"}
+              {value !== null ? (
+                <p className="text-3xl font-bold text-[#f4f4f6]">
+                  {formatNumber(value)}
+                </p>
+              ) : (
+                <div className="h-9 w-16 rounded bg-[#1c1c28] animate-pulse" />
+              )}
+              <p className="text-sm font-medium text-[#9898aa] mt-1.5">
+                {label}
               </p>
-              <p className="text-sm font-medium text-[#9898aa] mt-0.5">{label}</p>
               <p className="text-xs text-[#606072] mt-1">{sub}</p>
             </div>
           </Link>
         ))}
+      </div>
+
+      <div className="mb-5">
+        <ActiveUsersChart detailHref="/admin/sessions?tab=stats" />
+      </div>
+
+      <div className="grid gap-5 md:grid-cols-2 mb-5">
+        <RevenueChart detailHref="/admin/payments?tab=stats" />
+        <SubscriptionsPieChart />
+      </div>
+
+      <div className="grid gap-5 md:grid-cols-2">
+        <TopicPieChart detailHref="/admin/questions?tab=stats" />
+        <TopRecordedTable detailHref="/admin/questions?tab=stats" />
       </div>
     </div>
   );

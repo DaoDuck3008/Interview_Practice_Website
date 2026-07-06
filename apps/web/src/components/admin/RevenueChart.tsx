@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Area,
   AreaChart,
@@ -10,11 +11,15 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Loader2 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { getRevenueDaily, type RevenuePoint } from "@/lib/api/payments";
 import { formatDay, formatVnd, formatNumber } from "@/lib/utils/format";
 
-export default function RevenueChart() {
+export default function RevenueChart({
+  detailHref,
+}: {
+  detailHref?: string;
+} = {}) {
   const [data, setData] = useState<RevenuePoint[] | null>(null);
 
   useEffect(() => {
@@ -25,16 +30,27 @@ export default function RevenueChart() {
 
   return (
     <div className="rounded-2xl border border-border bg-surface p-6">
-      <h3 className="text-lg font-bold text-text-primary">
-        Doanh thu theo ngày
-      </h3>
-      <p className="mt-0.5 text-xs text-text-muted">30 ngày gần nhất</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-bold text-text-primary">
+            Doanh thu theo ngày
+          </h3>
+          <p className="mt-0.5 text-xs text-text-muted">30 ngày gần nhất</p>
+        </div>
+        {detailHref && (
+          <Link
+            href={detailHref}
+            className="flex items-center gap-1 text-xs font-medium text-accent-light hover:underline flex-shrink-0"
+          >
+            Xem chi tiết
+            <ArrowRight size={12} />
+          </Link>
+        )}
+      </div>
 
       <div className="mt-5">
         {!data ? (
-          <div className="flex items-center justify-center py-24 text-text-muted">
-            <Loader2 size={18} className="animate-spin" />
-          </div>
+          <div className="h-[280px] rounded-lg bg-elevated animate-pulse" />
         ) : data.every((d) => d.revenue === 0) ? (
           <p className="py-24 text-center text-sm text-text-muted">
             Chưa có doanh thu trong 30 ngày gần nhất.

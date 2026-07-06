@@ -62,7 +62,9 @@ export default function AdminQuestionsPage() {
   const [loading, setLoading] = useState(true);
 
   const { confirm, statusModal } = useStatusModal();
-  const [tab, setTab] = useState<"list" | "stats">("list");
+  const [tab, setTab] = useState<"list" | "stats">(
+    sp.get("tab") === "stats" ? "stats" : "list",
+  );
 
   // Bộ lọc — khởi tạo từ URL search params
   const [topicFilter, setTopicFilter] = useState(sp.get("topic") ?? "");

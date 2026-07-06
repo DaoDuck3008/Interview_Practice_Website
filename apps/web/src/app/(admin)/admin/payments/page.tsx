@@ -55,7 +55,9 @@ export default function AdminPaymentsPage() {
   const router = useRouter();
   const sp = useSearchParams();
 
-  const [tab, setTab] = useState<"orders" | "stats" | "reconcile">("orders");
+  const [tab, setTab] = useState<"orders" | "stats" | "reconcile">(
+    sp.get("tab") === "stats" ? "stats" : "orders",
+  );
   const [data, setData] = useState<Paginated<AdminOrder>>(EMPTY);
   const [stats, setStats] = useState<OrderStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -291,7 +293,12 @@ export default function AdminPaymentsPage() {
                   </span>
                 );
               })
-            : null}
+            : STATUS_ORDER.map((s) => (
+                <div
+                  key={s}
+                  className="h-[18px] w-16 rounded bg-[#1c1c28] animate-pulse"
+                />
+              ))}
         </div>
       </div>
 
