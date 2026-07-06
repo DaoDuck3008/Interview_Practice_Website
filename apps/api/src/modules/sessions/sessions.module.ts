@@ -6,6 +6,7 @@ import { SpeechModule } from '../speech/speech.module';
 import { AiJobsModule } from '../ai-jobs/ai-jobs.module';
 import { QuotaModule } from '../quota/quota.module';
 import { ConcurrencyModule } from '../../common/concurrency/concurrency.module';
+import { CacheModule } from '../../cache/cache.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { ConcurrencyModule } from '../../common/concurrency/concurrency.module';
     AiJobsModule,
     QuotaModule,
     ConcurrencyModule,
+    CacheModule,
   ],
   providers: [SessionsService],
   controllers: [SessionsController],

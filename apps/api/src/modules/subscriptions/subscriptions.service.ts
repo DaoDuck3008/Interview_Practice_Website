@@ -4,11 +4,13 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CacheService } from '../../cache/cache.service';
 import { MailService } from '../mail/mail.service';
 import { QuerySubscriptionDto } from './dto/query-subscription.dto';
 import { GrantSubscriptionDto } from './dto/grant-subscription.dto';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const STATS_TTL = 60; // 1 phút — thẻ thống kê admin, chấp nhận trễ vài chục giây
 
 // Nhắc gia hạn khi gói còn <= 2 ngày.
 const RENEWAL_REMINDER_WINDOW_DAYS = 2;
@@ -21,6 +23,7 @@ export class SubscriptionsService {
     private prisma: PrismaService,
     private config: ConfigService,
     private mail: MailService,
+    private cache: CacheService,
   ) {}
 
   /**
@@ -181,36 +184,38 @@ export class SubscriptionsService {
 
   /** Thẻ thống kê: đếm theo trạng thái + đếm theo từng gói. */
   async getStats() {
-    const [byStatus, byPlan] = await Promise.all([
-      this.prisma.subscription.groupBy({
-        by: ['status'],
-        _count: { status: true },
-      }),
-      this.prisma.subscription.groupBy({
-        by: ['planId'],
-        _count: { planId: true },
-        orderBy: { _count: { planId: 'desc' } },
-      }),
-    ]);
+    return this.cache.getOrSet('stats:subscriptions', STATS_TTL, async () => {
+      const [byStatus, byPlan] = await Promise.all([
+        this.prisma.subscription.groupBy({
+          by: ['status'],
+          _count: { status: true },
+        }),
+        this.prisma.subscription.groupBy({
+          by: ['planId'],
+          _count: { planId: true },
+          orderBy: { _count: { planId: 'desc' } },
+        }),
+      ]);
 
-    const counts: Record<string, number> = {};
-    for (const row of byStatus) counts[row.status] = row._count.status;
+      const counts: Record<string, number> = {};
+      for (const row of byStatus) counts[row.status] = row._count.status;
 
-    const plans = await this.prisma.plan.findMany({
-      where: { id: { in: byPlan.map((p) => p.planId) } },
-      select: { id: true, name: true },
+      const plans = await this.prisma.plan.findMany({
+        where: { id: { in: byPlan.map((p) => p.planId) } },
+        select: { id: true, name: true },
+      });
+      const planNameById = new Map(plans.map((p) => [p.id, p.name]));
+
+      return {
+        active: counts.ACTIVE ?? 0,
+        expired: counts.EXPIRED ?? 0,
+        canceled: counts.CANCELED ?? 0,
+        byPlan: byPlan.map((p) => ({
+          planName: planNameById.get(p.planId) ?? '—',
+          count: p._count.planId,
+        })),
+      };
     });
-    const planNameById = new Map(plans.map((p) => [p.id, p.name]));
-
-    return {
-      active: counts.ACTIVE ?? 0,
-      expired: counts.EXPIRED ?? 0,
-      canceled: counts.CANCELED ?? 0,
-      byPlan: byPlan.map((p) => ({
-        planName: planNameById.get(p.planId) ?? '—',
-        count: p._count.planId,
-      })),
-    };
   }
 
   /** Lịch sử đơn của một subscription (admin) — mới nhất trước, mọi trạng thái. */

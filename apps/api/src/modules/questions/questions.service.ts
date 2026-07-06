@@ -5,15 +5,26 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { CacheService } from '../../cache/cache.service';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { QueryQuestionDto } from './dto/query-question.dto';
 import { QueryCursorQuestionDto } from './dto/query-cursor-question.dto';
 import { QueryAdminQuestionDto } from './dto/query-admin-question.dto';
 
+const ORDER_TTL = 300; // 5 phút — danh sách id/level cho nút prev/next, đổi khi admin CRUD câu hỏi
+const STATS_TTL = 60; // 1 phút — thẻ thống kê admin, chấp nhận trễ vài chục giây
+
 @Injectable()
 export class QuestionsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private cache: CacheService,
+  ) {}
+
+  private orderCacheKey(topicId: string) {
+    return `questions:order:${topicId}`;
+  }
 
   async findAll(query: QueryQuestionDto) {
     const where: Prisma.QuestionWhereInput = {
@@ -131,40 +142,48 @@ export class QuestionsService {
   }
 
   async countByTopic() {
-    const groups = await this.prisma.question.groupBy({
-      by: ['topicId'],
-      _count: { _all: true },
+    return this.cache.getOrSet('questions:topic-counts', STATS_TTL, async () => {
+      const groups = await this.prisma.question.groupBy({
+        by: ['topicId'],
+        _count: { _all: true },
+      });
+      return groups.map((g) => ({ topicId: g.topicId, count: g._count._all }));
     });
-    return groups.map((g) => ({ topicId: g.topicId, count: g._count._all }));
   }
 
   /** Admin: top N câu hỏi được ghi âm (Session) nhiều nhất, mới nhiều nhất trước. */
   async getTopRecorded(limit = 10) {
-    const groups = await this.prisma.session.groupBy({
-      by: ['questionId'],
-      _count: { questionId: true },
-      orderBy: { _count: { questionId: 'desc' } },
-      take: limit,
-    });
-    if (groups.length === 0) return [];
+    return this.cache.getOrSet(
+      `questions:top-recorded:${limit}`,
+      STATS_TTL,
+      async () => {
+        const groups = await this.prisma.session.groupBy({
+          by: ['questionId'],
+          _count: { questionId: true },
+          orderBy: { _count: { questionId: 'desc' } },
+          take: limit,
+        });
+        if (groups.length === 0) return [];
 
-    const questions = await this.prisma.question.findMany({
-      where: { id: { in: groups.map((g) => g.questionId) } },
-      select: {
-        id: true,
-        content: true,
-        level: true,
-        topic: { select: { name: true, slug: true } },
+        const questions = await this.prisma.question.findMany({
+          where: { id: { in: groups.map((g) => g.questionId) } },
+          select: {
+            id: true,
+            content: true,
+            level: true,
+            topic: { select: { name: true, slug: true } },
+          },
+        });
+        const byId = new Map(questions.map((q) => [q.id, q]));
+
+        return groups
+          .map((g) => {
+            const q = byId.get(g.questionId);
+            return q ? { ...q, sessionCount: g._count.questionId } : null;
+          })
+          .filter((q): q is NonNullable<typeof q> => q !== null);
       },
-    });
-    const byId = new Map(questions.map((q) => [q.id, q]));
-
-    return groups
-      .map((g) => {
-        const q = byId.get(g.questionId);
-        return q ? { ...q, sessionCount: g._count.questionId } : null;
-      })
-      .filter((q): q is NonNullable<typeof q> => q !== null);
+    );
   }
 
   async findOne(id: string) {
@@ -190,11 +209,16 @@ export class QuestionsService {
   findOrder(topicId: string | undefined) {
     if (!topicId)
       throw new BadRequestException('TopicID không được truyền vào');
-    return this.prisma.question.findMany({
-      where: { isActive: true, topicId },
-      select: { id: true, level: true },
-      orderBy: [{ isFeatured: 'desc' }, { level: 'asc' }, { id: 'asc' }],
-    });
+    return this.cache.getOrSet(
+      this.orderCacheKey(topicId),
+      ORDER_TTL,
+      () =>
+        this.prisma.question.findMany({
+          where: { isActive: true, topicId },
+          select: { id: true, level: true },
+          orderBy: [{ isFeatured: 'desc' }, { level: 'asc' }, { id: 'asc' }],
+        }),
+    );
   }
 
   // Public: cursor pagination cho sidebar (Xem thêm / cuộn vô hạn)
@@ -224,18 +248,33 @@ export class QuestionsService {
     return { items, nextCursor };
   }
 
-  create(dto: CreateQuestionDto) {
-    return this.prisma.question.create({ data: dto });
+  async create(dto: CreateQuestionDto) {
+    const question = await this.prisma.question.create({ data: dto });
+    await this.cache.del(this.orderCacheKey(question.topicId));
+    return question;
   }
 
-  update(id: string, data: UpdateQuestionDto) {
-    return this.prisma.question.update({ where: { id }, data });
+  async update(id: string, data: UpdateQuestionDto) {
+    const before = await this.prisma.question.findUnique({
+      where: { id },
+      select: { topicId: true },
+    });
+    const question = await this.prisma.question.update({ where: { id }, data });
+
+    const keys = [this.orderCacheKey(question.topicId)];
+    if (before && before.topicId !== question.topicId) {
+      keys.push(this.orderCacheKey(before.topicId));
+    }
+    await this.cache.del(...keys);
+    return question;
   }
 
-  softDelete(id: string) {
-    return this.prisma.question.update({
+  async softDelete(id: string) {
+    const question = await this.prisma.question.update({
       where: { id },
       data: { isActive: false },
     });
+    await this.cache.del(this.orderCacheKey(question.topicId));
+    return question;
   }
 }

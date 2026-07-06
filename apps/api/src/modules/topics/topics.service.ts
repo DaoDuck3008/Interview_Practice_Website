@@ -8,30 +8,37 @@ import { extname } from 'path';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { CacheService } from '../../cache/cache.service';
 import { UpdateTopicDto } from './dto/update-topic.dto';
 import { CreateTopicDto } from './dto/create-topic.dto';
 import { QueryAdminTopicDto } from './dto/query-admin-topic.dto';
+
+const CACHE_KEY_ALL = 'topics:all';
+const CACHE_TTL_ALL = 300; // 5 phút — danh sách topic công khai, chỉ đổi khi admin CRUD
 
 @Injectable()
 export class TopicsService {
   constructor(
     private prisma: PrismaService,
     private storage: StorageService,
+    private cache: CacheService,
   ) {}
 
-  async findAll() {
-    const rows = await this.prisma.topic.findMany({
-      orderBy: { name: 'asc' },
-      include: { _count: { select: { questions: true } } },
+  findAll() {
+    return this.cache.getOrSet(CACHE_KEY_ALL, CACHE_TTL_ALL, async () => {
+      const rows = await this.prisma.topic.findMany({
+        orderBy: { name: 'asc' },
+        include: { _count: { select: { questions: true } } },
+      });
+      return rows.map((t) => ({
+        id: t.id,
+        slug: t.slug,
+        name: t.name,
+        iconUrl: t.iconUrl ?? null,
+        parentId: t.parentId ?? null,
+        questionCount: t._count.questions,
+      }));
     });
-    return rows.map((t) => ({
-      id: t.id,
-      slug: t.slug,
-      name: t.name,
-      iconUrl: t.iconUrl ?? null,
-      parentId: t.parentId ?? null,
-      questionCount: t._count.questions,
-    }));
   }
 
   async findAllAdmin(query: QueryAdminTopicDto) {
@@ -95,12 +102,16 @@ export class TopicsService {
     };
   }
 
-  create(data: CreateTopicDto) {
-    return this.prisma.topic.create({ data });
+  async create(data: CreateTopicDto) {
+    const topic = await this.prisma.topic.create({ data });
+    await this.cache.del(CACHE_KEY_ALL);
+    return topic;
   }
 
-  update(id: string, data: UpdateTopicDto) {
-    return this.prisma.topic.update({ where: { id }, data });
+  async update(id: string, data: UpdateTopicDto) {
+    const topic = await this.prisma.topic.update({ where: { id }, data });
+    await this.cache.del(CACHE_KEY_ALL);
+    return topic;
   }
 
   async uploadIcon(id: string, file: Express.Multer.File): Promise<{ iconUrl: string }> {
@@ -116,6 +127,7 @@ export class TopicsService {
     const iconUrl = await this.storage.upload(key, file.buffer, file.mimetype);
 
     await this.prisma.topic.update({ where: { id }, data: { iconUrl } });
+    await this.cache.del(CACHE_KEY_ALL);
     return { iconUrl };
   }
 
@@ -141,6 +153,8 @@ export class TopicsService {
       await this.storage.delete(this.storage.keyFromUrl(topic.iconUrl));
     }
 
-    return this.prisma.topic.delete({ where: { id } });
+    const removed = await this.prisma.topic.delete({ where: { id } });
+    await this.cache.del(CACHE_KEY_ALL);
+    return removed;
   }
 }

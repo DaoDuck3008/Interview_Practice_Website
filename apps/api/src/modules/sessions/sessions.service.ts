@@ -11,6 +11,7 @@ import { StorageService } from '../storage/storage.service';
 import { SpeechService } from '../speech/speech.service';
 import { QuotaService } from '../quota/quota.service';
 import { AiJobsService } from '../ai-jobs/ai-jobs.service';
+import { CacheService } from '../../cache/cache.service';
 import { MAX_AUDIO_DURATION_SEC } from '../../common/upload/audio.constants';
 import {
   SCORING_PROMPT_VERSION,
@@ -32,6 +33,8 @@ import {
 } from '../../common/utils/vn-time.util';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const STATS_TTL = 60; // 1 phút — thẻ thống kê admin, chấp nhận trễ vài chục giây
+const ME_STATS_TTL = 30; // giây — dashboard cá nhân, invalidate khi tạo session mới
 
 @Injectable()
 export class SessionsService {
@@ -43,7 +46,16 @@ export class SessionsService {
     private speech: SpeechService,
     private quota: QuotaService,
     private aiJobs: AiJobsService,
+    private cache: CacheService,
   ) {}
+
+  private statsCacheKey(userId: string) {
+    return `sessions:me:stats:${userId}`;
+  }
+
+  private heatmapCacheKey(userId: string) {
+    return `sessions:me:heatmap:${userId}`;
+  }
 
   /** Liệt kê các lần luyện tập của user cho 1 câu hỏi. */
   findByQuestion(userId: string, questionId: string) {
@@ -58,31 +70,37 @@ export class SessionsService {
 
   /** Thống kê toàn thời gian: tổng lượt, tổng thời gian luyện, điểm trung bình. */
   async getMyStats(userId: string) {
-    const [totalSessions, durationAgg, scoreAgg] = await Promise.all([
-      this.prisma.session.count({ where: { userId } }),
-      this.prisma.session.aggregate({
-        where: { userId },
-        _sum: { duration: true },
-      }),
-      this.prisma.score.aggregate({
-        where: { session: { userId } },
-        _avg: {
-          technicalScore: true,
-          completenessScore: true,
-          clarityScore: true,
-        },
-        _count: { _all: true },
-      }),
-    ]);
+    return this.cache.getOrSet(
+      this.statsCacheKey(userId),
+      ME_STATS_TTL,
+      async () => {
+        const [totalSessions, durationAgg, scoreAgg] = await Promise.all([
+          this.prisma.session.count({ where: { userId } }),
+          this.prisma.session.aggregate({
+            where: { userId },
+            _sum: { duration: true },
+          }),
+          this.prisma.score.aggregate({
+            where: { session: { userId } },
+            _avg: {
+              technicalScore: true,
+              completenessScore: true,
+              clarityScore: true,
+            },
+            _count: { _all: true },
+          }),
+        ]);
 
-    return {
-      totalSessions,
-      totalDurationSeconds: durationAgg._sum.duration ?? 0,
-      avgTechnical: round1(scoreAgg._avg.technicalScore),
-      avgCompleteness: round1(scoreAgg._avg.completenessScore),
-      avgClarity: round1(scoreAgg._avg.clarityScore),
-      scoredCount: scoreAgg._count._all,
-    };
+        return {
+          totalSessions,
+          totalDurationSeconds: durationAgg._sum.duration ?? 0,
+          avgTechnical: round1(scoreAgg._avg.technicalScore),
+          avgCompleteness: round1(scoreAgg._avg.completenessScore),
+          avgClarity: round1(scoreAgg._avg.clarityScore),
+          scoredCount: scoreAgg._count._all,
+        };
+      },
+    );
   }
 
   /** Lịch sử luyện tập (phân trang, mới nhất trước) kèm câu hỏi & điểm. */
@@ -193,32 +211,38 @@ export class SessionsService {
    * Trả các ngày có buổi luyện (sparse) + mốc from/to để FE dựng lưới đầy đủ.
    */
   async getMyHeatmap(userId: string) {
-    const vnNow = new Date(Date.now() + VN_OFFSET_MS);
-    const y = vnNow.getUTCFullYear();
-    const m = vnNow.getUTCMonth();
-    const d = vnNow.getUTCDate();
-    // [start = cùng ngày 1 năm trước, end = hết ngày hôm nay) quy về UTC.
-    const startUtc = new Date(Date.UTC(y - 1, m, d) - VN_OFFSET_MS);
-    const endUtc = new Date(Date.UTC(y, m, d + 1) - VN_OFFSET_MS);
+    return this.cache.getOrSet(
+      this.heatmapCacheKey(userId),
+      ME_STATS_TTL,
+      async () => {
+        const vnNow = new Date(Date.now() + VN_OFFSET_MS);
+        const y = vnNow.getUTCFullYear();
+        const m = vnNow.getUTCMonth();
+        const d = vnNow.getUTCDate();
+        // [start = cùng ngày 1 năm trước, end = hết ngày hôm nay) quy về UTC.
+        const startUtc = new Date(Date.UTC(y - 1, m, d) - VN_OFFSET_MS);
+        const endUtc = new Date(Date.UTC(y, m, d + 1) - VN_OFFSET_MS);
 
-    const sessions = await this.prisma.session.findMany({
-      where: { userId, createdAt: { gte: startUtc, lt: endUtc } },
-      select: { createdAt: true },
-      orderBy: { createdAt: 'asc' },
-    });
+        const sessions = await this.prisma.session.findMany({
+          where: { userId, createdAt: { gte: startUtc, lt: endUtc } },
+          select: { createdAt: true },
+          orderBy: { createdAt: 'asc' },
+        });
 
-    const map = new Map<string, number>();
-    for (const s of sessions) {
-      const day = vnDayKey(s.createdAt);
-      map.set(day, (map.get(day) ?? 0) + 1);
-    }
-    const days = [...map.entries()].map(([date, count]) => ({ date, count }));
+        const map = new Map<string, number>();
+        for (const s of sessions) {
+          const day = vnDayKey(s.createdAt);
+          map.set(day, (map.get(day) ?? 0) + 1);
+        }
+        const days = [...map.entries()].map(([date, count]) => ({ date, count }));
 
-    return {
-      from: vnDayKey(startUtc),
-      to: vnDayKey(new Date(endUtc.getTime() - 1)), // hôm nay
-      days,
-    };
+        return {
+          from: vnDayKey(startUtc),
+          to: vnDayKey(new Date(endUtc.getTime() - 1)), // hôm nay
+          days,
+        };
+      },
+    );
   }
 
   /**
@@ -265,6 +289,10 @@ export class SessionsService {
 
     // Đếm 1 lượt luyện tập (QuotaGuard đã chặn trước khi tới đây nếu hết lượt).
     await this.quota.record(userId, session.id);
+    await this.cache.del(
+      this.statsCacheKey(userId),
+      this.heatmapCacheKey(userId),
+    );
 
     return {
       id: session.id,
@@ -457,43 +485,55 @@ export class SessionsService {
 
   /** Admin: DAU/WAU/MAU — số user khác nhau có ít nhất 1 session trong ngày/tuần/tháng hiện tại (giờ VN). */
   async getActiveUsersStats() {
-    const [dau, wau, mau] = await Promise.all([
-      this.prisma.session.findMany({
-        where: { createdAt: { gte: vnStartOfDay() } },
-        distinct: ['userId'],
-        select: { userId: true },
-      }),
-      this.prisma.session.findMany({
-        where: { createdAt: { gte: vnStartOfWeek() } },
-        distinct: ['userId'],
-        select: { userId: true },
-      }),
-      this.prisma.session.findMany({
-        where: { createdAt: { gte: vnStartOfMonth() } },
-        distinct: ['userId'],
-        select: { userId: true },
-      }),
-    ]);
-    return { dau: dau.length, wau: wau.length, mau: mau.length };
+    return this.cache.getOrSet(
+      'stats:sessions:active-users',
+      STATS_TTL,
+      async () => {
+        const [dau, wau, mau] = await Promise.all([
+          this.prisma.session.findMany({
+            where: { createdAt: { gte: vnStartOfDay() } },
+            distinct: ['userId'],
+            select: { userId: true },
+          }),
+          this.prisma.session.findMany({
+            where: { createdAt: { gte: vnStartOfWeek() } },
+            distinct: ['userId'],
+            select: { userId: true },
+          }),
+          this.prisma.session.findMany({
+            where: { createdAt: { gte: vnStartOfMonth() } },
+            distinct: ['userId'],
+            select: { userId: true },
+          }),
+        ]);
+        return { dau: dau.length, wau: wau.length, mau: mau.length };
+      },
+    );
   }
 
   /** Admin: số user hoạt động (distinct) theo từng ngày trong `days` ngày gần nhất, zero-fill. */
   async getActiveUsersDaily(days = 30) {
-    const since = vnStartOfDay(new Date(Date.now() - (days - 1) * DAY_MS));
-    const rows = await this.prisma.session.findMany({
-      where: { createdAt: { gte: since } },
-      select: { userId: true, createdAt: true },
-    });
-    const map = new Map<string, Set<string>>();
-    for (const r of rows) {
-      const day = vnDayKey(r.createdAt);
-      if (!map.has(day)) map.set(day, new Set());
-      map.get(day)!.add(r.userId);
-    }
-    return vnLastNDays(days).map((date) => ({
-      date,
-      count: map.get(date)?.size ?? 0,
-    }));
+    return this.cache.getOrSet(
+      `stats:sessions:active-users-daily:${days}`,
+      STATS_TTL,
+      async () => {
+        const since = vnStartOfDay(new Date(Date.now() - (days - 1) * DAY_MS));
+        const rows = await this.prisma.session.findMany({
+          where: { createdAt: { gte: since } },
+          select: { userId: true, createdAt: true },
+        });
+        const map = new Map<string, Set<string>>();
+        for (const r of rows) {
+          const day = vnDayKey(r.createdAt);
+          if (!map.has(day)) map.set(day, new Set());
+          map.get(day)!.add(r.userId);
+        }
+        return vnLastNDays(days).map((date) => ({
+          date,
+          count: map.get(date)?.size ?? 0,
+        }));
+      },
+    );
   }
 
   /** Admin: xem chi tiết đầy đủ 1 session (transcript, câu hỏi, điểm, cải thiện). */

@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CacheService } from '../../cache/cache.service';
 import { QueryFavoriteDto } from './dto/query-favorite.dto';
+
+const IDS_TTL = 30; // giây — tô trạng thái bookmark, đổi khi user bấm add/remove
 
 const QUESTION_SELECT = {
   id: true,
@@ -17,15 +20,24 @@ const QUESTION_SELECT = {
 
 @Injectable()
 export class FavoritesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private cache: CacheService,
+  ) {}
+
+  private idsCacheKey(userId: string) {
+    return `favorites:ids:${userId}`;
+  }
 
   /** Toàn bộ questionId đã lưu của user — dùng để tô trạng thái nút bookmark. */
   async getIds(userId: string): Promise<string[]> {
-    const favorites = await this.prisma.favorite.findMany({
-      where: { userId },
-      select: { questionId: true },
+    return this.cache.getOrSet(this.idsCacheKey(userId), IDS_TTL, async () => {
+      const favorites = await this.prisma.favorite.findMany({
+        where: { userId },
+        select: { questionId: true },
+      });
+      return favorites.map((f) => f.questionId);
     });
-    return favorites.map((f) => f.questionId);
   }
 
   /** N câu hỏi lưu gần nhất, mới nhất trước — hiển thị trong drawer ở Header. */
@@ -81,12 +93,14 @@ export class FavoritesService {
     if (!question) throw new NotFoundException('Câu hỏi không tồn tại');
 
     await this.prisma.favorite.create({ data: { userId, questionId } });
+    await this.cache.del(this.idsCacheKey(userId));
     return { favorited: true };
   }
 
   /** Bỏ lưu — idempotent, chưa từng lưu thì cũng không lỗi. */
   async remove(userId: string, questionId: string) {
     await this.prisma.favorite.deleteMany({ where: { userId, questionId } });
+    await this.cache.del(this.idsCacheKey(userId));
     return { favorited: false };
   }
 }

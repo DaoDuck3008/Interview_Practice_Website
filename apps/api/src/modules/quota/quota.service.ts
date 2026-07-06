@@ -1,11 +1,21 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CacheService } from '../../cache/cache.service';
 import { FREE_TIER_LIMITS, QuotaLimits } from './quota.constants';
 import { vnStartOfDay, vnStartOfWeek } from '../../common/utils/vn-time.util';
 
+const STATUS_TTL = 15; // giây — chỉ cache tầng hiển thị, KHÔNG dùng cho assertWithinLimit (gate)
+
 @Injectable()
 export class QuotaService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private cache: CacheService,
+  ) {}
+
+  private statusCacheKey(userId: string) {
+    return `quota:status:${userId}`;
+  }
 
   /**
    * Hạn mức hiệu lực của user: lấy từ gói còn hiệu lực (chưa hủy & chưa hết hạn),
@@ -71,10 +81,12 @@ export class QuotaService {
   }
 
   /** Ghi 1 lượt đã dùng — gọi SAU khi tạo session thành công. */
-  record(userId: string, sessionId?: string) {
-    return this.prisma.usageLog.create({
+  async record(userId: string, sessionId?: string) {
+    const log = await this.prisma.usageLog.create({
       data: { userId, sessionId },
     });
+    await this.cache.del(this.statusCacheKey(userId));
+    return log;
   }
 
   /**
@@ -84,6 +96,14 @@ export class QuotaService {
    * ngữ nghĩa "còn bao nhiêu lượt" của daily/weekly.
    */
   async getStatus(userId: string) {
+    return this.cache.getOrSet(
+      this.statusCacheKey(userId),
+      STATUS_TTL,
+      () => this.computeStatus(userId),
+    );
+  }
+
+  private async computeStatus(userId: string) {
     const limits = await this.getLimits(userId);
     const usage = await this.getUsage(userId);
 

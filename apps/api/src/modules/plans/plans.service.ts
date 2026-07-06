@@ -5,26 +5,35 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CacheService } from '../../cache/cache.service';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
 
+const CACHE_KEY_ACTIVE = 'plans:active';
+const CACHE_TTL_ACTIVE = 300; // 5 phút — trang pricing công khai, đổi cực hiếm
+
 @Injectable()
 export class PlansService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private cache: CacheService,
+  ) {}
 
   findActive() {
-    return this.prisma.plan.findMany({
-      where: { isActive: true },
-      orderBy: { sortOrder: 'asc' },
-      select: {
-        id: true,
-        slug: true,
-        name: true,
-        description: true,
-        priceVnd: true,
-        durationDays: true,
-      },
-    });
+    return this.cache.getOrSet(CACHE_KEY_ACTIVE, CACHE_TTL_ACTIVE, () =>
+      this.prisma.plan.findMany({
+        where: { isActive: true },
+        orderBy: { sortOrder: 'asc' },
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          description: true,
+          priceVnd: true,
+          durationDays: true,
+        },
+      }),
+    );
   }
 
   findAllAdmin() {
@@ -42,9 +51,11 @@ export class PlansService {
     });
     if (existing) throw new ConflictException('Slug gói đã tồn tại');
 
-    return this.prisma.plan.create({
+    const plan = await this.prisma.plan.create({
       data: this.toData(dto) as Prisma.PlanUncheckedCreateInput,
     });
+    await this.cache.del(CACHE_KEY_ACTIVE);
+    return plan;
   }
 
   async update(id: string, dto: UpdatePlanDto) {
@@ -58,7 +69,12 @@ export class PlansService {
       if (dup) throw new ConflictException('Slug gói đã tồn tại');
     }
 
-    return this.prisma.plan.update({ where: { id }, data: this.toData(dto) });
+    const updated = await this.prisma.plan.update({
+      where: { id },
+      data: this.toData(dto),
+    });
+    await this.cache.del(CACHE_KEY_ACTIVE);
+    return updated;
   }
 
   async remove(id: string) {
@@ -77,6 +93,7 @@ export class PlansService {
     }
 
     await this.prisma.plan.delete({ where: { id } });
+    await this.cache.del(CACHE_KEY_ACTIVE);
     return { id };
   }
 
