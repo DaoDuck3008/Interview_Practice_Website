@@ -8,6 +8,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { PlansService } from './plans.service';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
@@ -15,6 +16,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
+import { THROTTLE_ADMIN_MUTATION } from '../../common/throttling/throttle-profiles';
 
 @Controller('plans')
 export class PlansController {
@@ -35,6 +37,7 @@ export class PlansController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Post()
+  @Throttle(THROTTLE_ADMIN_MUTATION)
   create(@Body() dto: CreatePlanDto) {
     return this.plansService.create(dto);
   }
@@ -42,6 +45,7 @@ export class PlansController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Patch(':id')
+  @Throttle(THROTTLE_ADMIN_MUTATION)
   update(@Param('id') id: string, @Body() dto: UpdatePlanDto) {
     return this.plansService.update(id, dto);
   }
@@ -49,6 +53,7 @@ export class PlansController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Delete(':id')
+  @Throttle(THROTTLE_ADMIN_MUTATION)
   remove(@Param('id') id: string) {
     return this.plansService.remove(id);
   }

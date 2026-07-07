@@ -47,9 +47,14 @@ export default function SupportChatPopup({ onClose }: { onClose: () => void }) {
     function onMessage(msg: SupportMessage) {
       setMessages((prev) => [...prev, msg]);
     }
+    function onError(message: string) {
+      toast.error(message);
+    }
     socket.on("support:message", onMessage);
+    socket.on("support:error", onError);
     return () => {
       socket.off("support:message", onMessage);
+      socket.off("support:error", onError);
     };
   }, []);
 

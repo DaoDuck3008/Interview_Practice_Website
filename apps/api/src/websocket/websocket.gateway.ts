@@ -12,6 +12,9 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { SupportService } from '../modules/support/support.service';
+import { RedisThrottlerStorage } from '../common/throttling/redis-throttler.storage';
+import { WS_SUPPORT_LIMIT } from '../common/throttling/throttle-profiles';
+import { resolveClientIp } from '../common/throttling/throttling.util';
 
 interface JwtPayload {
   sub: string;
@@ -46,6 +49,9 @@ export class WebsocketGateway
     private jwtService: JwtService,
     private config: ConfigService,
     private support: SupportService,
+    // Dùng lại counter Redis giống HTTP throttling. Event WebSocket không có
+    // req/res object, nên gateway gọi thẳng storage.
+    private throttlerStorage: RedisThrottlerStorage,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -92,6 +98,34 @@ export class WebsocketGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() data: SupportSendPayload,
   ) {
+    // Dùng cùng logic lấy IP sau proxy như HTTP. Kết hợp userId + IP để một
+    // user ở các mạng khác nhau có bucket riêng, đồng thời vẫn chặn được burst
+    // từ cùng một kết nối.
+    const tracker = resolveClientIp(
+      client.handshake.headers as Record<string, string | string[] | undefined>,
+      client.handshake.address,
+    );
+    const rateLimitKey = `${client.data.userId}:${tracker}`;
+
+    // support:send không phải HTTP route nên APP_GUARD/@Throttle không chạy ở
+    // đây. Tăng counter Redis thủ công để không hở lỗ spam chat.
+    const rateLimit = await this.throttlerStorage.increment(
+      rateLimitKey,
+      WS_SUPPORT_LIMIT.ttl,
+      WS_SUPPORT_LIMIT.limit,
+      WS_SUPPORT_LIMIT.blockDuration,
+      WS_SUPPORT_LIMIT.throttlerName,
+    );
+    if (rateLimit.isBlocked) {
+      // Emit event nghiệp vụ thay vì throw exception; frontend đã lắng nghe
+      // support event và có thể hiện toast mà không cần reconnect socket.
+      client.emit(
+        'support:error',
+        'Bạn gửi tin nhắn quá nhanh. Vui lòng chờ một chút rồi thử lại.',
+      );
+      return;
+    }
+
     const content = data?.content?.trim() ?? '';
     if (content.length > 2000) return;
 

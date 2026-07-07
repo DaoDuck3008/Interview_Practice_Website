@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -13,6 +14,13 @@ import { LocalAuthGuard } from '../../common/guards/local-auth.guard';
 import { JwtRefreshGuard } from '../../common/guards/jwt-refresh.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import {
+  THROTTLE_AUTH_CODE,
+  THROTTLE_AUTH_EMAIL,
+  THROTTLE_AUTH_LOGIN,
+  THROTTLE_AUTH_MODERATE,
+  THROTTLE_REFRESH,
+} from '../../common/throttling/throttle-profiles';
 
 const REFRESH_COOKIE = 'refresh_token';
 
@@ -24,11 +32,13 @@ export class AuthController {
   ) {}
 
   @Post('register')
+  @Throttle(THROTTLE_AUTH_EMAIL)
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
   @Post('verify-email')
+  @Throttle(THROTTLE_AUTH_CODE)
   async verifyEmail(
     @Body() dto: VerifyEmailDto,
     @Res({ passthrough: true }) res: Response,
@@ -40,16 +50,19 @@ export class AuthController {
   }
 
   @Post('resend-verification')
+  @Throttle(THROTTLE_AUTH_EMAIL)
   resendVerification(@Body() dto: ResendCodeDto) {
     return this.authService.resendVerification(dto.email);
   }
 
   @Post('forgot-password')
+  @Throttle(THROTTLE_AUTH_EMAIL)
   forgotPassword(@Body() dto: ResendCodeDto) {
     return this.authService.forgotPassword(dto.email);
   }
 
   @Post('reset-password')
+  @Throttle(THROTTLE_AUTH_CODE)
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.email, dto.code, dto.password);
   }
@@ -76,6 +89,7 @@ export class AuthController {
 
   @UseGuards(LocalAuthGuard)
   @Post('login')
+  @Throttle(THROTTLE_AUTH_LOGIN)
   async login(
     @Body() _dto: LoginDto,
     @CurrentUser()
@@ -102,6 +116,7 @@ export class AuthController {
   }
 
   @Post('google')
+  @Throttle(THROTTLE_AUTH_MODERATE)
   async google(
     @Body() dto: GoogleLoginDto,
     @Res({ passthrough: true }) res: Response,
@@ -114,6 +129,7 @@ export class AuthController {
 
   @UseGuards(JwtRefreshGuard)
   @Post('refresh')
+  @Throttle(THROTTLE_REFRESH)
   async refresh(
     @CurrentUser() current: { id: string; jti: string },
     @Res({ passthrough: true }) res: Response,
@@ -125,6 +141,7 @@ export class AuthController {
   }
 
   @Post('logout')
+  @Throttle(THROTTLE_REFRESH)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const token = (req as any).cookies?.[REFRESH_COOKIE] as string | undefined;
     await this.authService.logout(token);

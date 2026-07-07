@@ -8,6 +8,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Role } from '@prisma/client';
 import { SupportService } from './support.service';
@@ -21,6 +22,7 @@ import {
   ALLOWED_IMAGE_MIME,
   MAX_IMAGE_BYTES,
 } from '../../common/upload/image.constants';
+import { THROTTLE_HEAVY_UPLOAD } from '../../common/throttling/throttle-profiles';
 
 interface AuthUser {
   id: string;
@@ -39,6 +41,7 @@ export class SupportController {
 
   /** Upload ảnh đính kèm; FE lấy URL rồi gửi kèm qua WebSocket `support:send`. */
   @Post('upload')
+  @Throttle(THROTTLE_HEAVY_UPLOAD)
   @UseInterceptors(
     FileInterceptor(
       'file',

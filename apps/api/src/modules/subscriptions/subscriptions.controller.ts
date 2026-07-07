@@ -8,6 +8,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { SubscriptionsService } from './subscriptions.service';
 import { QuerySubscriptionDto } from './dto/query-subscription.dto';
 import { GrantSubscriptionDto } from './dto/grant-subscription.dto';
@@ -16,6 +17,10 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Role } from '@prisma/client';
+import {
+  THROTTLE_ADMIN_MUTATION,
+  THROTTLE_ADMIN_SENSITIVE,
+} from '../../common/throttling/throttle-profiles';
 
 @Controller('subscriptions')
 export class SubscriptionsController {
@@ -51,6 +56,7 @@ export class SubscriptionsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Patch(':id/cancel')
+  @Throttle(THROTTLE_ADMIN_MUTATION)
   cancel(@Param('id') id: string) {
     return this.subscriptionsService.cancel(id);
   }
@@ -58,6 +64,7 @@ export class SubscriptionsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Patch(':id/activate')
+  @Throttle(THROTTLE_ADMIN_MUTATION)
   activate(@Param('id') id: string) {
     return this.subscriptionsService.activate(id);
   }
@@ -65,6 +72,7 @@ export class SubscriptionsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Post('grant')
+  @Throttle(THROTTLE_ADMIN_SENSITIVE)
   grant(
     @CurrentUser() user: { id: string; email: string; role: Role },
     @Body() dto: GrantSubscriptionDto,

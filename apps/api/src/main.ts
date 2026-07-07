@@ -15,8 +15,16 @@ async function bootstrap() {
   // Cho phép onApplicationShutdown chạy (đóng kết nối Redis khi tắt app)
   app.enableShutdownHooks();
   app.use(cookieParser());
+
   const config = app.get(ConfigService);
   const isProduction = config.get<string>('NODE_ENV') === 'production';
+
+  const trustProxy = config.get<string>('trustProxy');
+  if (trustProxy) {
+    // Bật khi app đứng sau proxy tin cậy (vd Cloudflare Tunnel/Nginx local).
+    // Để trống TRUST_PROXY nếu deploy direct không qua proxy.
+    app.getHttpAdapter().getInstance().set('trust proxy', trustProxy);
+  }
 
   app.getHttpAdapter().getInstance().disable('x-powered-by'); // tắt header X-Powered-By để tránh lộ thông tin framework
   app.use(

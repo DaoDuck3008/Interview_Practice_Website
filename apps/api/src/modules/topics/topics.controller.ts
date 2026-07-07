@@ -12,6 +12,7 @@ import {
   UseInterceptors,
   BadRequestException,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TopicsService } from './topics.service';
 import { CreateTopicDto } from './dto/create-topic.dto';
@@ -22,6 +23,10 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { fileUploadOptions } from '../../common/upload/file-upload.options';
 import { Role } from '@prisma/client';
+import {
+  THROTTLE_ADMIN_MUTATION,
+  THROTTLE_HEAVY_UPLOAD,
+} from '../../common/throttling/throttle-profiles';
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
 const MAX_SIZE = 2 * 1024 * 1024; // 2 MB
@@ -45,6 +50,7 @@ export class TopicsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Post()
+  @Throttle(THROTTLE_ADMIN_MUTATION)
   create(@Body() dto: CreateTopicDto) {
     return this.topicsService.create(dto);
   }
@@ -52,6 +58,7 @@ export class TopicsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Patch(':id')
+  @Throttle(THROTTLE_ADMIN_MUTATION)
   update(@Param('id') id: string, @Body() dto: UpdateTopicDto) {
     return this.topicsService.update(id, dto);
   }
@@ -59,6 +66,7 @@ export class TopicsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Patch(':id/icon')
+  @Throttle(THROTTLE_HEAVY_UPLOAD)
   @UseInterceptors(
     FileInterceptor(
       'file',
@@ -81,6 +89,7 @@ export class TopicsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Delete(':id')
+  @Throttle(THROTTLE_ADMIN_MUTATION)
   remove(@Param('id') id: string) {
     return this.topicsService.remove(id);
   }

@@ -74,9 +74,14 @@ export default function AdminSupportPage() {
         setMessages((prev) => [...prev, msg]);
       }
     }
+    function onError(message: string) {
+      toast.error(message);
+    }
     socket.on("support:message", onMessage);
+    socket.on("support:error", onError);
     return () => {
       socket.off("support:message", onMessage);
+      socket.off("support:error", onError);
     };
   }, [loadThreads, selectedUserId]);
 

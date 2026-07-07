@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule } from '@nestjs/throttler';
 import configuration, { validationSchema } from './config/configuration';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
@@ -22,6 +23,9 @@ import { SupportModule } from './modules/support/support.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
 import { WebsocketModule } from './websocket/websocket.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { AppThrottlerGuard } from './common/throttling/app-throttler.guard';
+import { RedisThrottlerStorage } from './common/throttling/redis-throttler.storage';
+import { ThrottlingModule } from './common/throttling/throttling.module';
 
 @Module({
   imports: [
@@ -29,6 +33,23 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
       isGlobal: true,
       load: [configuration],
       validationSchema,
+    }),
+    ThrottlingModule,
+    ThrottlerModule.forRootAsync({
+      inject: [RedisThrottlerStorage],
+      useFactory: (storage: RedisThrottlerStorage) => ({
+        storage,
+        errorMessage:
+          'Bạn thao tác quá nhanh. Vui lòng chờ một chút rồi thử lại.',
+        throttlers: [
+          {
+            name: 'default',
+            ttl: 60_000,
+            limit: 120,
+            blockDuration: 60_000,
+          },
+        ],
+      }),
     }),
     ScheduleModule.forRoot(),
     PrismaModule,
@@ -54,6 +75,10 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
     {
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: AppThrottlerGuard,
     },
   ],
 })

@@ -11,6 +11,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Role } from '@prisma/client';
 import { SessionsService } from './sessions.service';
@@ -30,6 +31,12 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { fileUploadOptions } from '../../common/upload/file-upload.options';
 import { MAX_AUDIO_BYTES } from '../../common/upload/audio.constants';
 import { ConcurrencyInterceptor } from '../../common/concurrency/concurrency.interceptor';
+import {
+  THROTTLE_ADMIN_SENSITIVE,
+  THROTTLE_ADMIN_MUTATION,
+  THROTTLE_AI_ACTION,
+  THROTTLE_HEAVY_UPLOAD,
+} from '../../common/throttling/throttle-profiles';
 
 interface AuthUser {
   id: string;
@@ -74,6 +81,7 @@ export class SessionsController {
   }
 
   @Post()
+  @Throttle(THROTTLE_HEAVY_UPLOAD)
   @UseGuards(QuotaGuard)
   @UseInterceptors(
     ConcurrencyInterceptor,
@@ -97,6 +105,7 @@ export class SessionsController {
   }
 
   @Post(':id/score')
+  @Throttle(THROTTLE_AI_ACTION)
   @UseInterceptors(ConcurrencyInterceptor)
   score(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.sessions.enqueueScore(id, user.id);
@@ -104,6 +113,7 @@ export class SessionsController {
 
   /** User báo điểm chấm sai/khiếu nại cho session đã chấm. */
   @Post(':id/score/flag')
+  @Throttle(THROTTLE_AI_ACTION)
   flagScore(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
@@ -113,6 +123,7 @@ export class SessionsController {
   }
 
   @Post(':id/improve')
+  @Throttle(THROTTLE_AI_ACTION)
   @UseInterceptors(ConcurrencyInterceptor)
   improve(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.sessions.enqueueImprove(id, user.id);
@@ -147,6 +158,7 @@ export class SessionsController {
   }
 
   @Patch('admin/:id/review')
+  @Throttle(THROTTLE_ADMIN_MUTATION)
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN)
   reviewFlag(
@@ -158,6 +170,7 @@ export class SessionsController {
   }
 
   @Patch('admin/:id/score')
+  @Throttle(THROTTLE_ADMIN_SENSITIVE)
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN)
   manualRescore(
