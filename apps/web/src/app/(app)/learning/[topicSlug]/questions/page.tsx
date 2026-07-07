@@ -21,7 +21,7 @@ export default async function LearningQuestionsPage({
   const { page: pageStr, limit: limitStr, level, search } = await searchParams;
 
   const page = Math.max(1, parseInt(pageStr ?? "1") || 1);
-  const limit = 100;
+  const limit = 30;
   const levelFilter = (["EASY", "MEDIUM", "HARD"] as Level[]).includes(
     level as Level,
   )

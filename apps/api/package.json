@@ -45,6 +45,7 @@
     "dotenv": "^16.4.7",
     "google-auth-library": "^10.7.0",
     "groq-sdk": "^1.2.1",
+    "helmet": "^8.2.0",
     "ioredis": "^5.11.1",
     "joi": "^17.13.3",
     "passport": "^0.7.0",
