@@ -207,6 +207,7 @@ export class AuthService {
       // Đặt lại mật khẩu cũng đồng nghĩa đã chứng minh sở hữu email.
       data: { passwordHash, emailVerified: true },
     });
+    await this.refreshStore.removeAll(user.id);
     return { message: 'Đặt lại mật khẩu thành công, vui lòng đăng nhập' };
   }
 
@@ -344,13 +345,14 @@ export class AuthService {
       where: { id: userId },
       data: { passwordHash },
     });
+    await this.refreshStore.removeAll(userId);
     return { message: 'Đổi mật khẩu thành công' };
   }
 
   // Refresh token đã được JwtRefreshStrategy verify chữ ký + hạn dùng ở guard.
-  // Ở đây chỉ còn kiểm tra jti có nằm trong allowlist (Redis) không, rồi xoay vòng.
+  // Ở đây consume jti cũ bằng một thao tác Redis atomic, rồi xoay vòng token.
   async refreshTokens(userId: string, jti: string) {
-    const isAllowed = await this.refreshStore.exists(userId, jti);
+    const isAllowed = await this.refreshStore.consume(userId, jti);
     if (!isAllowed)
       throw new UnauthorizedException(
         'Phiên đăng nhập không hợp lệ, vui lòng đăng nhập lại',
@@ -359,9 +361,11 @@ export class AuthService {
     // Đọc lại user từ DB để role luôn cập nhật
     const user = await this.usersService.findById(userId);
     if (!user) throw new UnauthorizedException('Người dùng không tồn tại');
-
-    // Thu hồi jti cũ trước khi cấp jti mới (rotation)
-    await this.refreshStore.remove(userId, jti);
+    if (user.isLock)
+      throw new ForbiddenException({
+        message: 'Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.',
+        errorCode: 'ACCOUNT_LOCKED',
+      });
 
     const tokens = await this.issueTokens(user);
     return {

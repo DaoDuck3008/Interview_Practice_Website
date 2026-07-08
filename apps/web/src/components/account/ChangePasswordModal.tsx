@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2, X } from "lucide-react";
 import { toast } from "react-toastify";
 import ModalPortal from "@/components/ui/ModalPortal";
 import { changePasswordApi } from "@/lib/api/auth";
+import { useAuthStore } from "@/stores/auth.store";
 
 interface Props {
   open: boolean;
@@ -16,6 +18,8 @@ const fieldClass =
 const labelClass = "text-xs font-medium text-[var(--color-text-secondary)]";
 
 export default function ChangePasswordModal({ open, onClose }: Props) {
+  const router = useRouter();
+  const clearAuth = useAuthStore((s) => s.clearAuth);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -70,8 +74,16 @@ export default function ChangePasswordModal({ open, onClose }: Props) {
     setSaving(true);
     try {
       await changePasswordApi(oldPassword, newPassword);
-      toast.success("Đổi mật khẩu thành công.");
+      toast.success("Đổi mật khẩu thành công. Vui lòng đăng nhập lại.");
+      clearAuth();
       onClose();
+      const redirect =
+        window.location.pathname +
+        window.location.search +
+        window.location.hash;
+      router.replace(
+        `/login?notice=password_changed&redirect=${encodeURIComponent(redirect)}`,
+      );
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })
         ?.response?.data?.message;
@@ -93,7 +105,7 @@ export default function ChangePasswordModal({ open, onClose }: Props) {
           onMouseDown={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-            <h2 className="text-base font-semibold text-[var(--color-text-primary)]">
+            <h2 className="text-white font-semibold text-[var(--color-text-primary)]">
               Đổi mật khẩu
             </h2>
             <button

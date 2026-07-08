@@ -58,6 +58,7 @@ export class UsersService {
         name: true,
         role: true,
         avatarUrl: true,
+        isLock: true,
       },
     });
   }

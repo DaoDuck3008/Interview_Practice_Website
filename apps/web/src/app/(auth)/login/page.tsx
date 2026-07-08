@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent, Suspense } from "react";
+import { useEffect, useRef, useState, FormEvent, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
@@ -20,13 +20,22 @@ function LoginContent() {
   const setAuth = useAuthStore((s) => s.setAuth);
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") ?? undefined;
+  const notice = searchParams.get("notice");
   const router = useRouter();
+  const noticeShownRef = useRef(false);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (notice === "password_changed" && !noticeShownRef.current) {
+      noticeShownRef.current = true;
+      toast.info("Mật khẩu đã được đổi. Vui lòng đăng nhập lại để tiếp tục.");
+    }
+  }, [notice]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -42,7 +51,12 @@ function LoginContent() {
       const { accessToken, user } = await loginApi(email.trim(), password);
       setAuth(accessToken, user);
       const fallback = user.role === "ADMIN" ? "/admin" : "/practice";
-      router.push(redirectTo || fallback);
+      const target = redirectTo || fallback;
+      if (notice === "password_changed" && typeof window !== "undefined") {
+        window.location.assign(target);
+        return;
+      }
+      router.push(target);
     } catch (err: unknown) {
       const data = (
         err as {
