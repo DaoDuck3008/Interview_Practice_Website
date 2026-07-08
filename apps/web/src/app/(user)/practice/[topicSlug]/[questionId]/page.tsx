@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
@@ -7,6 +8,12 @@ import PracticeContent from "@/components/practice/PracticeContent";
 import PracticeNavFooter from "@/components/practice/PracticeNavFooter";
 import { formatTopicName } from "@/lib/utils/topics";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
+
+export const metadata: Metadata = {
+  title: "Câu hỏi luyện tập phỏng vấn IT — Phỏng vấn IT",
+  description:
+    "Trả lời câu hỏi phỏng vấn IT, ghi âm phần trình bày và nhận đánh giá AI kèm gợi ý cải thiện.",
+};
 
 export default async function QuestionPage({
   params,

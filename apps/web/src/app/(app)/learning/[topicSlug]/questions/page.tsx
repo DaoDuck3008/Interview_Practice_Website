@@ -1,13 +1,19 @@
+import type { Metadata } from "next";
 import { getTopicsWithCounts } from "@/lib/api/topics";
 import { getQuestionsPublic } from "@/lib/api/questions";
 import type { Level } from "@/lib/api/questions";
 import QuestionBrowser from "@/components/questions/QuestionBrowser";
 
+export const metadata: Metadata = {
+  title: "Thư viện câu hỏi phỏng vấn IT — Phỏng vấn IT",
+  description:
+    "Khám phá bộ câu hỏi phỏng vấn IT theo chủ đề, cấp độ và từ khóa để ôn tập trước khi bước vào buổi phỏng vấn.",
+};
+
 interface PageProps {
   params: Promise<{ topicSlug: string }>;
   searchParams: Promise<{
     page?: string;
-    limit?: string;
     level?: string;
     search?: string;
   }>;
@@ -18,7 +24,7 @@ export default async function LearningQuestionsPage({
   searchParams,
 }: PageProps) {
   const { topicSlug } = await params;
-  const { page: pageStr, limit: limitStr, level, search } = await searchParams;
+  const { page: pageStr, level, search } = await searchParams;
 
   const page = Math.max(1, parseInt(pageStr ?? "1") || 1);
   const limit = 30;

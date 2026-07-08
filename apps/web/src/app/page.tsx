@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import Hero from "@/components/landing/Hero";
@@ -6,6 +7,12 @@ import TopicsPreview from "@/components/landing/TopicsPreview";
 import FeaturesSection from "@/components/landing/FeaturesSection";
 import CTASection from "@/components/landing/CTASection";
 import { AnimateOnScroll } from "@/components/ui/AnimateOnScroll";
+
+export const metadata: Metadata = {
+  title: "Phỏng vấn IT — Luyện tập phỏng vấn IT với AI",
+  description:
+    "Luyện tập câu hỏi phỏng vấn IT theo chủ đề, ghi âm câu trả lời và nhận phản hồi AI để cải thiện kỹ năng phỏng vấn.",
+};
 
 export default function HomePage() {
   return (
