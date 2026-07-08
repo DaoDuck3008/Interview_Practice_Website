@@ -19,7 +19,7 @@ import PracticeHistoryList from "./PracticeHistoryList";
 import { currentMonth } from "./MonthSelect";
 
 const cardClass =
-  "rounded-2xl p-6 md:p-8 backdrop-blur-xl border border-white/10";
+  "rounded-2xl w-full p-6 md:p-8 backdrop-blur-xl border border-white/10";
 const cardBg = { background: "rgba(255,255,255,0.05)" };
 
 export default function OverviewView() {

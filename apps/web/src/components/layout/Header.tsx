@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import {
   Menu,
@@ -19,6 +18,7 @@ import { useFavoritesStore } from "@/stores/favorites.store";
 import { logoutApi } from "@/lib/api/auth";
 import { useRouter } from "next/navigation";
 import FavoritesDrawer from "./FavoritesDrawer";
+import Avatar from "@/components/ui/Avatar";
 
 // Mốc số câu đã luyện hôm nay -> màu + lời động viên (min giảm dần, khớp mốc đầu tiên đạt được).
 const COUNT_TIERS: { min: number; color: string; message: string }[] = [
@@ -64,50 +64,16 @@ const NAV_LINKS = [
   // { href: "#cach-hoat-dong", label: "Cách Hoạt Động" },
 ];
 
-// Hiển thị avatar nếu có URL; nếu thiếu hoặc ảnh load lỗi thì fallback về chữ cái đầu
-function Avatar({
-  name,
-  avatarUrl,
-  sizeClass,
-  textClass,
-}: {
-  name: string;
-  avatarUrl?: string | null;
-  sizeClass: string;
-  textClass: string;
-}) {
-  const [errored, setErrored] = useState(false);
-
-  if (avatarUrl && !errored) {
-    return (
-      <img
-        src={avatarUrl}
-        alt={name}
-        referrerPolicy="no-referrer"
-        onError={() => setErrored(true)}
-        className={`${sizeClass} rounded-full object-cover flex-shrink-0`}
-      />
-    );
-  }
-
-  return (
-    <div
-      className={`${sizeClass} rounded-full flex items-center justify-center ${textClass} font-bold text-white flex-shrink-0`}
-      style={{ background: "#7c3aed" }}
-    >
-      {name.charAt(0).toUpperCase()}
-    </div>
-  );
-}
-
 function UserDropdown({
   name,
   role,
   avatarUrl,
+  seed,
 }: {
   name: string;
   role: string;
   avatarUrl?: string | null;
+  seed: string;
 }) {
   const [open, setOpen] = useState(false);
   const clearAuth = useAuthStore((s) => s.clearAuth);
@@ -144,6 +110,7 @@ function UserDropdown({
         <Avatar
           name={name}
           avatarUrl={avatarUrl}
+          seed={seed}
           sizeClass="w-7 h-7"
           textClass="text-xs"
         />
@@ -178,12 +145,12 @@ function UserDropdown({
               </Link>
             )}
             <Link
-              href="/billing"
+              href="/overview"
               onClick={() => setOpen(false)}
               className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#9898aa] hover:text-[#f4f4f6] hover:bg-[#13131c] transition-colors duration-150 cursor-pointer border-b border-[#1c1c28]"
             >
               <CreditCard size={14} />
-              Gói của tôi
+              Trang cá nhân
             </Link>
             <button
               onClick={handleLogout}
@@ -294,6 +261,7 @@ export default function Header() {
                   name={user.name}
                   role={user.role}
                   avatarUrl={user.avatarUrl}
+                  seed={user.email}
                 />
               </>
             ) : (
@@ -349,6 +317,7 @@ export default function Header() {
                       <Avatar
                         name={user.name}
                         avatarUrl={user.avatarUrl}
+                        seed={user.email}
                         sizeClass="w-8 h-8"
                         textClass="text-sm"
                       />
