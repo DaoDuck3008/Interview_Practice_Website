@@ -16,11 +16,12 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { Role } from '@prisma/client';
+import { AuditAction, Role } from '@prisma/client';
 import {
   THROTTLE_ADMIN_MUTATION,
   THROTTLE_ADMIN_SENSITIVE,
 } from '../../common/throttling/throttle-profiles';
+import { Audit } from '../audit/audit.decorator';
 
 @Controller('subscriptions')
 export class SubscriptionsController {
@@ -57,6 +58,20 @@ export class SubscriptionsController {
   @Roles(Role.ADMIN)
   @Patch(':id/cancel')
   @Throttle(THROTTLE_ADMIN_MUTATION)
+  @Audit({
+    action: AuditAction.SUBSCRIPTION_CANCEL,
+    entityType: 'Subscription',
+    entityId: ({ request }) => String(request.params.id),
+    targetUserId: ({ response }) =>
+      typeof response === 'object' &&
+      response !== null &&
+      'user' in response &&
+      typeof response.user === 'object' &&
+      response.user !== null &&
+      'id' in response.user
+        ? String(response.user.id)
+        : null,
+  })
   cancel(@Param('id') id: string) {
     return this.subscriptionsService.cancel(id);
   }
@@ -65,6 +80,20 @@ export class SubscriptionsController {
   @Roles(Role.ADMIN)
   @Patch(':id/activate')
   @Throttle(THROTTLE_ADMIN_MUTATION)
+  @Audit({
+    action: AuditAction.SUBSCRIPTION_ACTIVATE,
+    entityType: 'Subscription',
+    entityId: ({ request }) => String(request.params.id),
+    targetUserId: ({ response }) =>
+      typeof response === 'object' &&
+      response !== null &&
+      'user' in response &&
+      typeof response.user === 'object' &&
+      response.user !== null &&
+      'id' in response.user
+        ? String(response.user.id)
+        : null,
+  })
   activate(@Param('id') id: string) {
     return this.subscriptionsService.activate(id);
   }
@@ -73,6 +102,15 @@ export class SubscriptionsController {
   @Roles(Role.ADMIN)
   @Post('grant')
   @Throttle(THROTTLE_ADMIN_SENSITIVE)
+  @Audit({
+    action: AuditAction.SUBSCRIPTION_GRANT,
+    entityType: 'Subscription',
+    entityId: ({ response }) =>
+      typeof response === 'object' && response !== null && 'id' in response
+        ? String(response.id)
+        : null,
+    targetUserId: ({ request }) => request.body?.userId,
+  })
   grant(
     @CurrentUser() user: { id: string; email: string; role: Role },
     @Body() dto: GrantSubscriptionDto,

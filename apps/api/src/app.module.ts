@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -21,11 +21,13 @@ import { SubscriptionsModule } from './modules/subscriptions/subscriptions.modul
 import { QuotaModule } from './modules/quota/quota.module';
 import { SupportModule } from './modules/support/support.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
+import { AuditModule } from './modules/audit/audit.module';
 import { WebsocketModule } from './websocket/websocket.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { AppThrottlerGuard } from './common/throttling/app-throttler.guard';
 import { RedisThrottlerStorage } from './common/throttling/redis-throttler.storage';
 import { ThrottlingModule } from './common/throttling/throttling.module';
+import { AuditInterceptor } from './modules/audit/audit.interceptor';
 
 @Module({
   imports: [
@@ -70,6 +72,7 @@ import { ThrottlingModule } from './common/throttling/throttling.module';
     SupportModule,
     WebsocketModule,
     FavoritesModule,
+    AuditModule,
   ],
   providers: [
     {
@@ -79,6 +82,10 @@ import { ThrottlingModule } from './common/throttling/throttling.module';
     {
       provide: APP_GUARD,
       useClass: AppThrottlerGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditInterceptor,
     },
   ],
 })

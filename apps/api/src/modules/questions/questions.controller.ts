@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import { AuditAction } from '@prisma/client';
 import { QuestionsService } from './questions.service';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
@@ -22,6 +23,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { THROTTLE_ADMIN_MUTATION } from '../../common/throttling/throttle-profiles';
+import { Audit } from '../audit/audit.decorator';
 
 @Controller('questions')
 export class QuestionsController {
@@ -84,6 +86,14 @@ export class QuestionsController {
   @Roles(Role.ADMIN)
   @Post()
   @Throttle(THROTTLE_ADMIN_MUTATION)
+  @Audit({
+    action: AuditAction.QUESTION_CREATE,
+    entityType: 'Question',
+    entityId: ({ response }) =>
+      typeof response === 'object' && response !== null && 'id' in response
+        ? String(response.id)
+        : null,
+  })
   create(@Body() dto: CreateQuestionDto) {
     return this.questionsService.create(dto);
   }
@@ -92,6 +102,11 @@ export class QuestionsController {
   @Roles(Role.ADMIN)
   @Patch(':id')
   @Throttle(THROTTLE_ADMIN_MUTATION)
+  @Audit({
+    action: AuditAction.QUESTION_UPDATE,
+    entityType: 'Question',
+    entityId: ({ request }) => String(request.params.id),
+  })
   update(@Param('id') id: string, @Body() dto: UpdateQuestionDto) {
     return this.questionsService.update(id, dto);
   }
@@ -100,6 +115,11 @@ export class QuestionsController {
   @Roles(Role.ADMIN)
   @Delete(':id')
   @Throttle(THROTTLE_ADMIN_MUTATION)
+  @Audit({
+    action: AuditAction.QUESTION_SOFT_DELETE,
+    entityType: 'Question',
+    entityId: ({ request }) => String(request.params.id),
+  })
   remove(@Param('id') id: string) {
     return this.questionsService.softDelete(id);
   }

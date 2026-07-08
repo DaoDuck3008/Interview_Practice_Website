@@ -33,6 +33,54 @@ enum OrderStatus {
   FAILED //  tiền về nhưng không khớp (sai số tiền…) — xử lý tay
 }
 
+enum AuditActorType {
+  USER
+  ADMIN
+  SYSTEM
+  WEBHOOK
+}
+
+enum AuditAction {
+  USER_REGISTER
+  USER_VERIFY_EMAIL
+  USER_CHANGE_PASSWORD
+  USER_RESET_PASSWORD
+  USER_LOCK
+  USER_UNLOCK
+  USER_MANUAL_VERIFY
+
+  PLAN_CREATE
+  PLAN_UPDATE
+  PLAN_DELETE
+
+  TOPIC_CREATE
+  TOPIC_UPDATE
+  TOPIC_UPLOAD_ICON
+  TOPIC_DELETE
+
+  QUESTION_CREATE
+  QUESTION_UPDATE
+  QUESTION_SOFT_DELETE
+
+  CHECKOUT_CREATE
+  PAYMENT_WEBHOOK_PAID
+  PAYMENT_WEBHOOK_FAILED
+  PAYMENT_WEBHOOK_IGNORED
+  PAYMENT_ADMIN_VIEW_DETAIL
+  PAYMENT_EXPORT
+
+  SUBSCRIPTION_CANCEL
+  SUBSCRIPTION_ACTIVATE
+  SUBSCRIPTION_GRANT
+  SUBSCRIPTION_EXPIRE_CRON
+
+  SESSION_CREATE
+  SCORE_FLAG
+  SCORE_REVIEW
+  SCORE_MANUAL_RESCORE
+  SESSION_ADMIN_VIEW_DETAIL
+}
+
 // ─── Models ──────────────────────────────────────────
 
 model User {
@@ -287,4 +335,38 @@ model Favorite {
 
   @@unique([userId, questionId])
   @@index([userId, createdAt]) // recent list + phân trang, mới nhất trước
+}
+
+model AuditLog {
+  id String @id @default(uuid())
+
+  actorType  AuditActorType
+  actorId    String?
+  actorEmail String?
+
+  action AuditAction
+
+  entityType   String
+  entityId     String?
+  targetUserId String?
+
+  method    String?
+  path      String?
+  ip        String?
+  userAgent String?
+
+  before   Json?
+  after    Json?
+  metadata Json?
+
+  success   Boolean @default(true)
+  errorCode String?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@index([entityType, entityId])
+  @@index([targetUserId, createdAt])
 }

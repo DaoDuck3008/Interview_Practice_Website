@@ -1,13 +1,14 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { Prisma } from '@prisma/client';
+import { AuditAction, AuditActorType, Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../cache/cache.service';
 import { MailService } from '../mail/mail.service';
 import { QuerySubscriptionDto } from './dto/query-subscription.dto';
 import { GrantSubscriptionDto } from './dto/grant-subscription.dto';
+import { AuditService } from '../audit/audit.service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const STATS_TTL = 60; // 1 phút — thẻ thống kê admin, chấp nhận trễ vài chục giây
@@ -24,6 +25,7 @@ export class SubscriptionsService {
     private config: ConfigService,
     private mail: MailService,
     private cache: CacheService,
+    private audit: AuditService,
   ) {}
 
   /**
@@ -105,6 +107,12 @@ export class SubscriptionsService {
     });
     if (count > 0) {
       this.logger.log(`Đã hạ cấp ${count} subscription hết hạn.`);
+      await this.audit.log({
+        actorType: AuditActorType.SYSTEM,
+        action: AuditAction.SUBSCRIPTION_EXPIRE_CRON,
+        entityType: 'Subscription',
+        metadata: { count },
+      });
     }
   }
 

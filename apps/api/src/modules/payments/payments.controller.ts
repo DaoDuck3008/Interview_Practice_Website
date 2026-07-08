@@ -21,8 +21,9 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { Role } from '@prisma/client';
+import { AuditAction, Role } from '@prisma/client';
 import { THROTTLE_CHECKOUT } from '../../common/throttling/throttle-profiles';
+import { Audit } from '../audit/audit.decorator';
 
 @Controller('payments')
 export class PaymentsController {
@@ -31,6 +32,15 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard)
   @Post('checkout')
   @Throttle(THROTTLE_CHECKOUT)
+  @Audit({
+    action: AuditAction.CHECKOUT_CREATE,
+    entityType: 'Order',
+    entityId: ({ response }) =>
+      typeof response === 'object' && response !== null && 'id' in response
+        ? String(response.id)
+        : null,
+    targetUserId: ({ request }) => request.user?.id,
+  })
   createCheckout(
     @CurrentUser() user: { id: string; email: string; role: Role },
     @Body() dto: CreateCheckoutDto,
@@ -79,6 +89,11 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Get('admin/orders/export')
+  @Audit({
+    action: AuditAction.PAYMENT_EXPORT,
+    entityType: 'Order',
+    metadata: ({ request }) => ({ query: request.query }),
+  })
   getOrdersForExport(@Query() query: QueryOrderDto) {
     return this.paymentsService.getOrdersForExport(query);
   }
@@ -100,6 +115,11 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Get('admin/orders/:id')
+  @Audit({
+    action: AuditAction.PAYMENT_ADMIN_VIEW_DETAIL,
+    entityType: 'Order',
+    entityId: ({ request }) => String(request.params.id),
+  })
   getOrderAdmin(@Param('id') id: string) {
     return this.paymentsService.getOrderAdmin(id);
   }

@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { Prisma, Plan, Order } from '@prisma/client';
+import { AuditAction, AuditActorType, Prisma, Plan, Order } from '@prisma/client';
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { QueryOrderDto, OrderDateField } from './dto/query-order.dto';
@@ -19,6 +19,7 @@ import {
   vnDayKey,
   vnLastNDays,
 } from '../../common/utils/vn-time.util';
+import { AuditService } from '../audit/audit.service';
 
 // Đơn hết hiệu lực (QR) sau 10 phút — chỉ để UX tạo lại; tiền về trễ vẫn được honor ở webhook.
 const ORDER_TTL_MS = 10 * 60 * 1000;
@@ -36,6 +37,7 @@ export class PaymentsService {
     private config: ConfigService,
     private sepay: SepayClient,
     private mail: MailService,
+    private audit: AuditService,
   ) {}
 
   /** Tạo (hoặc tái dùng) đơn PENDING cho user + plan, trả về thông tin thanh toán + QR động. */
@@ -107,17 +109,41 @@ export class PaymentsService {
       this.logger.warn(
         `Sepay webhook không khớp đơn nào. content="${payload?.content ?? ''}"`,
       );
+      await this.audit.log({
+        actorType: AuditActorType.WEBHOOK,
+        action: AuditAction.PAYMENT_WEBHOOK_IGNORED,
+        entityType: 'Order',
+        metadata: {
+          reason: 'no_matching_order',
+          amount,
+          txnId,
+          content: payload?.content ?? payload?.description ?? null,
+        },
+      });
       return { success: true, ignored: 'no_matching_order' };
     }
 
     // Đã xử lý rồi → idempotent.
     if (order.status === 'PAID') {
+      await this.audit.log({
+        actorType: AuditActorType.WEBHOOK,
+        action: AuditAction.PAYMENT_WEBHOOK_IGNORED,
+        entityType: 'Order',
+        entityId: order.id,
+        targetUserId: order.userId,
+        metadata: {
+          reason: 'already_paid',
+          amount,
+          txnId,
+          transferCode: order.transferCode,
+        },
+      });
       return { success: true, ignored: 'already_paid' };
     }
 
     // Số tiền không đủ → ghi nhận FAILED, không kích hoạt.
     if (amount < order.amountVnd) {
-      await this.prisma.order.update({
+      const failed = await this.prisma.order.update({
         where: { id: order.id },
         data: {
           status: 'FAILED',
@@ -128,6 +154,25 @@ export class PaymentsService {
       this.logger.warn(
         `Đơn ${order.id} thiếu tiền: nhận ${amount} < cần ${order.amountVnd}`,
       );
+      await this.audit.log({
+        actorType: AuditActorType.WEBHOOK,
+        action: AuditAction.PAYMENT_WEBHOOK_FAILED,
+        entityType: 'Order',
+        entityId: order.id,
+        targetUserId: order.userId,
+        after: {
+          id: failed.id,
+          status: failed.status,
+          providerTxnId: failed.providerTxnId,
+        },
+        metadata: {
+          reason: 'underpaid',
+          amount,
+          expectedAmount: order.amountVnd,
+          txnId,
+          transferCode: order.transferCode,
+        },
+      });
       return { success: true, ignored: 'underpaid' };
     }
 
@@ -137,6 +182,25 @@ export class PaymentsService {
       payload,
     );
     this.logger.log(`Đơn ${order.id} đã thanh toán & kích hoạt subscription.`);
+    await this.audit.log({
+      actorType: AuditActorType.WEBHOOK,
+      action: AuditAction.PAYMENT_WEBHOOK_PAID,
+      entityType: 'Order',
+      entityId: order.id,
+      targetUserId: order.userId,
+      after: {
+        id: order.id,
+        status: 'PAID',
+        paidAt,
+        periodEnd,
+      },
+      metadata: {
+        amount,
+        txnId,
+        transferCode: order.transferCode,
+        planId: order.planId,
+      },
+    });
     // Gửi biên nhận best-effort — không để lỗi email làm hỏng phản hồi webhook.
     void this.sendReceiptEmail(order, paidAt, periodEnd);
     return { success: true };

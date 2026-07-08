@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
+import { AuditAction } from '@prisma/client';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -21,6 +22,7 @@ import {
   THROTTLE_AUTH_MODERATE,
   THROTTLE_REFRESH,
 } from '../../common/throttling/throttle-profiles';
+import { Audit } from '../audit/audit.decorator';
 
 const REFRESH_COOKIE = 'refresh_token';
 
@@ -33,12 +35,22 @@ export class AuthController {
 
   @Post('register')
   @Throttle(THROTTLE_AUTH_EMAIL)
+  @Audit({
+    action: AuditAction.USER_REGISTER,
+    entityType: 'User',
+    metadata: ({ request }) => ({ email: request.body?.email }),
+  })
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
   @Post('verify-email')
   @Throttle(THROTTLE_AUTH_CODE)
+  @Audit({
+    action: AuditAction.USER_VERIFY_EMAIL,
+    entityType: 'User',
+    metadata: ({ request }) => ({ email: request.body?.email }),
+  })
   async verifyEmail(
     @Body() dto: VerifyEmailDto,
     @Res({ passthrough: true }) res: Response,
@@ -63,6 +75,11 @@ export class AuthController {
 
   @Post('reset-password')
   @Throttle(THROTTLE_AUTH_CODE)
+  @Audit({
+    action: AuditAction.USER_RESET_PASSWORD,
+    entityType: 'User',
+    metadata: ({ request }) => ({ email: request.body?.email }),
+  })
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.email, dto.code, dto.password);
   }
@@ -76,6 +93,12 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('change-password')
+  @Audit({
+    action: AuditAction.USER_CHANGE_PASSWORD,
+    entityType: 'User',
+    entityId: ({ request }) => request.user?.id,
+    targetUserId: ({ request }) => request.user?.id,
+  })
   changePassword(
     @CurrentUser() user: { id: string },
     @Body() dto: ChangePasswordDto,

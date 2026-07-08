@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Role } from '@prisma/client';
+import { AuditAction, Role } from '@prisma/client';
 import { SessionsService } from './sessions.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { QueryHistoryDto } from './dto/query-history.dto';
@@ -37,6 +37,7 @@ import {
   THROTTLE_AI_ACTION,
   THROTTLE_HEAVY_UPLOAD,
 } from '../../common/throttling/throttle-profiles';
+import { Audit } from '../audit/audit.decorator';
 
 interface AuthUser {
   id: string;
@@ -82,6 +83,15 @@ export class SessionsController {
 
   @Post()
   @Throttle(THROTTLE_HEAVY_UPLOAD)
+  @Audit({
+    action: AuditAction.SESSION_CREATE,
+    entityType: 'Session',
+    entityId: ({ response }) =>
+      typeof response === 'object' && response !== null && 'id' in response
+        ? String(response.id)
+        : null,
+    targetUserId: ({ request }) => request.user?.id,
+  })
   @UseGuards(QuotaGuard)
   @UseInterceptors(
     ConcurrencyInterceptor,
@@ -114,6 +124,12 @@ export class SessionsController {
   /** User báo điểm chấm sai/khiếu nại cho session đã chấm. */
   @Post(':id/score/flag')
   @Throttle(THROTTLE_AI_ACTION)
+  @Audit({
+    action: AuditAction.SCORE_FLAG,
+    entityType: 'Score',
+    entityId: ({ request }) => String(request.params.id),
+    targetUserId: ({ request }) => request.user?.id,
+  })
   flagScore(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
@@ -153,6 +169,15 @@ export class SessionsController {
   @Get('admin/:id')
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN)
+  @Audit({
+    action: AuditAction.SESSION_ADMIN_VIEW_DETAIL,
+    entityType: 'Session',
+    entityId: ({ request }) => String(request.params.id),
+    targetUserId: ({ response }) =>
+      typeof response === 'object' && response !== null && 'userId' in response
+        ? String(response.userId)
+        : null,
+  })
   getAdminDetail(@Param('id') id: string) {
     return this.sessions.getAdminDetail(id);
   }
@@ -161,6 +186,11 @@ export class SessionsController {
   @Throttle(THROTTLE_ADMIN_MUTATION)
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN)
+  @Audit({
+    action: AuditAction.SCORE_REVIEW,
+    entityType: 'Score',
+    entityId: ({ request }) => String(request.params.id),
+  })
   reviewFlag(
     @CurrentUser() admin: AuthUser,
     @Param('id') id: string,
@@ -173,6 +203,11 @@ export class SessionsController {
   @Throttle(THROTTLE_ADMIN_SENSITIVE)
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN)
+  @Audit({
+    action: AuditAction.SCORE_MANUAL_RESCORE,
+    entityType: 'Score',
+    entityId: ({ request }) => String(request.params.id),
+  })
   manualRescore(
     @CurrentUser() admin: AuthUser,
     @Param('id') id: string,

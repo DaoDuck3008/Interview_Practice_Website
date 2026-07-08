@@ -13,6 +13,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import { AuditAction } from '@prisma/client';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TopicsService } from './topics.service';
 import { CreateTopicDto } from './dto/create-topic.dto';
@@ -27,6 +28,7 @@ import {
   THROTTLE_ADMIN_MUTATION,
   THROTTLE_HEAVY_UPLOAD,
 } from '../../common/throttling/throttle-profiles';
+import { Audit } from '../audit/audit.decorator';
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
 const MAX_SIZE = 2 * 1024 * 1024; // 2 MB
@@ -51,6 +53,14 @@ export class TopicsController {
   @Roles(Role.ADMIN)
   @Post()
   @Throttle(THROTTLE_ADMIN_MUTATION)
+  @Audit({
+    action: AuditAction.TOPIC_CREATE,
+    entityType: 'Topic',
+    entityId: ({ response }) =>
+      typeof response === 'object' && response !== null && 'id' in response
+        ? String(response.id)
+        : null,
+  })
   create(@Body() dto: CreateTopicDto) {
     return this.topicsService.create(dto);
   }
@@ -59,6 +69,11 @@ export class TopicsController {
   @Roles(Role.ADMIN)
   @Patch(':id')
   @Throttle(THROTTLE_ADMIN_MUTATION)
+  @Audit({
+    action: AuditAction.TOPIC_UPDATE,
+    entityType: 'Topic',
+    entityId: ({ request }) => String(request.params.id),
+  })
   update(@Param('id') id: string, @Body() dto: UpdateTopicDto) {
     return this.topicsService.update(id, dto);
   }
@@ -67,6 +82,11 @@ export class TopicsController {
   @Roles(Role.ADMIN)
   @Patch(':id/icon')
   @Throttle(THROTTLE_HEAVY_UPLOAD)
+  @Audit({
+    action: AuditAction.TOPIC_UPLOAD_ICON,
+    entityType: 'Topic',
+    entityId: ({ request }) => String(request.params.id),
+  })
   @UseInterceptors(
     FileInterceptor(
       'file',
@@ -90,6 +110,11 @@ export class TopicsController {
   @Roles(Role.ADMIN)
   @Delete(':id')
   @Throttle(THROTTLE_ADMIN_MUTATION)
+  @Audit({
+    action: AuditAction.TOPIC_DELETE,
+    entityType: 'Topic',
+    entityId: ({ request }) => String(request.params.id),
+  })
   remove(@Param('id') id: string) {
     return this.topicsService.remove(id);
   }
