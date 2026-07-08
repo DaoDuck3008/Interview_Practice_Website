@@ -2,7 +2,7 @@
 name: it-interview-flashcard
 description: >
   Tạo file markdown dạng flashcard để trả lời các câu hỏi phỏng vấn IT.
-  Dùng skill này bất cứ khi nào user hỏi một câu hỏi phỏng vấn IT (Node.js, React, Database, System Design, JS, v.v.)
+  Chỉ dùng skill này khi người dùng yêu cầu tạo flashcard cho câu hỏi phỏng vấn IT
   hoặc yêu cầu giải thích một khái niệm kỹ thuật để học/ôn tập.
   Mỗi câu hỏi xuất ra 1 file markdown riêng.
 ---
