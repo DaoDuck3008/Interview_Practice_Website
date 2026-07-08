@@ -9,17 +9,49 @@ import PracticeNavFooter from "@/components/practice/PracticeNavFooter";
 import { formatTopicName } from "@/lib/utils/topics";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
 
-export const metadata: Metadata = {
+const DEFAULT_METADATA: Metadata = {
   title: "Câu hỏi luyện tập phỏng vấn IT — Phỏng vấn IT",
   description:
     "Trả lời câu hỏi phỏng vấn IT, ghi âm phần trình bày và nhận đánh giá AI kèm gợi ý cải thiện.",
 };
 
-export default async function QuestionPage({
-  params,
-}: {
+interface PageProps {
   params: Promise<{ topicSlug: string; questionId: string }>;
-}) {
+}
+
+function truncateSeoText(text: string, maxLength: number) {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxLength) return normalized;
+
+  const sliced = normalized.slice(0, maxLength - 1).trimEnd();
+  const lastSpace = sliced.lastIndexOf(" ");
+  const safeText = lastSpace > 40 ? sliced.slice(0, lastSpace) : sliced;
+
+  return `${safeText}…`;
+}
+
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { topicSlug, questionId } = await params;
+  const question = await getQuestion(questionId);
+
+  if (!question) return DEFAULT_METADATA;
+
+  const topicName = question.topic?.name ?? formatTopicName(topicSlug);
+  const questionTitle = truncateSeoText(question.content, 72);
+  const questionDescription = truncateSeoText(
+    `Luyện tập trả lời câu hỏi "${question.content}" trong chủ đề ${topicName}, ghi âm câu trả lời và nhận đánh giá AI kèm gợi ý cải thiện.`,
+    155,
+  );
+
+  return {
+    title: `${questionTitle} — Phỏng vấn IT`,
+    description: questionDescription,
+  };
+}
+
+export default async function QuestionPage({ params }: PageProps) {
   const { topicSlug, questionId } = await params;
 
   const question = await getQuestion(questionId);
