@@ -13,6 +13,7 @@ import {
   Wallet,
   Flag,
   MessageCircle,
+  FileClock,
   Home,
   ChevronLeft,
   ChevronRight,
@@ -65,6 +66,12 @@ const NAV: NavItem[] = [
     exact: false,
   },
   { href: "/admin/payments", label: "Giao dịch", icon: Wallet, exact: false },
+  {
+    href: "/admin/audit-logs",
+    label: "Audit log",
+    icon: FileClock,
+    exact: false,
+  },
 ];
 
 export const SIDEBAR_WIDTH = { expanded: "15rem", collapsed: "4.5rem" };

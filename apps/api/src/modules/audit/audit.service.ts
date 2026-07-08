@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogInput } from './audit.types';
+import { QueryAuditLogDto } from './dto/query-audit-log.dto';
 
 const REDACTED = '[REDACTED]';
 const SENSITIVE_KEYS = [
@@ -25,6 +26,54 @@ export class AuditService {
   private readonly logger = new Logger(AuditService.name);
 
   constructor(private prisma: PrismaService) {}
+
+  // Danh sách audit log cho admin: lọc, phân trang, chỉ trả các field nhẹ.
+  async findAllAdmin(query: QueryAuditLogDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 30;
+    const where = this.buildAdminWhere(query);
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.auditLog.findMany({
+        where,
+        select: {
+          id: true,
+          actorType: true,
+          actorId: true,
+          actorEmail: true,
+          action: true,
+          entityType: true,
+          entityId: true,
+          targetUserId: true,
+          method: true,
+          path: true,
+          ip: true,
+          success: true,
+          errorCode: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.auditLog.count({ where }),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 1,
+    };
+  }
+
+  // Chi tiết một audit log cho modal, gồm before/after/metadata.
+  async findOneAdmin(id: string) {
+    const log = await this.prisma.auditLog.findUnique({ where: { id } });
+    if (!log) throw new NotFoundException('Không tìm thấy audit log');
+    return log;
+  }
 
   // Ghi audit log vào DB; lỗi ghi log không được làm hỏng request chính.
   async log(input: AuditLogInput) {
@@ -55,6 +104,37 @@ export class AuditService {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.warn(`Khong ghi duoc audit log: ${message}`);
     }
+  }
+
+  private buildAdminWhere(query: QueryAuditLogDto): Prisma.AuditLogWhereInput {
+    const createdAt =
+      query.from || query.to
+        ? {
+            ...(query.from && { gte: new Date(query.from) }),
+            ...(query.to && {
+              lte: new Date(`${query.to.slice(0, 10)}T23:59:59.999Z`),
+            }),
+          }
+        : undefined;
+
+    return {
+      ...(query.action && { action: query.action }),
+      ...(query.actorType && { actorType: query.actorType }),
+      ...(query.entityType && { entityType: query.entityType }),
+      ...(query.actorId && { actorId: query.actorId }),
+      ...(query.targetUserId && { targetUserId: query.targetUserId }),
+      ...(createdAt && { createdAt }),
+      ...(query.search && {
+        OR: [
+          { actorEmail: { contains: query.search, mode: 'insensitive' } },
+          { actorId: { contains: query.search, mode: 'insensitive' } },
+          { entityId: { contains: query.search, mode: 'insensitive' } },
+          { targetUserId: { contains: query.search, mode: 'insensitive' } },
+          { path: { contains: query.search, mode: 'insensitive' } },
+          { ip: { contains: query.search, mode: 'insensitive' } },
+        ],
+      }),
+    };
   }
 
   // Làm sạch dữ liệu trước khi đưa vào cột JSON của AuditLog.
