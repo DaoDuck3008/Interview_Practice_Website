@@ -1,12 +1,13 @@
 import { Sparkles } from "lucide-react";
 import { AnimateOnScroll } from "@/components/ui/AnimateOnScroll";
 import PricingCards from "@/components/pricing/PricingCards";
+import { createSeoMetadata } from "@/lib/seo";
 
-export const metadata = {
+export const metadata = createSeoMetadata({
   title: "Bảng giá — Phỏng vấn IT",
   description:
     "Chọn gói luyện tập phù hợp: mở khóa chấm điểm AI không giới hạn, phân tích cải thiện và theo dõi tiến bộ.",
-};
+});
 
 export default function PricingPage() {
   return (

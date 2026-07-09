@@ -1,12 +1,12 @@
-import type { Metadata } from "next";
 import { redirect, notFound } from "next/navigation";
 import { getQuestionsByTopic } from "@/lib/api/questions";
+import { createSeoMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = createSeoMetadata({
   title: "Luyện tập theo chủ đề — Phỏng vấn IT",
   description:
     "Chọn câu hỏi đầu tiên trong chủ đề luyện tập và bắt đầu trả lời phỏng vấn IT với phản hồi hỗ trợ từ AI.",
-};
+});
 
 export default async function TopicIndexPage({
   params,

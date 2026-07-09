@@ -1,14 +1,14 @@
-import type { Metadata } from "next";
 import { getTopicsWithCounts } from "@/lib/api/topics";
 import { getQuestionsPublic } from "@/lib/api/questions";
 import type { Level } from "@/lib/api/questions";
 import QuestionBrowser from "@/components/questions/QuestionBrowser";
+import { createSeoMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = createSeoMetadata({
   title: "Thư viện câu hỏi phỏng vấn IT — Phỏng vấn IT",
   description:
     "Khám phá bộ câu hỏi phỏng vấn IT theo chủ đề, cấp độ và từ khóa để ôn tập trước khi bước vào buổi phỏng vấn.",
-};
+});
 
 interface PageProps {
   params: Promise<{ topicSlug: string }>;

@@ -8,12 +8,13 @@ import PracticeContent from "@/components/practice/PracticeContent";
 import PracticeNavFooter from "@/components/practice/PracticeNavFooter";
 import { formatTopicName } from "@/lib/utils/topics";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
+import { createSeoMetadata } from "@/lib/seo";
 
-const DEFAULT_METADATA: Metadata = {
+const DEFAULT_METADATA = createSeoMetadata({
   title: "Câu hỏi luyện tập phỏng vấn IT — Phỏng vấn IT",
   description:
     "Trả lời câu hỏi phỏng vấn IT, ghi âm phần trình bày và nhận đánh giá AI kèm gợi ý cải thiện.",
-};
+});
 
 interface PageProps {
   params: Promise<{ topicSlug: string; questionId: string }>;
@@ -45,10 +46,10 @@ export async function generateMetadata({
     155,
   );
 
-  return {
+  return createSeoMetadata({
     title: `${questionTitle} — Phỏng vấn IT`,
     description: questionDescription,
-  };
+  });
 }
 
 export default async function QuestionPage({ params }: PageProps) {

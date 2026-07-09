@@ -1,10 +1,11 @@
 import CheckoutView from "@/components/pricing/CheckoutView";
+import { createSeoMetadata } from "@/lib/seo";
 
-export const metadata = {
+export const metadata = createSeoMetadata({
   title: "Thanh toán — Phỏng vấn IT",
   description:
     "Hoàn tất thanh toán gói luyện tập Phỏng vấn IT để mở khóa chấm điểm AI và các tính năng nâng cao.",
-};
+});
 
 export default async function CheckoutPage({
   params,
