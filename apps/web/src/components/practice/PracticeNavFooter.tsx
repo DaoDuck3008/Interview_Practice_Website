@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { QuestionOrderItem, Level } from "@/lib/api/questions";
+import { getPracticeQuestionHref } from "@/lib/utils/question-url";
 
 interface Props {
   order: QuestionOrderItem[];
@@ -28,8 +29,12 @@ export default function PracticeNavFooter({
   const next = currentIdx < filtered.length - 1 ? filtered[currentIdx + 1] : null;
 
   const levelParam = level ? `?level=${level}` : "";
-  const prevHref = prev ? `/practice/${topicSlug}/${prev.id}${levelParam}` : null;
-  const nextHref = next ? `/practice/${topicSlug}/${next.id}${levelParam}` : null;
+  const prevHref = prev
+    ? getPracticeQuestionHref(topicSlug, prev, levelParam)
+    : null;
+  const nextHref = next
+    ? getPracticeQuestionHref(topicSlug, next, levelParam)
+    : null;
 
   return (
     <div

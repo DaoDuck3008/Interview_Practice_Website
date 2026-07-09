@@ -12,7 +12,7 @@ import { QueryQuestionDto } from './dto/query-question.dto';
 import { QueryCursorQuestionDto } from './dto/query-cursor-question.dto';
 import { QueryAdminQuestionDto } from './dto/query-admin-question.dto';
 
-const ORDER_TTL = 300; // 5 phút — danh sách id/level cho nút prev/next, đổi khi admin CRUD câu hỏi
+const ORDER_TTL = 300; // 5 phút — danh sách id/level/content cho nút prev/next, đổi khi admin CRUD câu hỏi
 const STATS_TTL = 60; // 1 phút — thẻ thống kê admin, chấp nhận trễ vài chục giây
 
 @Injectable()
@@ -23,7 +23,7 @@ export class QuestionsService {
   ) {}
 
   private orderCacheKey(topicId: string) {
-    return `questions:order:${topicId}`;
+    return `questions:order:v2:${topicId}`;
   }
 
   async findAll(query: QueryQuestionDto) {
@@ -205,7 +205,7 @@ export class QuestionsService {
     return question;
   }
 
-  // Public: danh sách id + level đã sắp xếp của 1 topic (cho nút prev/next + bộ đếm ở trang practice (PracticeNavFooter.tsx))
+  // Public: danh sách id + level + content đã sắp xếp của 1 topic (cho nút prev/next + bộ đếm ở trang practice)
   findOrder(topicId: string | undefined) {
     if (!topicId)
       throw new BadRequestException('TopicID không được truyền vào');
@@ -215,7 +215,7 @@ export class QuestionsService {
       () =>
         this.prisma.question.findMany({
           where: { isActive: true, topicId },
-          select: { id: true, level: true },
+          select: { id: true, level: true, content: true },
           orderBy: [{ isFeatured: 'desc' }, { level: 'asc' }, { id: 'asc' }],
         }),
     );

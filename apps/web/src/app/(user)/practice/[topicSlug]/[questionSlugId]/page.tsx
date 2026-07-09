@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
@@ -9,6 +9,11 @@ import PracticeNavFooter from "@/components/practice/PracticeNavFooter";
 import { formatTopicName } from "@/lib/utils/topics";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
 import { createSeoMetadata } from "@/lib/seo";
+import {
+  getPracticeQuestionHref,
+  isCanonicalQuestionSlugId,
+  parseQuestionSlugId,
+} from "@/lib/utils/question-url";
 
 const DEFAULT_METADATA = createSeoMetadata({
   title: "Câu hỏi luyện tập phỏng vấn IT — Phỏng vấn IT",
@@ -17,7 +22,8 @@ const DEFAULT_METADATA = createSeoMetadata({
 });
 
 interface PageProps {
-  params: Promise<{ topicSlug: string; questionId: string }>;
+  params: Promise<{ topicSlug: string; questionSlugId: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
 function truncateSeoText(text: string, maxLength: number) {
@@ -34,32 +40,54 @@ function truncateSeoText(text: string, maxLength: number) {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  const { topicSlug, questionId } = await params;
+  const { topicSlug, questionSlugId } = await params;
+  const { id: questionId } = parseQuestionSlugId(questionSlugId);
   const question = await getQuestion(questionId);
 
   if (!question) return DEFAULT_METADATA;
 
   const topicName = question.topic?.name ?? formatTopicName(topicSlug);
+  const canonicalTopicSlug = question.topic?.slug ?? topicSlug;
   const questionTitle = truncateSeoText(question.content, 72);
   const questionDescription = truncateSeoText(
     `Luyện tập trả lời câu hỏi "${question.content}" trong chủ đề ${topicName}, ghi âm câu trả lời và nhận đánh giá AI kèm gợi ý cải thiện.`,
     155,
   );
 
-  return createSeoMetadata({
-    title: `${questionTitle} — Phỏng vấn IT`,
-    description: questionDescription,
-  });
+  return {
+    ...createSeoMetadata({
+      title: `${questionTitle} — Phỏng vấn IT`,
+      description: questionDescription,
+    }),
+    alternates: {
+      canonical: getPracticeQuestionHref(canonicalTopicSlug, question),
+    },
+  };
 }
 
-export default async function QuestionPage({ params }: PageProps) {
-  const { topicSlug, questionId } = await params;
+export default async function QuestionPage({ params, searchParams }: PageProps) {
+  const { topicSlug, questionSlugId } = await params;
+  const { id: questionId } = parseQuestionSlugId(questionSlugId);
 
   const question = await getQuestion(questionId);
   if (!question) notFound();
 
+  const canonicalTopicSlug = question.topic?.slug ?? topicSlug;
+  if (
+    topicSlug !== canonicalTopicSlug ||
+    !isCanonicalQuestionSlugId(questionSlugId, question)
+  ) {
+    const resolvedSearchParams = await searchParams;
+    const level = resolvedSearchParams?.level;
+    const levelParam = typeof level === "string" ? `?level=${level}` : "";
+
+    permanentRedirect(
+      getPracticeQuestionHref(canonicalTopicSlug, question, levelParam),
+    );
+  }
+
   const order = await getQuestionOrder(question.topicId);
-  const topicName = formatTopicName(topicSlug);
+  const topicName = question.topic?.name ?? formatTopicName(topicSlug);
   const levelStyle = LEVEL_STYLE[question.level];
 
   return (

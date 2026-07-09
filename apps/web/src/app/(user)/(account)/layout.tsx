@@ -1,6 +1,5 @@
 import Header from "@/components/layout/Header";
 import UserSidebar from "@/components/account/UserSidebar";
-import AuthGuard from "@/guards/authGuard";
 
 /**
  * Layout dùng chung cho khu vực tài khoản (/billing, sau này /overview, /history, /saved).
@@ -32,7 +31,7 @@ export default function AccountLayout({
         <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 md:py-12">
           <div className="flex flex-col gap-6 md:flex-row">
             <UserSidebar />
-            <AuthGuard>{children}</AuthGuard>
+            {children}
           </div>
         </div>
       </div>

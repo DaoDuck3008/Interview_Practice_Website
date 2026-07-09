@@ -162,6 +162,7 @@ export async function deleteQuestion(id: string): Promise<void> {
 
 export interface QuestionOrderItem {
   id: string;
+  content: string;
   level: Level;
 }
 

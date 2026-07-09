@@ -7,6 +7,7 @@ import { getMyHistory, type HistoryItem } from "@/lib/api/sessions";
 import type { Paginated } from "@/lib/api/questions";
 import { formatDay, formatDuration } from "@/lib/utils/format";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
+import { getPracticeQuestionHref } from "@/lib/utils/question-url";
 
 const cardClass =
   "rounded-2xl p-6 md:p-8 backdrop-blur-xl border border-white/10";
@@ -43,7 +44,13 @@ export default function PracticeHistoryList() {
             {data.items.map((item) => (
               <li key={item.id}>
                 <Link
-                  href={`/practice/${item.question.topic.slug}/${item.questionId}`}
+                  href={getPracticeQuestionHref(
+                    item.question.topic.slug,
+                    {
+                      id: item.questionId,
+                      content: item.question.content,
+                    },
+                  )}
                   className="flex flex-wrap items-start gap-x-3 gap-y-2 rounded-lg py-3.5 transition-colors hover:bg-white/5"
                 >
                   <div className="min-w-0 flex-1">

@@ -7,6 +7,7 @@ import { Bookmark, X } from "lucide-react";
 import ModalPortal from "../ui/ModalPortal";
 import { useFavoritesStore } from "@/stores/favorites.store";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
+import { getPracticeQuestionHref } from "@/lib/utils/question-url";
 
 interface FavoritesDrawerProps {
   open: boolean;
@@ -99,7 +100,7 @@ export default function FavoritesDrawer({
                     <li key={q.id} className="flex items-stretch">
                       <Link
                         href={
-                          topicSlug ? `/practice/${topicSlug}/${q.id}` : "#"
+                          topicSlug ? getPracticeQuestionHref(topicSlug, q) : "#"
                         }
                         onClick={onClose}
                         className="flex-1 min-w-0 flex flex-col gap-1.5 px-5 py-3.5 hover:bg-[#13131c] transition-colors duration-150"

@@ -9,6 +9,7 @@ import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { ChevronDown, ArrowUpRight, Star, Bookmark } from "lucide-react";
 import type { Question } from "@/lib/api/questions";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
+import { getPracticeQuestionHref } from "@/lib/utils/question-url";
 import { useAuthStore } from "@/stores/auth.store";
 import { useFavoritesStore } from "@/stores/favorites.store";
 
@@ -257,7 +258,7 @@ export default function QuestionCard({
         {/* Practice link */}
         {topicSlug && (
           <Link
-            href={`/practice/${topicSlug}/${question.id}`}
+            href={getPracticeQuestionHref(topicSlug, question)}
             onClick={(e) => e.stopPropagation()}
             className="flex-shrink-0 text-[#606072] hover:text-[#8b5cf6] transition-colors duration-100"
             title="Luyện tập"

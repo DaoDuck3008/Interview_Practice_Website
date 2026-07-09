@@ -15,6 +15,10 @@ import { getQuestionsCursor } from "@/lib/api/questions";
 import type { Level } from "@/lib/api/questions";
 import type { TopicWithCount } from "@/lib/api/topics";
 import { LEVELS, LEVEL_DOT } from "@/lib/utils/levels";
+import {
+  getPracticeQuestionHref,
+  parseQuestionSlugId,
+} from "@/lib/utils/question-url";
 
 const PAGE_SIZE = 15;
 
@@ -35,7 +39,9 @@ export default function PracticeSidebar({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const params = useParams();
-  const currentQuestionId = (params.questionId as string | undefined) ?? "";
+  const currentQuestionSlugId =
+    (params.questionSlugId as string | undefined) ?? "";
+  const currentQuestionId = parseQuestionSlugId(currentQuestionSlugId).id;
   const activeLevel = searchParams.get("level") as Level | null;
 
   // Drawer trên mobile (desktop luôn hiện cột tĩnh)
@@ -208,7 +214,7 @@ export default function PracticeSidebar({
             <Link
               key={q.id}
               ref={isActive ? activeRef : undefined}
-              href={`/practice/${topicSlug}/${q.id}${levelParam}`}
+              href={getPracticeQuestionHref(topicSlug, q, levelParam)}
               onClick={closeMobile}
               className="flex items-start gap-3 px-3 py-2.5 rounded-xl transition-colors duration-200 group cursor-pointer"
               style={{

@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import { getQuestionsByTopic } from "@/lib/api/questions";
 import { createSeoMetadata } from "@/lib/seo";
+import { getPracticeQuestionHref } from "@/lib/utils/question-url";
 
 export const metadata = createSeoMetadata({
   title: "Luyện tập theo chủ đề — Phỏng vấn IT",
@@ -19,5 +20,5 @@ export default async function TopicIndexPage({
 
   if (!first) notFound();
 
-  redirect(`/practice/${topicSlug}/${first.id}`);
+  redirect(getPracticeQuestionHref(first.topic?.slug ?? topicSlug, first));
 }
