@@ -18,6 +18,7 @@ export interface Question {
   level: Level;
   isActive: boolean;
   isFeatured: boolean;
+  createdAt?: string;
   topic?: { id: string; slug: string; name: string };
 }
 
@@ -57,6 +58,8 @@ export interface PublicQuestionQuery {
   topicId?: string;
   level?: Level;
   search?: string;
+  sortBy?: "default" | "createdAt";
+  order?: SortOrder;
   page?: number;
   limit?: number;
 }
@@ -193,7 +196,7 @@ export async function getQuestionsCursor(
   return res.data.data;
 }
 
-// Public: 1 câu hỏi active theo id (trang luyện tập)
+// Public: 1 câu hỏi active theo id (trang luyện tập/ trang chi tiết câu hỏi)
 export async function getQuestion(id: string): Promise<Question | null> {
   try {
     const res = await api.get<ApiResponse<Question>>(`/questions/detail/${id}`);

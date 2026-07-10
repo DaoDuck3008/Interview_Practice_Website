@@ -27,6 +27,11 @@ export class QuestionsService {
   }
 
   async findAll(query: QueryQuestionDto) {
+    const orderBy: Prisma.QuestionOrderByWithRelationInput[] =
+      query.sortBy === 'createdAt'
+        ? [{ createdAt: query.order ?? 'desc' }, { id: 'asc' }]
+        : [{ isFeatured: 'desc' }, { level: 'asc' }, { id: 'asc' }];
+
     const where: Prisma.QuestionWhereInput = {
       isActive: true,
       ...(query.topicId && { topicId: query.topicId }),
@@ -43,7 +48,7 @@ export class QuestionsService {
         this.prisma.question.findMany({
           where,
           include: { topic: true },
-          orderBy: [{ isFeatured: 'desc' }, { level: 'asc' }, { id: 'asc' }],
+          orderBy,
           skip: (page - 1) * limit,
           take: limit,
         }),
@@ -61,7 +66,7 @@ export class QuestionsService {
     return this.prisma.question.findMany({
       where,
       include: { topic: true },
-      orderBy: [{ isFeatured: 'desc' }, { level: 'asc' }, { id: 'asc' }],
+      orderBy,
     });
   }
 

@@ -133,11 +133,13 @@ model Question {
   level      Level
   isActive   Boolean @default(true)
   isFeatured Boolean @default(false)
+  createdAt  DateTime @default(now())
 
   sessions  Session[]
   favorites Favorite[]
 
   @@index([isActive, topicId]) // browse/random/admin-list: luôn lọc isActive, thường kèm topicId
+  @@index([isActive, createdAt]) // public latest questions
 }
 
 model Session {

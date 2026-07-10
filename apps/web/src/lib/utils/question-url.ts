@@ -36,6 +36,15 @@ export function getPracticeQuestionHref(
   return `/practice/${topicSlug}/${getQuestionSlugId(question)}${query}`;
 }
 
+// Dùng cho trang questionDetail trong khu vực learning.
+export function getLearningQuestionHref(
+  topicSlug: string,
+  question: QuestionUrlItem,
+  query = "",
+) {
+  return `/learning/${topicSlug}/questions/${getQuestionSlugId(question)}${query}`;
+}
+
 // Utl tách slug và id từ questionSlugId
 export function parseQuestionSlugId(questionSlugId: string) {
   const separatorIndex = questionSlugId.lastIndexOf(QUESTION_SLUG_ID_SEPARATOR);

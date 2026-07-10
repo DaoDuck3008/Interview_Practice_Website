@@ -6,10 +6,19 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { ChevronDown, ArrowUpRight, Star, Bookmark } from "lucide-react";
+import {
+  BookOpen,
+  ChevronDown,
+  ArrowUpRight,
+  Star,
+  Bookmark,
+} from "lucide-react";
 import type { Question } from "@/lib/api/questions";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
-import { getPracticeQuestionHref } from "@/lib/utils/question-url";
+import {
+  getLearningQuestionHref,
+  getPracticeQuestionHref,
+} from "@/lib/utils/question-url";
 import { useAuthStore } from "@/stores/auth.store";
 import { useFavoritesStore } from "@/stores/favorites.store";
 
@@ -255,15 +264,15 @@ export default function QuestionCard({
           </span>
         )}
 
-        {/* Practice link */}
+        {/* Detail link */}
         {topicSlug && (
           <Link
-            href={getPracticeQuestionHref(topicSlug, question)}
+            href={getLearningQuestionHref(topicSlug, question)}
             onClick={(e) => e.stopPropagation()}
             className="flex-shrink-0 text-[#606072] hover:text-[#8b5cf6] transition-colors duration-100"
-            title="Luyện tập"
+            title="Xem chi tiết"
           >
-            <ArrowUpRight size={14} />
+            <BookOpen size={14} />
           </Link>
         )}
 
@@ -311,6 +320,21 @@ export default function QuestionCard({
                   {kw}
                 </span>
               ))}
+            </div>
+          )}
+
+          {topicSlug && (
+            <div
+              className="mt-4 flex justify-stretch border-t pt-4 sm:justify-end"
+              style={{ borderColor: "rgba(255,255,255,0.06)" }}
+            >
+              <Link
+                href={getPracticeQuestionHref(topicSlug, question)}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#7c3aed]/30 bg-[#7c3aed]/10 px-3.5 py-2 text-sm font-semibold text-[#f4f4f6] transition-colors duration-100 hover:border-[#8b5cf6]/50 hover:bg-[#8b5cf6]/15 sm:w-auto"
+              >
+                Luyện tập
+                <ArrowUpRight size={14} />
+              </Link>
             </div>
           )}
         </div>
