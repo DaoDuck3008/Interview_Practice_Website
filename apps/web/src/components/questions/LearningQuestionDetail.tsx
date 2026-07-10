@@ -162,7 +162,7 @@ export default function LearningQuestionDetail({
             </section>
           )}
 
-          <section>
+          <section id="answer">
             <h2 className="mb-4 text-lg font-bold text-text-primary">
               Đáp án chi tiết
             </h2>

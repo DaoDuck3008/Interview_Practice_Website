@@ -2,7 +2,12 @@ import { getTopicsWithCounts } from "@/lib/api/topics";
 import { getQuestionsPublic } from "@/lib/api/questions";
 import type { Level } from "@/lib/api/questions";
 import QuestionBrowser from "@/components/questions/QuestionBrowser";
-import { createSeoMetadata } from "@/lib/seo";
+import {
+  createJsonLdMarkup,
+  createSeoMetadata,
+  getAbsoluteUrl,
+} from "@/lib/seo";
+import { getLearningQuestionHref } from "@/lib/utils/question-url";
 
 export const metadata = createSeoMetadata({
   title: "Thư viện câu hỏi phỏng vấn IT — Phỏng vấn IT",
@@ -48,15 +53,48 @@ export default async function LearningQuestionsPage({
       })
     : { items: [], total: 0, page, limit, totalPages: 0 };
 
+  // Tạo dữ liệu JSON-LD cho SEO
+  const pageUrl = getAbsoluteUrl(`/learning/${topicSlug}/questions`);
+  const jsonLd = currentTopic
+    ? {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        name: `${currentTopic.name} interview questions`,
+        description:
+          "Danh sách câu hỏi phỏng vấn IT theo chủ đề để học và luyện tập.",
+        url: pageUrl,
+        mainEntity: {
+          "@type": "ItemList",
+          numberOfItems: result.total,
+          itemListElement: result.items.map((question, index) => ({
+            "@type": "ListItem",
+            position: (page - 1) * limit + index + 1,
+            url: getAbsoluteUrl(
+              getLearningQuestionHref(currentTopic.slug, question),
+            ),
+            name: question.content,
+          })),
+        },
+      }
+    : null;
+
   return (
-    <QuestionBrowser
-      topics={topics}
-      currentTopicSlug={topicSlug}
-      initialResult={result}
-      initialPage={page}
-      initialLimit={limit}
-      initialLevel={levelFilter}
-      initialSearch={searchQuery}
-    />
+    <>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={createJsonLdMarkup(jsonLd)}
+        />
+      )}
+      <QuestionBrowser
+        topics={topics}
+        currentTopicSlug={topicSlug}
+        initialResult={result}
+        initialPage={page}
+        initialLimit={limit}
+        initialLevel={levelFilter}
+        initialSearch={searchQuery}
+      />
+    </>
   );
 }

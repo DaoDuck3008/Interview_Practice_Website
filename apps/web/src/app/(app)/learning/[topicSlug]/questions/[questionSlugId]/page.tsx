@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import LearningQuestionDetail from "@/components/questions/LearningQuestionDetail";
 import { getQuestion, getQuestionsPublic } from "@/lib/api/questions";
-import { createSeoMetadata } from "@/lib/seo";
+import {
+  createJsonLdMarkup,
+  createSeoMetadata,
+  getAbsoluteUrl,
+} from "@/lib/seo";
 import {
   getLearningQuestionHref,
   isCanonicalQuestionSlugId,
@@ -84,12 +88,81 @@ export default async function LearningQuestionDetailPage({
     }),
   ]);
 
+  // Tạo dữ liệu JSON-LD cho SEO
+  const pagePath = getLearningQuestionHref(canonicalTopicSlug, question);
+  const pageUrl = getAbsoluteUrl(pagePath);
+  const answerText = question.detailAnswerKey || question.answerKeySummary;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Phỏng vấn IT",
+            item: getAbsoluteUrl("/"),
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: question.topic?.name ?? canonicalTopicSlug,
+            item: getAbsoluteUrl(`/learning/${canonicalTopicSlug}/questions`),
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: question.content,
+            item: pageUrl,
+          },
+        ],
+      },
+      {
+        "@type": "QAPage",
+        "@id": `${pageUrl}#qa`,
+        url: pageUrl,
+        inLanguage: "vi-VN",
+        mainEntity: {
+          "@type": "Question",
+          name: question.content,
+          text: question.content,
+          url: pageUrl,
+          ...(question.createdAt ? { datePublished: question.createdAt } : {}),
+          ...(question.answerKeywords.length > 0
+            ? { keywords: question.answerKeywords }
+            : {}),
+          ...(answerText
+            ? {
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: answerText,
+                  url: `${pageUrl}#answer`,
+                  author: {
+                    "@type": "Organization",
+                    name: "Phỏng vấn IT",
+                    url: getAbsoluteUrl("/"),
+                  },
+                },
+              }
+            : {}),
+        },
+      },
+    ],
+  };
+
   return (
-    <LearningQuestionDetail
-      question={question}
-      sameTopicQuestions={sameTopicResult.items}
-      latestQuestions={latestResult.items}
-      topicSlug={canonicalTopicSlug}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={createJsonLdMarkup(jsonLd)}
+      />
+      <LearningQuestionDetail
+        question={question}
+        sameTopicQuestions={sameTopicResult.items}
+        latestQuestions={latestResult.items}
+        topicSlug={canonicalTopicSlug}
+      />
+    </>
   );
 }
