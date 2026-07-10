@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { toast } from "react-toastify";
 import {
   ArrowLeft,
@@ -211,10 +212,11 @@ export default function CheckoutView({ orderId }: { orderId: string }) {
           {/* QR */}
           <div className="flex flex-col items-center">
             <div className="bg-white rounded-xl p-2.5">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={order.qrUrl}
                 alt="Mã QR thanh toán"
+                width={180}
+                height={180}
                 className="w-[180px] h-[180px] object-contain"
               />
             </div>

@@ -25,12 +25,35 @@ function websocketOrigin(httpOrigin: string) {
   return httpOrigin;
 }
 
+// Chuyển một URL public thành remotePattern cho next/image. Các URL không hợp lệ
+// được bỏ qua để cấu hình vẫn chạy tốt ở môi trường local chưa khai báo đủ biến.
+function imagePatternFromUrl(url: string | undefined) {
+  if (!url) return undefined;
+  try {
+    const parsed = new URL(url);
+    return {
+      protocol: parsed.protocol.replace(":", "") as "http" | "https",
+      hostname: parsed.hostname,
+      port: parsed.port,
+      pathname: "/**",
+    };
+  } catch {
+    return undefined;
+  }
+}
+
 const isProduction = process.env.NODE_ENV === "production";
 const apiOrigin = originOf(
   process.env.NEXT_PUBLIC_API_URL,
   "http://localhost:3001/api/v1",
 );
 const wsOrigin = websocketOrigin(apiOrigin);
+const remoteImagePatterns = unique([
+  process.env.NEXT_PUBLIC_R2_PUBLIC_URL,
+  process.env.R2_PUBLIC_URL,
+])
+  .map(imagePatternFromUrl)
+  .filter((pattern): pattern is NonNullable<typeof pattern> => Boolean(pattern));
 
 // Danh sách các nguồn được phép trong Content Security Policy (CSP)
 const scriptSrc = unique([
@@ -83,6 +106,19 @@ const csp = [
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["daoduck.id.vn", "backend.daoduck.id.vn"],
+  images: {
+    remotePatterns: [
+      ...remoteImagePatterns,
+      // Avatar Google OAuth.
+      { protocol: "https", hostname: "**.googleusercontent.com" },
+      // QR thanh toán Sepay.
+      { protocol: "https", hostname: "qr.sepay.vn", pathname: "/img" },
+      // Ảnh Open Graph/Cloudinary nếu sau này render trực tiếp trong UI.
+      { protocol: "https", hostname: "res.cloudinary.com", pathname: "/**" },
+      // Cloudflare R2 public bucket mặc định; custom domain vẫn nên khai báo qua env ở trên.
+      { protocol: "https", hostname: "**.r2.dev", pathname: "/**" },
+    ],
+  },
   async headers() {
     return [
       {

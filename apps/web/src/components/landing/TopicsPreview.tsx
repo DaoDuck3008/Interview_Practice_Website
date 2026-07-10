@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { getTopics } from "@/lib/api/topics";
 import { AnimateOnScroll } from "@/components/ui/AnimateOnScroll";
@@ -49,7 +50,7 @@ export default async function TopicsPreview() {
                 className="group inline-flex items-center gap-2 h-9 pl-2 pr-4 rounded-full border border-[#1c1c28] bg-[#0d0d14] text-sm text-[#a1a1aa] hover:text-[#fafafa] hover:border-[#7c3aed]/60 hover:bg-[#13131c] hover:-translate-y-0.5 hover:shadow-[0_6px_22px_rgba(124,58,237,0.28)] transition-all duration-200 cursor-pointer"
               >
                 {topic.iconUrl ? (
-                  <img
+                  <Image
                     src={topic.iconUrl}
                     alt=""
                     width={20}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import {
   BadgeCheck,
   CalendarDays,
@@ -58,10 +59,11 @@ export default function ProfileView() {
       <div className={cardClass} style={cardBg}>
         <div className="flex items-center gap-4">
           {profile.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={profile.avatarUrl}
               alt={profile.name}
+              width={64}
+              height={64}
               referrerPolicy="no-referrer"
               className="h-16 w-16 flex-shrink-0 rounded-full object-cover"
             />

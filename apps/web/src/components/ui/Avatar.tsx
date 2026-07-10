@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 
 // Bảng màu cố định — chọn theo hash của `seed` (thường là userId) nên mỗi
 // user luôn ra cùng 1 màu, không đổi giữa các lần render ("random" nhưng ổn định).
@@ -23,6 +24,25 @@ function colorForSeed(seed: string): string {
   return PALETTE[hash % PALETTE.length];
 }
 
+const TAILWIND_SIZE_TO_PX: Record<string, number> = {
+  "h-7": 28,
+  "w-7": 28,
+  "h-8": 32,
+  "w-8": 32,
+  "h-10": 40,
+  "w-10": 40,
+  "h-14": 56,
+  "w-14": 56,
+  "h-16": 64,
+  "w-16": 64,
+};
+
+function imageSizeFromClass(sizeClass: string) {
+  const tokens = sizeClass.split(/\s+/);
+  const width = tokens.map((token) => TAILWIND_SIZE_TO_PX[token]).find(Boolean);
+  return width ?? 40;
+}
+
 interface Props {
   name: string;
   avatarUrl?: string | null;
@@ -41,12 +61,15 @@ export default function Avatar({
   textClass = "text-sm",
 }: Props) {
   const [errored, setErrored] = useState(false);
+  const imageSize = imageSizeFromClass(sizeClass);
 
   if (avatarUrl && !errored) {
     return (
-      <img
+      <Image
         src={avatarUrl}
         alt={name}
+        width={imageSize}
+        height={imageSize}
         referrerPolicy="no-referrer"
         onError={() => setErrored(true)}
         className={`${sizeClass} flex-shrink-0 rounded-full object-cover`}

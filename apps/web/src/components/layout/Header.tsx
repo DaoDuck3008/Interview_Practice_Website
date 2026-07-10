@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   Menu,
@@ -174,7 +175,6 @@ export default function Header() {
   const hydrated = useAuthStore((s) => s.hydrated);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const resetFavorites = useFavoritesStore((s) => s.reset);
-  const router = useRouter();
 
   const headerRef = useRef<HTMLElement>(null);
 
@@ -222,9 +222,13 @@ export default function Header() {
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex-shrink-0">
-          <img
+          <Image
             src="/logo.png"
             alt="Phỏng vấn IT"
+            width={790}
+            height={316}
+            priority
+            sizes="(max-width: 640px) 140px, 160px"
             className="h-14 sm:h-16 w-auto"
           />
         </Link>

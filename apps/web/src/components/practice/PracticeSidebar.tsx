@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   useSearchParams,
@@ -510,8 +511,7 @@ function TopicIcon({
 }) {
   if (iconUrl) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
+      <Image
         src={iconUrl}
         alt=""
         width={size}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Search } from "lucide-react";
 import type { TopicWithCount } from "@/lib/api/topics";
 
@@ -140,8 +141,7 @@ export default function TopicsSidebar({
                   >
                     <span className="flex items-center gap-2 min-w-0">
                       {topic.iconUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <Image
                           src={topic.iconUrl}
                           alt=""
                           width={20}
