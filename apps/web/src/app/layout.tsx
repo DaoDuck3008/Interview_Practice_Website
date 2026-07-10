@@ -6,6 +6,7 @@ import QueryProvider from "@/components/providers/queryProvider";
 import SocketProvider from "@/components/providers/socketProvider";
 import SupportWidget from "@/components/support/SupportWidget";
 import { ToastContainer } from "react-toastify";
+import { getSiteUrl } from "@/lib/seo";
 
 const beVietnam = Be_Vietnam_Pro({
   subsets: ["latin", "vietnamese"],
@@ -15,6 +16,7 @@ const beVietnam = Be_Vietnam_Pro({
 });
 
 export const metadata: Metadata = {
+  metadataBase: getSiteUrl(),
   title: "Phỏng vấn IT — Chinh Phục Mọi Cuộc Phỏng Vấn",
   description:
     "Luyện tập câu hỏi phỏng vấn IT thực tế với phản hồi từ AI. Lọc theo chủ đề và cấp độ kinh nghiệm.",
