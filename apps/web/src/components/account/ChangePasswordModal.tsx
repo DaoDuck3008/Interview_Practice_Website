@@ -30,12 +30,14 @@ export default function ChangePasswordModal({ open, onClose }: Props) {
   // Reset form mỗi lần mở.
   useEffect(() => {
     if (open) {
-      setOldPassword("");
-      setNewPassword("");
-      setConfirm("");
-      setShow(false);
-      setError("");
-      setSaving(false);
+      queueMicrotask(() => {
+        setOldPassword("");
+        setNewPassword("");
+        setConfirm("");
+        setShow(false);
+        setError("");
+        setSaving(false);
+      });
     }
   }, [open]);
 

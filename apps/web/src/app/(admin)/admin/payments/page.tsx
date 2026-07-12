@@ -100,7 +100,16 @@ export default function AdminPaymentsPage() {
     if (limit !== 30) params.set("limit", String(limit));
     const qs = params.toString();
     router.replace(`/admin/payments${qs ? `?${qs}` : ""}`, { scroll: false });
-  }, [statusFilter, dateField, from, to, debouncedSearch, page, limit]);
+  }, [
+    statusFilter,
+    dateField,
+    from,
+    to,
+    debouncedSearch,
+    page,
+    limit,
+    router,
+  ]);
 
   const query = {
     status: statusFilter || undefined,
@@ -128,7 +137,9 @@ export default function AdminPaymentsPage() {
   }, [statusFilter, dateField, from, to, debouncedSearch, page, limit]);
 
   useEffect(() => {
-    load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, [load]);
 
   // Thống kê (tải 1 lần)

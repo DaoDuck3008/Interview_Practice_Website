@@ -43,7 +43,15 @@ export default function AuthHydrator({
     };
 
     hydrate();
-  }, [hasSession]);
+  }, [
+    clearAuth,
+    fetchFavorites,
+    hasSession,
+    refreshPracticeCount,
+    resetFavorites,
+    setAuth,
+    setHydrated,
+  ]);
 
   return <>{children}</>;
 }

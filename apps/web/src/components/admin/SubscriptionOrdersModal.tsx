@@ -30,12 +30,15 @@ export default function SubscriptionOrdersModal({
   useEffect(() => {
     if (!id) return;
     let active = true;
-    setLoading(true);
-    setError(false);
-    getSubscriptionOrders(id)
-      .then((data) => active && setOrders(data))
-      .catch(() => active && setError(true))
-      .finally(() => active && setLoading(false));
+    queueMicrotask(() => {
+      if (!active) return;
+      setLoading(true);
+      setError(false);
+      getSubscriptionOrders(id)
+        .then((data) => active && setOrders(data))
+        .catch(() => active && setError(true))
+        .finally(() => active && setLoading(false));
+    });
     return () => {
       active = false;
     };

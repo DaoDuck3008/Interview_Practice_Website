@@ -24,8 +24,10 @@ export default function FlagScoreModal({
 
   useEffect(() => {
     if (open) {
-      setReason("");
-      setSaving(false);
+      queueMicrotask(() => {
+        setReason("");
+        setSaving(false);
+      });
     }
   }, [open]);
 

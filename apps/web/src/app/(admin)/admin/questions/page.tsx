@@ -131,6 +131,7 @@ export default function AdminQuestionsPage() {
     order,
     page,
     limit,
+    router,
   ]);
 
   const load = useCallback(async () => {
@@ -169,17 +170,10 @@ export default function AdminQuestionsPage() {
   ]);
 
   useEffect(() => {
-    load();
-  }, [
-    topicFilter,
-    levelFilter,
-    statusFilter,
-    debouncedSearch,
-    sortBy,
-    order,
-    page,
-    limit,
-  ]);
+    queueMicrotask(() => {
+      void load();
+    });
+  }, [load]);
 
   function resetToFirstPage<T>(setter: (v: T) => void) {
     return (v: T) => {

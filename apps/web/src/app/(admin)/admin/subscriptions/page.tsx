@@ -89,7 +89,15 @@ export default function AdminSubscriptionsPage() {
     router.replace(`/admin/subscriptions${qs ? `?${qs}` : ""}`, {
       scroll: false,
     });
-  }, [statusFilter, startedFrom, startedTo, debouncedSearch, page, limit]);
+  }, [
+    statusFilter,
+    startedFrom,
+    startedTo,
+    debouncedSearch,
+    page,
+    limit,
+    router,
+  ]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -115,7 +123,9 @@ export default function AdminSubscriptionsPage() {
   }, [statusFilter, startedFrom, startedTo, debouncedSearch, page, limit]);
 
   useEffect(() => {
-    load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, [load]);
 
   // Thống kê (tải 1 lần)

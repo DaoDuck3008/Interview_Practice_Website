@@ -6,7 +6,6 @@ import {
   Bookmark,
   CreditCard,
   Gauge,
-  History,
   LayoutDashboard,
   UserCircle,
   type LucideIcon,

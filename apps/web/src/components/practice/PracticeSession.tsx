@@ -161,7 +161,18 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
     [questionId, onSessionSaved, refreshQuota, refreshPracticeCount, applyScore],
   );
 
-  const recorder = useAudioRecorder({ onComplete: handleRecordingComplete });
+  const {
+    recordContainerRef,
+    playbackContainerRef,
+    status: recorderStatus,
+    elapsed: recorderElapsed,
+    isPlaying,
+    errorMsg,
+    start: startRecorder,
+    stop: stopRecorder,
+    togglePlayback,
+    reset: resetRecorder,
+  } = useAudioRecorder({ onComplete: handleRecordingComplete });
 
   const applyImprovement = useCallback(
     (improvement: Improvement) => {
@@ -212,7 +223,7 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
   }, [sessionId, applyImprovement]);
 
   const handleReset = useCallback(() => {
-    recorder.reset();
+    resetRecorder();
     setPhase("idle");
     setSessionId("");
     setCurrentSession(null);
@@ -223,7 +234,7 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
     setImprovement(null);
     setImprovementError("");
     setIsImproving(false);
-  }, [recorder]);
+  }, [resetRecorder]);
 
   const inPostRecording = phase === "evaluating" || phase === "evaluated";
 
@@ -245,7 +256,7 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
       {/* Recorder pane */}
       <section className="px-6 py-6 flex flex-col gap-4">
         {/* IDLE */}
-        {recorder.status === "idle" && phase === "idle" && (
+        {recorderStatus === "idle" && phase === "idle" && (
           <div className="flex flex-col items-center gap-3 py-6">
             {outOfQuota ? (
               <>
@@ -274,7 +285,7 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
                     new Audio("/sounds/record_start.mp3")
                       .play()
                       .catch(() => {});
-                    recorder.start();
+                    startRecorder();
                   }}
                   className="w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
                   style={{
@@ -307,7 +318,7 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
           className="flex items-center gap-4"
           style={{
             display:
-              recorder.status === "recording" && phase === "idle"
+              recorderStatus === "recording" && phase === "idle"
                 ? "flex"
                 : "none",
           }}
@@ -322,9 +333,9 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
             />
             REC
           </span>
-          <div ref={recorder.recordContainerRef} className="flex-1 min-w-0" />
+          <div ref={recordContainerRef} className="flex-1 min-w-0" />
           <span className="font-mono text-xl font-bold text-[#f4f4f6] tabular-nums flex-shrink-0">
-            {formatTime(recorder.elapsed)}
+            {formatTime(recorderElapsed)}
           </span>
           {/* Hủy: bỏ bản ghi đang dở, về đầu, KHÔNG gửi đi phiên âm */}
           <button
@@ -338,7 +349,7 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
           </button>
           {/* Dừng: kết thúc ghi âm và gửi đi chấm điểm */}
           <button
-            onClick={recorder.stop}
+            onClick={stopRecorder}
             className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95"
             style={{
               background: "#ef4444",
@@ -352,9 +363,9 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
         </div>
 
         {/* Cảnh báo sắp chạm trần độ dài (5 phút) — hiện từ phút thứ 4 */}
-        {recorder.status === "recording" &&
+        {recorderStatus === "recording" &&
           phase === "idle" &&
-          recorder.elapsed >= WARN_DURATION && (
+          recorderElapsed >= WARN_DURATION && (
             <p className="text-xs font-medium text-[#ef4444]">quá dài rồi</p>
           )}
 
@@ -378,16 +389,16 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
           style={{ display: inPostRecording ? "flex" : "none" }}
         >
           <button
-            onClick={recorder.togglePlayback}
+            onClick={togglePlayback}
             className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-200 cursor-pointer hover:scale-105"
             style={{
-              background: recorder.isPlaying ? "#7c3aed" : "#13131c",
+              background: isPlaying ? "#7c3aed" : "#13131c",
               border: "1px solid",
-              borderColor: recorder.isPlaying ? "#7c3aed" : "#1c1c28",
+              borderColor: isPlaying ? "#7c3aed" : "#1c1c28",
             }}
-            aria-label={recorder.isPlaying ? "Tạm dừng" : "Phát lại"}
+            aria-label={isPlaying ? "Tạm dừng" : "Phát lại"}
           >
-            {recorder.isPlaying ? (
+            {isPlaying ? (
               <Pause size={12} className="text-white" />
             ) : (
               <Play
@@ -397,7 +408,7 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
               />
             )}
           </button>
-          <div ref={recorder.playbackContainerRef} className="flex-1 min-w-0" />
+          <div ref={playbackContainerRef} className="flex-1 min-w-0" />
           <button
             onClick={handleReset}
             className="flex items-center gap-1.5 text-xs text-[#606072] hover:text-[#9898aa] transition-colors cursor-pointer flex-shrink-0"
@@ -408,7 +419,7 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
         </div>
 
         {/* ERROR — microphone access */}
-        {recorder.status === "error" && (
+        {recorderStatus === "error" && (
           <div className="flex flex-col gap-3 py-2">
             <div className="flex items-start gap-2">
               <AlertCircle
@@ -416,7 +427,7 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
                 className="text-[#ef4444] flex-shrink-0 mt-0.5"
               />
               <p className="text-sm text-[#ef4444] leading-relaxed">
-                {recorder.errorMsg}
+                {errorMsg}
               </p>
             </div>
             <button

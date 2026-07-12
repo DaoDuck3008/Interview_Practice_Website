@@ -39,6 +39,7 @@ export default function GrantSubscriptionModal({
   // Nạp danh sách gói + reset form mỗi khi mở cho user mới.
   useEffect(() => {
     if (!user) return;
+    queueMicrotask(() => {
     setPlanId("");
     setMode("plan");
     setDays("");
@@ -50,6 +51,7 @@ export default function GrantSubscriptionModal({
         if (data.length) setPlanId(data[0].id);
       })
       .catch(() => toast.error("Không tải được danh sách gói."));
+    });
   }, [user]);
 
   const selectedPlan = plans.find((p) => p.id === planId);

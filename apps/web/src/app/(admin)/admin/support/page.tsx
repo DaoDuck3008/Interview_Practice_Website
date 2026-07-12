@@ -50,16 +50,20 @@ export default function AdminSupportPage() {
   }, []);
 
   useEffect(() => {
-    loadThreads();
+    queueMicrotask(() => {
+      loadThreads();
+    });
   }, [loadThreads]);
 
   useEffect(() => {
     if (!selectedUserId) return;
-    setMessagesLoading(true);
-    getSupportThread(selectedUserId)
-      .then(setMessages)
-      .catch(() => setMessages([]))
-      .finally(() => setMessagesLoading(false));
+    queueMicrotask(() => {
+      setMessagesLoading(true);
+      getSupportThread(selectedUserId)
+        .then(setMessages)
+        .catch(() => setMessages([]))
+        .finally(() => setMessagesLoading(false));
+    });
   }, [selectedUserId]);
 
   // Realtime: tin nhắn mới của bất kỳ user nào -> refetch danh sách thread

@@ -120,7 +120,7 @@ export default function AdminUsersPage() {
     if (limit !== 30) params.set("limit", String(limit));
     const qs = params.toString();
     router.replace(`/admin/users${qs ? `?${qs}` : ""}`, { scroll: false });
-  }, [debouncedSearch, plan, verified, locked, sortKey, page, limit]);
+  }, [debouncedSearch, plan, verified, locked, sortKey, page, limit, router]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -149,7 +149,9 @@ export default function AdminUsersPage() {
   }, [debouncedSearch, plan, verified, locked, sortKey, page, limit]);
 
   useEffect(() => {
-    load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, [load]);
 
   // Đổi bộ lọc → quay về trang 1.

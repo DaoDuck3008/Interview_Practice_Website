@@ -106,7 +106,7 @@ export default function AdminSessionReportsPage() {
     router.replace(`/admin/sessions/reports${qs ? `?${qs}` : ""}`, {
       scroll: false,
     });
-  }, [debouncedSearch, topicId, level, flagged, page, limit]);
+  }, [debouncedSearch, topicId, level, flagged, page, limit, router]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -132,7 +132,9 @@ export default function AdminSessionReportsPage() {
   }, [debouncedSearch, topicId, level, flagged, page, limit]);
 
   useEffect(() => {
-    load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, [load]);
 
   function changeFilter<T>(setter: (v: T) => void, value: T) {

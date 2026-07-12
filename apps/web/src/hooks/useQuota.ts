@@ -19,7 +19,9 @@ export function useQuota() {
   }, []);
 
   useEffect(() => {
-    refresh();
+    queueMicrotask(() => {
+      void refresh();
+    });
   }, [refresh]);
 
   return { status, loading, refresh };

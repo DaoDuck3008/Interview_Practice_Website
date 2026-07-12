@@ -21,11 +21,13 @@ export default function PracticeHistoryList() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    getMyHistory(page, LIMIT)
-      .then(setData)
-      .catch(() => setData(null))
-      .finally(() => setLoading(false));
+    queueMicrotask(() => {
+      setLoading(true);
+      getMyHistory(page, LIMIT)
+        .then(setData)
+        .catch(() => setData(null))
+        .finally(() => setLoading(false));
+    });
   }, [page]);
 
   return (

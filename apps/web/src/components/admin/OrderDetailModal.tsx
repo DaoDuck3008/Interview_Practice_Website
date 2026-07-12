@@ -30,13 +30,16 @@ export default function OrderDetailModal({ orderId, onClose }: Props) {
   useEffect(() => {
     if (!orderId) return;
     let active = true;
-    setLoading(true);
-    setError(false);
-    setOrder(null);
-    getOrderAdmin(orderId)
-      .then((data) => active && setOrder(data))
-      .catch(() => active && setError(true))
-      .finally(() => active && setLoading(false));
+    queueMicrotask(() => {
+      if (!active) return;
+      setLoading(true);
+      setError(false);
+      setOrder(null);
+      getOrderAdmin(orderId)
+        .then((data) => active && setOrder(data))
+        .catch(() => active && setError(true))
+        .finally(() => active && setLoading(false));
+    });
     return () => {
       active = false;
     };

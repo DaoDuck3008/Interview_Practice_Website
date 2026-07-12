@@ -31,12 +31,14 @@ export default function UserDetailModal({ userId, onClose }: Props) {
 
   useEffect(() => {
     if (!userId) return;
-    setDetail(null);
-    setLoading(true);
-    getUserDetail(userId)
-      .then(setDetail)
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    queueMicrotask(() => {
+      setDetail(null);
+      setLoading(true);
+      getUserDetail(userId)
+        .then(setDetail)
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    });
   }, [userId]);
 
   return (
@@ -54,6 +56,7 @@ export default function UserDetailModal({ userId, onClose }: Props) {
           {/* Header */}
           <div className="flex items-center gap-4">
             {detail.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={detail.avatarUrl}
                 alt={detail.name}

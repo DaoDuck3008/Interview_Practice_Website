@@ -82,6 +82,7 @@ export default function SessionDetailModal({
 
   useEffect(() => {
     if (!sessionId) return;
+    queueMicrotask(() => {
     setDetail(null);
     setEditingScore(false);
     setLoading(true);
@@ -98,6 +99,7 @@ export default function SessionDetailModal({
       })
       .catch(() => toast.error("Không tải được chi tiết session."))
       .finally(() => setLoading(false));
+    });
   }, [sessionId]);
 
   async function saveReview() {

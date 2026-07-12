@@ -113,7 +113,17 @@ export default function AdminAuditLogsPage() {
     router.replace(`/admin/audit-logs${qs ? `?${qs}` : ""}`, {
       scroll: false,
     });
-  }, [debouncedSearch, actorType, action, entityType, from, to, page, limit]);
+  }, [
+    debouncedSearch,
+    actorType,
+    action,
+    entityType,
+    from,
+    to,
+    page,
+    limit,
+    router,
+  ]);
 
   const query = useMemo(
     () => ({
@@ -144,7 +154,9 @@ export default function AdminAuditLogsPage() {
   }, [query, page, limit]);
 
   useEffect(() => {
-    load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, [load]);
 
   function setFilter<T>(setter: (value: T) => void) {

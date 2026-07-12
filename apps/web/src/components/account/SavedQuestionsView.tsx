@@ -22,10 +22,12 @@ export default function SavedQuestionsView() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    getFavoritesPaginated({ page, limit: LIMIT })
-      .then(setData)
-      .finally(() => setLoading(false));
+    queueMicrotask(() => {
+      setLoading(true);
+      getFavoritesPaginated({ page, limit: LIMIT })
+        .then(setData)
+        .finally(() => setLoading(false));
+    });
   }, [page]);
 
   function handleRemoved(questionId: string) {

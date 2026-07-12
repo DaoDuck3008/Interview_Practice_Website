@@ -46,11 +46,13 @@ export default function OverviewView() {
   }, []);
 
   useEffect(() => {
-    setMonthlyLoading(true);
-    getMyMonthly(month)
-      .then(setMonthly)
-      .catch(() => setMonthly(null))
-      .finally(() => setMonthlyLoading(false));
+    queueMicrotask(() => {
+      setMonthlyLoading(true);
+      getMyMonthly(month)
+        .then(setMonthly)
+        .catch(() => setMonthly(null))
+        .finally(() => setMonthlyLoading(false));
+    });
   }, [month]);
 
   const avgOverall =

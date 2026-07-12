@@ -40,6 +40,7 @@ export default function BillingView() {
   const [sub, setSub] = useState<MySubscription | null>(null);
   const [orders, setOrders] = useState<PaidOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     Promise.all([getMySubscription(), getPaidOrders()])
@@ -48,6 +49,11 @@ export default function BillingView() {
         setOrders(o);
       })
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
   }, []);
 
   if (loading) {
@@ -61,13 +67,19 @@ export default function BillingView() {
 
   return (
     <div className="flex-1 flex flex-col gap-6">
-      <CurrentPlanCard sub={sub} />
+      <CurrentPlanCard sub={sub} now={now} />
       <HistoryCard orders={orders} />
     </div>
   );
 }
 
-function CurrentPlanCard({ sub }: { sub: MySubscription | null }) {
+function CurrentPlanCard({
+  sub,
+  now,
+}: {
+  sub: MySubscription | null;
+  now: number;
+}) {
   // Chưa từng mua gói
   if (!sub) {
     return (
@@ -92,7 +104,7 @@ function CurrentPlanCard({ sub }: { sub: MySubscription | null }) {
 
   const remainingDays = Math.max(
     0,
-    Math.ceil((new Date(sub.expiresAt).getTime() - Date.now()) / DAY_MS),
+    Math.ceil((new Date(sub.expiresAt).getTime() - now) / DAY_MS),
   );
   const expiryStr = formatDay(sub.expiresAt);
 

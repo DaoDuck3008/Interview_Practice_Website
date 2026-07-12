@@ -29,11 +29,13 @@ export default function FavoritesDrawer({
 
   useEffect(() => {
     if (open) {
-      setMounted(true);
-      const raf = requestAnimationFrame(() => setShow(true));
-      return () => cancelAnimationFrame(raf);
+      const t = setTimeout(() => {
+        setMounted(true);
+        requestAnimationFrame(() => setShow(true));
+      }, 0);
+      return () => clearTimeout(t);
     }
-    setShow(false);
+    queueMicrotask(() => setShow(false));
     const t = setTimeout(() => setMounted(false), 300);
     return () => clearTimeout(t);
   }, [open]);

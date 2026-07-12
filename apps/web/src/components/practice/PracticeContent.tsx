@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Tags } from "lucide-react";
 import { getSessionsByQuestion } from "@/lib/api/sessions";
 import type { Session } from "@/lib/api/sessions";
 import { useAuthStore } from "@/stores/auth.store";

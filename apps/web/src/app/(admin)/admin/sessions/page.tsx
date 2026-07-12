@@ -88,7 +88,7 @@ export default function AdminSessionsPage() {
     if (limit !== 20) params.set("limit", String(limit));
     const qs = params.toString();
     router.replace(`/admin/sessions${qs ? `?${qs}` : ""}`, { scroll: false });
-  }, [debouncedSearch, topicId, level, page, limit]);
+  }, [debouncedSearch, topicId, level, page, limit, router]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -113,7 +113,9 @@ export default function AdminSessionsPage() {
   }, [debouncedSearch, topicId, level, page, limit]);
 
   useEffect(() => {
-    load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, [load]);
 
   function changeFilter<T>(setter: (v: T) => void, value: T) {

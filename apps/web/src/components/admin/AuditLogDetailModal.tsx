@@ -89,13 +89,16 @@ export default function AuditLogDetailModal({ logId, onClose }: Props) {
   useEffect(() => {
     if (!logId) return;
     let active = true;
-    setLoading(true);
-    setError(false);
-    setDetail(null);
-    getAuditLogAdmin(logId)
-      .then((data) => active && setDetail(data))
-      .catch(() => active && setError(true))
-      .finally(() => active && setLoading(false));
+    queueMicrotask(() => {
+      if (!active) return;
+      setLoading(true);
+      setError(false);
+      setDetail(null);
+      getAuditLogAdmin(logId)
+        .then((data) => active && setDetail(data))
+        .catch(() => active && setError(true))
+        .finally(() => active && setLoading(false));
+    });
     return () => {
       active = false;
     };

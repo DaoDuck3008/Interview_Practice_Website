@@ -134,6 +134,7 @@ export default function SupportChatPopup({ onClose }: { onClose: () => void }) {
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                   <div className="flex flex-col items-end gap-1">
                     {m.imageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={m.imageUrl}
                         alt="Ảnh đính kèm"

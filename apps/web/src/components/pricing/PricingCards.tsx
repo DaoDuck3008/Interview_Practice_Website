@@ -30,6 +30,7 @@ export default function PricingCards() {
   const [plans, setPlans] = useState<Plan[] | null>(null);
   const [sub, setSub] = useState<MySubscription | null>(null);
   const [loadingSlug, setLoadingSlug] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     getPlans().then(setPlans);
@@ -37,8 +38,15 @@ export default function PricingCards() {
 
   useEffect(() => {
     if (user) getMySubscription().then(setSub);
-    else setSub(null);
+    else {
+      queueMicrotask(() => setSub(null));
+    }
   }, [user]);
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
 
   async function handleBuy(slug: string) {
     if (loadingSlug) return;
@@ -74,7 +82,7 @@ export default function PricingCards() {
   const remainingDays = hasActiveSub
     ? Math.max(
         0,
-        Math.ceil((new Date(sub!.expiresAt).getTime() - Date.now()) / DAY_MS),
+        Math.ceil((new Date(sub!.expiresAt).getTime() - now) / DAY_MS),
       )
     : 0;
   const expiryStr = hasActiveSub ? formatDay(sub!.expiresAt) : "";

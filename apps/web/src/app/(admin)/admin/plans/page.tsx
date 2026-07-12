@@ -96,7 +96,9 @@ export default function AdminPlansPage() {
   }
 
   useEffect(() => {
-    load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, []);
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
