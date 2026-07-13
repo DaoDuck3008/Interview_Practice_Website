@@ -1,0 +1,4 @@
+interface:
+  display_name: "Scenario Interview Flashcard"
+  short_description: "Flashcards for practical interview cases"
+  default_prompt: "Use $scenario-interview-flashcard to answer this practical interview scenario as a concise flashcard."
