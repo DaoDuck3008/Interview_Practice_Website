@@ -30,7 +30,12 @@ export class QuestionsService {
     const orderBy: Prisma.QuestionOrderByWithRelationInput[] =
       query.sortBy === 'createdAt'
         ? [{ createdAt: query.order ?? 'desc' }, { id: 'asc' }]
-        : [{ isFeatured: 'desc' }, { level: 'asc' }, { id: 'asc' }];
+        : [
+            { isFeatured: 'desc' },
+            { level: 'asc' },
+            { createdAt: 'asc' },
+            { id: 'asc' },
+          ];
 
     const where: Prisma.QuestionWhereInput = {
       isActive: true,
@@ -112,17 +117,27 @@ export class QuestionsService {
       | Prisma.QuestionOrderByWithRelationInput[];
     switch (query.sortBy) {
       case 'content':
-        orderBy = { content: order };
+        orderBy = [
+          { content: order },
+          { level: 'asc' },
+          { createdAt: 'asc' },
+          { id: 'asc' },
+        ];
         break;
       case 'level':
-        orderBy = { level: order };
+        orderBy = [{ level: order }, { createdAt: 'asc' }, { id: 'asc' }];
         break;
       case 'status':
-        orderBy = { isActive: order };
+        orderBy = [{ isActive: order }, { createdAt: 'asc' }, { id: 'asc' }];
         break;
       case 'topic':
       default:
-        orderBy = [{ topic: { name: order } }, { level: 'asc' }];
+        orderBy = [
+          { topic: { name: order } },
+          { level: 'asc' },
+          { createdAt: 'asc' },
+          { id: 'asc' },
+        ];
         break;
     }
 
@@ -147,13 +162,20 @@ export class QuestionsService {
   }
 
   async countByTopic() {
-    return this.cache.getOrSet('questions:topic-counts', STATS_TTL, async () => {
-      const groups = await this.prisma.question.groupBy({
-        by: ['topicId'],
-        _count: { _all: true },
-      });
-      return groups.map((g) => ({ topicId: g.topicId, count: g._count._all }));
-    });
+    return this.cache.getOrSet(
+      'questions:topic-counts',
+      STATS_TTL,
+      async () => {
+        const groups = await this.prisma.question.groupBy({
+          by: ['topicId'],
+          _count: { _all: true },
+        });
+        return groups.map((g) => ({
+          topicId: g.topicId,
+          count: g._count._all,
+        }));
+      },
+    );
   }
 
   /** Admin: top N câu hỏi được ghi âm (Session) nhiều nhất, mới nhiều nhất trước. */
@@ -214,15 +236,12 @@ export class QuestionsService {
   findOrder(topicId: string | undefined) {
     if (!topicId)
       throw new BadRequestException('TopicID không được truyền vào');
-    return this.cache.getOrSet(
-      this.orderCacheKey(topicId),
-      ORDER_TTL,
-      () =>
-        this.prisma.question.findMany({
-          where: { isActive: true, topicId },
-          select: { id: true, level: true, content: true },
-          orderBy: [{ isFeatured: 'desc' }, { level: 'asc' }, { id: 'asc' }],
-        }),
+    return this.cache.getOrSet(this.orderCacheKey(topicId), ORDER_TTL, () =>
+      this.prisma.question.findMany({
+        where: { isActive: true, topicId },
+        select: { id: true, level: true, content: true },
+        orderBy: [{ isFeatured: 'desc' }, { level: 'asc' }, { id: 'asc' }],
+      }),
     );
   }
 

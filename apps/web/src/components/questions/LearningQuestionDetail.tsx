@@ -1,6 +1,8 @@
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { ArrowLeft, BookOpen, Mic, Sparkles } from "lucide-react";
 import type { Question } from "@/lib/api/questions";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
@@ -46,14 +48,42 @@ const markdownComponents: React.ComponentProps<
       {children}
     </blockquote>
   ),
+  pre: ({ children }) => <>{children}</>,
   code: ({ children, className }) => {
-    const isBlock = className?.startsWith("language-");
+    const match = /language-(\w+)/.exec(className ?? "");
+    const codeStr = String(children).replace(/\n$/, "");
 
-    if (isBlock) {
+    if (match) {
       return (
-        <code className="block overflow-x-auto rounded-lg border border-border bg-base p-4 text-sm leading-6 text-text-secondary">
-          {children}
-        </code>
+        <SyntaxHighlighter
+          language={match[1]}
+          style={oneDark}
+          customStyle={{
+            background: "#05050d",
+            border: "1px solid var(--color-border)",
+            borderRadius: "8px",
+            padding: "16px",
+            marginBottom: "16px",
+            fontSize: "14px",
+            lineHeight: "1.7",
+          }}
+          codeTagProps={{
+            style: { fontFamily: "var(--font-mono, monospace)" },
+          }}
+        >
+          {codeStr}
+        </SyntaxHighlighter>
+      );
+    }
+
+    if (codeStr.includes("\n")) {
+      return (
+        <pre
+          className="mb-4 overflow-x-auto rounded-lg border border-border bg-base p-4 text-sm leading-7 text-text-secondary"
+          style={{ fontFamily: "var(--font-mono, monospace)" }}
+        >
+          <code>{codeStr}</code>
+        </pre>
       );
     }
 
@@ -63,7 +93,6 @@ const markdownComponents: React.ComponentProps<
       </code>
     );
   },
-  pre: ({ children }) => <pre className="mb-4 overflow-x-auto">{children}</pre>,
   table: ({ children }) => (
     <div className="mb-4 overflow-x-auto rounded-lg border border-border">
       <table className="w-full min-w-[520px] border-collapse text-sm">
