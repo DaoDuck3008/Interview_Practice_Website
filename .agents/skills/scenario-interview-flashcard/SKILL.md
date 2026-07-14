@@ -21,8 +21,8 @@ Mỗi flashcard nên mở bằng `# [Câu hỏi tình huống]`, sau đó trả 
 Luôn ưu tiên:
 
 1. **Hiểu đúng bài toán:** Nêu ngắn input, output, điều kiện quan trọng hoặc giả định cần hỏi lại.
-2. **Đi sâu hướng giải:** Trình bày cách làm chính theo từng bước hợp lý, giải thích vì sao chọn cách đó.
-3. **Minh họa khi có ích:** Dùng SQL, pseudo-code hoặc TypeScript/JavaScript ngắn nếu nó làm câu trả lời dễ nhớ hơn.
+2. **Đi sâu hướng giải:** Trình bày cách làm chính theo từng bước hợp lý, giải thích vì sao chọn cách đó. Nếu có thể trình bày bằng code ngắn, SQL, pseudo-code thì hãy làm để minh họa hướng giải, comment output từng đoạn (nếu cần), comment Tiếng việt để giải thích (nếu cần).
+3. **Minh họa khi có ích:** Dùng SQL, pseudo-code hoặc TypeScript/JavaScript ngắn nếu nó làm câu trả lời dễ nhớ hơn. (Chỉ làm khi bước 2 không có code minh họa, hoặc code minh họa giúp làm rõ hướng giải.)
 4. **Nhắc điểm thực tế khi cần:** Chỉ thêm tối ưu, mở rộng, độ phức tạp, production note hoặc trade-off khi chúng thật sự liên quan đến câu hỏi.
 
 Không biến mọi câu trả lời thành các mục cứng như "Tối ưu / mở rộng" hay "Độ phức tạp". Với câu Fresher/Junior, thường chỉ cần làm rõ bài toán, hướng giải đúng, ví dụ ngắn và một lưu ý dễ nhớ.
@@ -97,7 +97,7 @@ Ví dụ:
 SELECT user_id, SUM(amount) AS total_amount
 FROM transactions
 WHERE status = 'SUCCESS'
-  AND created_at >= $1 AND created_at < $2
+AND created_at >= $1 AND created_at < $2
 GROUP BY user_id
 ORDER BY total_amount DESC
 LIMIT 10;

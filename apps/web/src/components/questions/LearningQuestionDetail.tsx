@@ -6,6 +6,10 @@ import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { ArrowLeft, BookOpen, Mic, Sparkles } from "lucide-react";
 import type { Question } from "@/lib/api/questions";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
+import {
+  getMarkdownCodeLanguage,
+  getMarkdownLanguageLabel,
+} from "@/lib/utils/markdown";
 import { getPracticeQuestionHref } from "@/lib/utils/question-url";
 import RelatedQuestionList from "./RelatedQuestionList";
 
@@ -50,29 +54,36 @@ const markdownComponents: React.ComponentProps<
   ),
   pre: ({ children }) => <>{children}</>,
   code: ({ children, className }) => {
-    const match = /language-(\w+)/.exec(className ?? "");
+    const language = getMarkdownCodeLanguage(className);
     const codeStr = String(children).replace(/\n$/, "");
 
-    if (match) {
+    if (language) {
+      const languageLabel = getMarkdownLanguageLabel(language);
+
       return (
-        <SyntaxHighlighter
-          language={match[1]}
-          style={oneDark}
-          customStyle={{
-            background: "#05050d",
-            border: "1px solid var(--color-border)",
-            borderRadius: "8px",
-            padding: "16px",
-            marginBottom: "16px",
-            fontSize: "14px",
-            lineHeight: "1.7",
-          }}
-          codeTagProps={{
-            style: { fontFamily: "var(--font-mono, monospace)" },
-          }}
-        >
-          {codeStr}
-        </SyntaxHighlighter>
+        <div className="mb-4 overflow-hidden rounded-lg border border-border bg-[#05050d]">
+          <div className="border-b border-border px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-accent-light">
+            {languageLabel}
+          </div>
+          <SyntaxHighlighter
+            language={language}
+            style={oneDark}
+            customStyle={{
+              background: "#05050d",
+              border: 0,
+              borderRadius: 0,
+              margin: 0,
+              padding: "16px",
+              fontSize: "14px",
+              lineHeight: "1.7",
+            }}
+            codeTagProps={{
+              style: { fontFamily: "var(--font-mono, monospace)" },
+            }}
+          >
+            {codeStr}
+          </SyntaxHighlighter>
+        </div>
       );
     }
 

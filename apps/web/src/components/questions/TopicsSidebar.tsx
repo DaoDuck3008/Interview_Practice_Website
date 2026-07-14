@@ -56,14 +56,13 @@ export default function TopicsSidebar({
 
   return (
     <aside
-      className="hidden md:flex w-60 flex-shrink-0 flex-col rounded-2xl overflow-hidden sticky top-4 self-start"
+      className="hidden md:flex h-full max-h-[1000px] w-60 flex-shrink-0 flex-col rounded-2xl overflow-hidden sticky top-4 self-start"
       style={{
         background: "rgba(16, 15, 26, 0.82)",
         backdropFilter: "blur(16px)",
         WebkitBackdropFilter: "blur(16px)",
         border: "1px solid rgba(255,255,255,0.07)",
         boxShadow: "0 4px 24px rgba(0,0,0,0.35)",
-        maxHeight: "calc(100vh - 88px)",
       }}
     >
       {/* Header */}

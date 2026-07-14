@@ -13,8 +13,6 @@ description: >
 ## Quy tắc output
 
 - 1 câu hỏi = 1 file markdown
-- Tên file: slug viết thường, dấu gạch ngang. VD: `nodejs-la-gi.md`
-- Lưu vào `/mnt/user-data/outputs/` rồi gọi `present_files`
 
 ## Cấu trúc file
 
@@ -32,7 +30,7 @@ description: >
 Ví dụ: ← CHỈ thêm nếu cần minh họa bằng code
 
 \```language
-// code ngắn, tối đa ~8 dòng, có comment tiếng Việt
+// code ngắn, có comment tiếng Việt, có comment cả output nếu cần
 \```
 
 [câu giải thích kết quả nếu cần, in đậm phần quan trọng]
