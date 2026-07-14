@@ -30,6 +30,7 @@ import { getTopics, Topic } from "@/lib/api/topics";
 import Pagination from "@/components/admin/Pagination";
 import QuestionsStatsView from "@/components/admin/QuestionsStatsView";
 import { useStatusModal } from "@/components/ui/useStatusModal";
+import { LEVEL_STYLE } from "@/lib/utils/levels";
 import { buildTopicOptions } from "@/lib/utils/topics";
 
 const controlStyle = { background: "#0d0d14", border: "1px solid #1c1c28" };
@@ -407,8 +408,10 @@ export default function AdminQuestionsPage() {
               <span className="text-sm text-[#9898aa] truncate">
                 {q.topic?.name ?? "—"}
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#8b5cf6]">
-                {q.level}
+              <span
+                className={`w-fit rounded-md px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${LEVEL_STYLE[q.level].className}`}
+              >
+                {LEVEL_STYLE[q.level].label}
               </span>
               <span>
                 {q.isActive ? (

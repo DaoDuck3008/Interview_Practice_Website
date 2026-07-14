@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Search, X } from "lucide-react";
+import { ArrowUp, Search, X } from "lucide-react";
 import TopicsSidebar from "./TopicsSidebar";
 import QuestionCard from "./QuestionCard";
 import LearningPagination from "./LearningPagination";
@@ -35,6 +35,7 @@ export default function QuestionBrowser({
   const { items, total, totalPages } = initialResult;
 
   const [searchValue, setSearchValue] = useState(initialSearch ?? "");
+  const [showBackToTop, setShowBackToTop] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentTopic = topics.find((t) => t.slug === currentTopicSlug);
@@ -69,6 +70,21 @@ export default function QuestionBrowser({
     debounceRef.current = setTimeout(() => {
       navigate({ search: value, page: 1 });
     }, 400);
+  }
+
+  useEffect(() => {
+    function handleScroll() {
+      setShowBackToTop(window.scrollY > 480);
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    queueMicrotask(handleScroll);
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   return (
@@ -242,6 +258,18 @@ export default function QuestionBrowser({
           onPageChange={(p) => navigate({ page: p })}
         />
       </main>
+
+      {showBackToTop && (
+        <button
+          type="button"
+          onClick={scrollToTop}
+          aria-label="Lên đầu trang"
+          title="Lên đầu trang"
+          className="fixed bottom-36 right-4 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-[#141320] text-[#d4d4e0] shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#7c3aed]/50 hover:text-white"
+        >
+          <ArrowUp size={18} />
+        </button>
+      )}
     </div>
   );
 }
