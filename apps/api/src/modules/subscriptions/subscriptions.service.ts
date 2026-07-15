@@ -9,6 +9,7 @@ import { MailService } from '../mail/mail.service';
 import { QuerySubscriptionDto } from './dto/query-subscription.dto';
 import { GrantSubscriptionDto } from './dto/grant-subscription.dto';
 import { AuditService } from '../audit/audit.service';
+import { lockBillingUser } from '../../common/utils/billing-lock.util';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const STATS_TTL = 60; // 1 phút — thẻ thống kê admin, chấp nhận trễ vài chục giây
@@ -292,6 +293,8 @@ export class SubscriptionsService {
     const now = new Date();
 
     return this.prisma.$transaction(async (tx) => {
+      await lockBillingUser(tx, dto.userId);
+
       const user = await tx.user.findUnique({ where: { id: dto.userId } });
       if (!user) throw new NotFoundException('Không tìm thấy người dùng');
 

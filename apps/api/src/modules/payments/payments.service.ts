@@ -7,7 +7,13 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { AuditAction, AuditActorType, Prisma, Plan, Order } from '@prisma/client';
+import {
+  AuditAction,
+  AuditActorType,
+  Prisma,
+  Plan,
+  Order,
+} from '@prisma/client';
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { QueryOrderDto, OrderDateField } from './dto/query-order.dto';
@@ -19,6 +25,7 @@ import {
   vnDayKey,
   vnLastNDays,
 } from '../../common/utils/vn-time.util';
+import { lockBillingUser } from '../../common/utils/billing-lock.util';
 import { AuditService } from '../audit/audit.service';
 
 // Đơn hết hiệu lực (QR) sau 10 phút — chỉ để UX tạo lại; tiền về trễ vẫn được honor ở webhook.
@@ -123,7 +130,6 @@ export class PaymentsService {
       return { success: true, ignored: 'no_matching_order' };
     }
 
-    // Đã xử lý rồi → idempotent.
     if (order.status === 'PAID') {
       await this.audit.log({
         actorType: AuditActorType.WEBHOOK,
@@ -141,15 +147,54 @@ export class PaymentsService {
       return { success: true, ignored: 'already_paid' };
     }
 
+    // Nếu đơn khác PENDING -> bỏ qua, ghi log vào audit
+    if (order.status !== 'PENDING') {
+      await this.audit.log({
+        actorType: AuditActorType.WEBHOOK,
+        action: AuditAction.PAYMENT_WEBHOOK_IGNORED,
+        entityType: 'Order',
+        entityId: order.id,
+        targetUserId: order.userId,
+        metadata: {
+          reason: 'already_processed',
+          status: order.status,
+          amount,
+          txnId,
+          transferCode: order.transferCode,
+        },
+      });
+      return { success: true, ignored: 'already_processed' };
+    }
+
     // Số tiền không đủ → ghi nhận FAILED, không kích hoạt.
     if (amount < order.amountVnd) {
-      const failed = await this.prisma.order.update({
-        where: { id: order.id },
+      const claimed = await this.prisma.order.updateMany({
+        where: { id: order.id, status: 'PENDING' },
         data: {
           status: 'FAILED',
           rawPayload: payload as Prisma.InputJsonValue,
           providerTxnId: txnId || undefined,
         },
+      });
+
+      if (claimed.count === 0) {
+        await this.audit.log({
+          actorType: AuditActorType.WEBHOOK,
+          action: AuditAction.PAYMENT_WEBHOOK_IGNORED,
+          entityType: 'Order',
+          entityId: order.id,
+          targetUserId: order.userId,
+          metadata: {
+            reason: 'already_processed',
+            amount,
+            txnId,
+            transferCode: order.transferCode,
+          },
+        });
+        return { success: true, ignored: 'already_processed' };
+      }
+      const failed = await this.prisma.order.findUniqueOrThrow({
+        where: { id: order.id },
       });
       this.logger.warn(
         `Đơn ${order.id} thiếu tiền: nhận ${amount} < cần ${order.amountVnd}`,
@@ -176,11 +221,26 @@ export class PaymentsService {
       return { success: true, ignored: 'underpaid' };
     }
 
-    const { paidAt, periodEnd } = await this.activateOrder(
-      order,
-      txnId,
-      payload,
-    );
+    const activated = await this.activateOrder(order, txnId, payload);
+    // Nếu không tìm thấy đơn PENDING (đã bị claim bởi webhook khác) → bỏ qua, ghi log vào audit
+    if (!activated) {
+      await this.audit.log({
+        actorType: AuditActorType.WEBHOOK,
+        action: AuditAction.PAYMENT_WEBHOOK_IGNORED,
+        entityType: 'Order',
+        entityId: order.id,
+        targetUserId: order.userId,
+        metadata: {
+          reason: 'already_processed',
+          amount,
+          txnId,
+          transferCode: order.transferCode,
+        },
+      });
+      return { success: true, ignored: 'already_processed' };
+    }
+
+    const { paidAt, periodEnd } = activated;
     this.logger.log(`Đơn ${order.id} đã thanh toán & kích hoạt subscription.`);
     await this.audit.log({
       actorType: AuditActorType.WEBHOOK,
@@ -536,10 +596,23 @@ export class PaymentsService {
     order: Order & { plan: Plan },
     txnId: string,
     payload: any,
-  ): Promise<{ paidAt: Date; periodEnd: Date }> {
+  ): Promise<{ paidAt: Date; periodEnd: Date } | null> {
     const now = new Date();
     let periodEnd = now;
-    await this.prisma.$transaction(async (tx) => {
+    const activated = await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.order.updateMany({
+        where: { id: order.id, status: 'PENDING' },
+        data: {
+          status: 'PAID',
+          paidAt: now,
+          providerTxnId: txnId || undefined,
+          rawPayload: payload as Prisma.InputJsonValue,
+        },
+      });
+      if (claimed.count === 0) return false;
+
+      await lockBillingUser(tx, order.userId);
+
       const sub = await tx.subscription.findUnique({
         where: { userId: order.userId },
       });
@@ -573,16 +646,13 @@ export class PaymentsService {
       await tx.order.update({
         where: { id: order.id },
         data: {
-          status: 'PAID',
-          paidAt: now,
-          providerTxnId: txnId || undefined,
-          rawPayload: payload as Prisma.InputJsonValue,
           subscriptionId,
           periodEnd: expiresAt,
         },
       });
+      return true;
     });
-    return { paidAt: now, periodEnd };
+    return activated ? { paidAt: now, periodEnd } : null;
   }
 
   /**

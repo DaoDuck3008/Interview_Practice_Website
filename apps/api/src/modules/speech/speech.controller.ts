@@ -11,6 +11,8 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { SpeechService } from './speech.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { QuotaGuard } from '../quota/quota.guard';
+import { QuotaService } from '../quota/quota.service';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { fileUploadOptions } from '../../common/upload/file-upload.options';
 import { MAX_AUDIO_BYTES } from '../../common/upload/audio.constants';
 import { ConcurrencyInterceptor } from '../../common/concurrency/concurrency.interceptor';
@@ -18,7 +20,10 @@ import { THROTTLE_HEAVY_UPLOAD } from '../../common/throttling/throttle-profiles
 
 @Controller('speech')
 export class SpeechController {
-  constructor(private readonly speechService: SpeechService) {}
+  constructor(
+    private readonly speechService: SpeechService,
+    private readonly quota: QuotaService,
+  ) {}
 
   @UseGuards(JwtAuthGuard, QuotaGuard)
   @Post('transcribe')
@@ -34,9 +39,14 @@ export class SpeechController {
       }),
     ),
   )
-  transcribe(@UploadedFile() file: Express.Multer.File) {
+  async transcribe(
+    @CurrentUser() user: { id: string },
+    @UploadedFile() file: Express.Multer.File,
+  ) {
     if (!file)
       throw new BadRequestException('Không có file audio được gửi lên.');
-    return this.speechService.transcribe(file);
+    const result = await this.speechService.transcribe(file);
+    await this.quota.record(user.id);
+    return result;
   }
 }
