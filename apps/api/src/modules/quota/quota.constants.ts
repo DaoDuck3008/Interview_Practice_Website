@@ -10,6 +10,6 @@ export interface QuotaLimits {
 
 export const FREE_TIER_LIMITS: QuotaLimits = {
   isUnlimited: false,
-  dailyLimit: 3,
+  dailyLimit: 10,
   weeklyLimit: null,
 };
