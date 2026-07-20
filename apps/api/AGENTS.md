@@ -6,16 +6,22 @@ NestJS API for an interview-practice platform. Part of an npm-workspaces monorep
 
 ## Stack
 
-| Concern | Technology |
-|---|---|
-| Framework | NestJS (Express adapter) |
-| Language | TypeScript (strict) |
-| ORM | Prisma 7 (`@prisma/adapter-pg`) |
-| Database | PostgreSQL |
-| Auth | Passport (local + JWT + JWT-refresh strategies) |
-| Storage | Cloudflare R2 (S3-compatible) |
-| Validation | class-validator + class-transformer |
-| Config | `@nestjs/config` + Joi schema |
+| Concern    | Technology                                      |
+| ---------- | ----------------------------------------------- |
+| Framework  | NestJS (Express adapter)                        |
+| Language   | TypeScript (strict)                             |
+| ORM        | Prisma 7 (`@prisma/adapter-pg`)                 |
+| Database   | PostgreSQL                                      |
+| Auth       | Passport (local + JWT + JWT-refresh strategies) |
+| Storage    | Cloudflare R2 (S3-compatible)                   |
+| Validation | class-validator + class-transformer             |
+| Config     | `@nestjs/config` + Joi schema                   |
+
+---
+
+## Code Comments
+
+Khi cần thêm comment để giải thích ý nghĩa, ghi chú hoặc làm rõ một đoạn code ngắn, schema Database, hoặc syntax lạ, hãy viết bằng tiếng Việt có dấu. Chỉ comment khi phần code không tự giải thích đủ rõ.
 
 ---
 
@@ -105,6 +111,7 @@ src/
 Every response is automatically wrapped. **Never wrap manually in controllers.**
 
 ### Success
+
 ```json
 {
   "success": true,
@@ -114,6 +121,7 @@ Every response is automatically wrapped. **Never wrap manually in controllers.**
 ```
 
 ### Error (thrown via NestJS exceptions)
+
 ```json
 {
   "success": false,
@@ -211,10 +219,10 @@ Register every new module in `app.module.ts`.
 
 Pure helper functions used by **more than one module** go in `src/common/utils/`, one file per domain (mirrors the frontend's `lib/utils/` convention). Do not redefine a VN-timezone or formatting helper locally in a service/template — import from here.
 
-| File | Exports | Used by |
-|---|---|---|
+| File              | Exports                                                                       | Used by                                                                                                                                              |
+| ----------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `vn-time.util.ts` | `VN_OFFSET_MS`, `vnDayKey`, `vnStartOfDay`, `vnStartOfWeek`, `vnStartOfMonth` | `sessions`, `quota`, `payments` — all Vietnam-timezone (UTC+7, no DST) day/week/month boundary math for `where: { createdAt: { gte: ... } }` queries |
-| `format.util.ts` | `formatDateVn`, `formatVnd`, `escapeHtml` | `mail/templates/*` — human-facing string formatting inside email HTML |
+| `format.util.ts`  | `formatDateVn`, `formatVnd`, `escapeHtml`                                     | `mail/templates/*` — human-facing string formatting inside email HTML                                                                                |
 
 Vietnam is fixed at UTC+7 (no DST) — always compute boundaries by shifting to VN wall-clock via `VN_OFFSET_MS`, applying `Date.UTC(...)`, then shifting back, exactly as `vn-time.util.ts` does. Never call `.getHours()`/`.getDate()` etc. directly on a `Date` for VN-day grouping — those read the **server's local timezone**, not VN.
 
@@ -271,6 +279,7 @@ export class QueryExampleDto {
 `PrismaService` is globally provided — inject it directly without importing `PrismaModule`.
 
 ### Paginated list (standard shape)
+
 ```typescript
 const page = query.page ?? 1;
 const limit = query.limit ?? 30;
@@ -289,6 +298,7 @@ return { items, total, page, limit, totalPages: Math.ceil(total / limit) || 1 };
 ```
 
 ### Dynamic where clause
+
 ```typescript
 const where: Prisma.ExampleWhereInput = {
   isActive: true,
@@ -300,7 +310,9 @@ const where: Prisma.ExampleWhereInput = {
 ```
 
 ### Soft delete
+
 Questions are never hard-deleted. Use `isActive: false` instead:
+
 ```typescript
 softDelete(id: string) {
   return this.prisma.question.update({ where: { id }, data: { isActive: false } });
@@ -313,18 +325,19 @@ softDelete(id: string) {
 
 Key models and their purpose:
 
-| Model | Purpose |
-|---|---|
-| `User` | id, email (unique), passwordHash (nullable — null for Google accounts), name, role (USER\|ADMIN), googleId (unique, nullable), avatarUrl (nullable) |
-| `Topic` | id, slug (unique), name, iconUrl, parentId (self-ref hierarchy) |
-| `Question` | id, topicId, content, answerKeySummary, answerKeywords[], level (EASY\|MEDIUM\|HARD), isActive, isFeatured, detailAnswerKey |
-| `Session` | id, userId, questionId, audioUrl, transcript, duration — one practice attempt |
-| `Score` | id (1-1 with Session), technicalScore, completenessScore, clarityScore, matchedKeywords, missedKeywords, summary, improvements |
-| `Improvement` | id (1-1 with Session), improvedAnswer, annotations (Json: originalSegment/issue/suggestion), keyChanges |
+| Model         | Purpose                                                                                                                                             |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `User`        | id, email (unique), passwordHash (nullable — null for Google accounts), name, role (USER\|ADMIN), googleId (unique, nullable), avatarUrl (nullable) |
+| `Topic`       | id, slug (unique), name, iconUrl, parentId (self-ref hierarchy)                                                                                     |
+| `Question`    | id, topicId, content, answerKeySummary, answerKeywords[], level (EASY\|MEDIUM\|HARD), isActive, isFeatured, detailAnswerKey                         |
+| `Session`     | id, userId, questionId, audioUrl, transcript, duration — one practice attempt                                                                       |
+| `Score`       | id (1-1 with Session), technicalScore, completenessScore, clarityScore, matchedKeywords, missedKeywords, summary, improvements                      |
+| `Improvement` | id (1-1 with Session), improvedAnswer, annotations (Json: originalSegment/issue/suggestion), keyChanges                                             |
 
 **Topic hierarchy**: `parentId = null` → parent (group). `parentId = <id>` → child (leaf with iconUrl). Questions always belong to child topics.
 
 **Enums** (import from `@prisma/client`):
+
 - `Role`: `USER`, `ADMIN`
 - `Level`: `EASY`, `MEDIUM`, `HARD`
 

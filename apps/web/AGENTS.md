@@ -29,6 +29,12 @@ Next.js frontend for an interview-practice platform. Part of an npm-workspaces m
 
 ---
 
+## Code Comments
+
+Khi cần thêm comment để giải thích ý nghĩa, ghi chú hoặc làm rõ một đoạn code ngắn, hãy viết bằng tiếng Việt có dấu. Chỉ comment khi phần code không tự giải thích đủ rõ.
+
+---
+
 ## Running the Frontend
 
 ```bash
