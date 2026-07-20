@@ -11,6 +11,13 @@ import {
   type QuestionInput,
   type ScoreResult,
 } from './prompts/scoring.prompt';
+import {
+  MOCK_INTERVIEW_OVERVIEW_PROMPT_VERSION,
+  MOCK_INTERVIEW_OVERVIEW_SYSTEM_PROMPT,
+  buildMockInterviewOverviewUserPrompt,
+  type MockInterviewOverviewInput,
+  type MockInterviewOverviewResult,
+} from './prompts/mock-interview-overview.prompt';
 
 type ParsedScore = Omit<ScoreResult, 'overallScore' | 'promptVersion'>;
 
@@ -54,6 +61,23 @@ export class ScoringService {
     return { ...parsed, overallScore, promptVersion: SCORING_PROMPT_VERSION };
   }
 
+  // Tổng hợp overview mock interview từ các câu đã chấm. Nếu LLM trả về JSON không hợp lệ thì ném lỗi để retry 1 lần.
+  // Dùng bởi ai-jobs.processor.ts để lưu vào mock interview tổng quan.
+  async mockInterviewOverview(
+    input: MockInterviewOverviewInput,
+  ): Promise<MockInterviewOverviewResult> {
+    const raw = await this.deepseek.call({
+      systemPrompt: MOCK_INTERVIEW_OVERVIEW_SYSTEM_PROMPT,
+      userPrompt: buildMockInterviewOverviewUserPrompt(input),
+      temperature: 0.25,
+    });
+    const parsed = this.parseOverview(raw);
+    return {
+      ...parsed,
+      promptVersion: MOCK_INTERVIEW_OVERVIEW_PROMPT_VERSION,
+    };
+  }
+
   private callDeepSeek(userPrompt: string): Promise<string> {
     return this.deepseek.call({
       systemPrompt: SCORING_SYSTEM_PROMPT,
@@ -75,6 +99,42 @@ export class ScoringService {
       );
     }
     return this.normalize(obj);
+  }
+
+  /* Chuẩn hóa + validate output của DeepSeek. `response_format: json_object` chỉ đảm bảo JSON hợp lệ, KHÔNG đảm bảo đúng schema.
+   Nên phải tự kiểm tra để tránh 500 (thiếu field) hay điểm tràn khung (>10). Schema sai -> ném để retry 1 lần.
+  */
+  private parseOverview(
+    raw: string,
+  ): Omit<MockInterviewOverviewResult, 'promptVersion'> {
+    let obj: unknown;
+    try {
+      obj = JSON.parse(raw);
+    } catch {
+      this.logger.error(
+        `DeepSeek tráº£ vá» overview khÃ´ng pháº£i JSON: ${raw.slice(0, 200)}`,
+      );
+      throw new InternalServerErrorException(
+        'Káº¿t quáº£ tá»•ng há»£p mock interview khÃ´ng há»£p lá»‡.',
+      );
+    }
+
+    if (typeof obj !== 'object' || obj === null) {
+      throw this.invalid('overview khÃ´ng pháº£i object');
+    }
+    const r = obj as Record<string, unknown>;
+    const summary = typeof r.summary === 'string' ? r.summary.trim() : '';
+    if (!summary) throw this.invalid('overview thiáº¿u summary');
+
+    return {
+      summary,
+      strengths: this.toStringArray(r.strengths).slice(0, 4),
+      weaknesses: this.toStringArray(r.weaknesses).slice(0, 4),
+      nextRecommendations: this.toStringArray(r.nextRecommendations).slice(
+        0,
+        4,
+      ),
+    };
   }
 
   /**

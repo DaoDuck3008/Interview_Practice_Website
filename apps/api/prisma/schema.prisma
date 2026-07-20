@@ -81,6 +81,42 @@ enum AuditAction {
   SESSION_ADMIN_VIEW_DETAIL
 }
 
+enum MockInterviewStatus {
+  DRAFT
+  IN_PROGRESS
+  SUBMITTED
+  SCORING
+  SCORED
+  ABANDONED
+}
+
+enum MockInterviewMode {
+  TOPIC
+  CUSTOM
+  MIXED
+}
+
+enum MockQuestionAnswerStatus {
+  PENDING
+  ANSWERED
+  SKIPPED
+}
+
+enum MockQuestionScoreStatus {
+  PENDING
+  QUEUED
+  SCORED
+  FAILED
+  SKIPPED
+}
+
+enum MockOverviewStatus {
+  PENDING
+  GENERATED
+  FALLBACK
+  FAILED
+}
+
 // ─── Models ──────────────────────────────────────────
 
 model User {
@@ -103,6 +139,7 @@ model User {
   reviewedScores  Score[]          @relation("ScoreReviewedBy") // các Score admin này đã review/chấm lại thủ công
   supportMessages SupportMessage[] // hội thoại hỗ trợ (1 thread liên tục / user, cả tin user gửi lẫn admin trả lời)
   favorites       Favorite[]
+  mockInterviews  MockInterview[]
 }
 
 model Topic {
@@ -118,6 +155,7 @@ model Topic {
   children Topic[] @relation("TopicHierarchy")
 
   questions Question[]
+  mockInterviews MockInterview[]
 }
 
 model Question {
@@ -137,6 +175,7 @@ model Question {
 
   sessions  Session[]
   favorites Favorite[]
+  mockInterviewQuestions MockInterviewQuestion[]
 
   @@index([isActive, topicId]) // browse/random/admin-list: luôn lọc isActive, thường kèm topicId
   @@index([isActive, createdAt]) // public latest questions
@@ -157,9 +196,78 @@ model Session {
 
   score       Score?
   improvement Improvement?
+  mockInterviewQuestion MockInterviewQuestion?
 
   @@index([userId, createdAt]) // dashboard: thống kê/lịch sử/heatmap theo user + thời gian
   @@index([questionId]) // findByQuestion + admin filter theo topic (join qua questionId)
+}
+
+model MockInterview {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  mode   MockInterviewMode   @default(TOPIC)
+  status MockInterviewStatus @default(DRAFT)
+
+  title   String
+  topicId String?
+  topic   Topic? @relation(fields: [topicId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  level           Level?
+  totalQuestions  Int
+  durationSeconds Int
+
+  startedAt   DateTime?
+  expiresAt   DateTime?
+  submittedAt DateTime?
+  scoredAt    DateTime?
+
+  averageTechnicalScore    Float?
+  averageCompletenessScore Float?
+  averageClarityScore      Float?
+  overallScore             Float?
+
+  summary             String?
+  strengths           String[] @default([])
+  weaknesses          String[] @default([])
+  nextRecommendations String[] @default([])
+
+  overviewStatus MockOverviewStatus @default(PENDING)
+  overviewError  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  questions MockInterviewQuestion[]
+
+  @@index([userId, createdAt])
+  @@index([userId, status])
+}
+
+model MockInterviewQuestion {
+  id              String @id @default(uuid())
+  mockInterviewId String
+  mockInterview   MockInterview @relation(fields: [mockInterviewId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  sessionId String?  @unique
+  session   Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  order Int
+
+  answerStatus MockQuestionAnswerStatus @default(PENDING)
+  scoreStatus  MockQuestionScoreStatus  @default(PENDING)
+  scoreError   String?
+
+  answeredAt DateTime?
+  skippedAt  DateTime?
+
+  @@unique([mockInterviewId, questionId])
+  @@unique([mockInterviewId, order])
+  @@index([mockInterviewId, order])
 }
 
 model Score {

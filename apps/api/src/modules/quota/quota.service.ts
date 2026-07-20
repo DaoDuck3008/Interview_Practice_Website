@@ -66,16 +66,31 @@ export class QuotaService {
    * Không tăng đếm — record() mới tăng, gọi sau khi tạo session thành công.
    */
   async assertWithinLimit(userId: string): Promise<void> {
+    await this.assertWithinLimitFor(userId, 1);
+  }
+
+  // Kiểm tra TRƯỚC khi cho luyện tập nhiều lượt cùng lúc (vd 3 câu hỏi)
+  // dùng trong mock interview.
+  async assertWithinLimitFor(
+    userId: string,
+    requestedUses: number,
+  ): Promise<void> {
     const limits = await this.getLimits(userId);
     if (limits.isUnlimited) return;
     if (limits.dailyLimit === null && limits.weeklyLimit === null) return;
 
     const usage = await this.getUsage(userId);
 
-    if (limits.dailyLimit !== null && usage.daily >= limits.dailyLimit) {
+    if (
+      limits.dailyLimit !== null &&
+      usage.daily + requestedUses > limits.dailyLimit
+    ) {
       throw this.limitException('hôm nay', limits.dailyLimit);
     }
-    if (limits.weeklyLimit !== null && usage.weekly >= limits.weeklyLimit) {
+    if (
+      limits.weeklyLimit !== null &&
+      usage.weekly + requestedUses > limits.weeklyLimit
+    ) {
       throw this.limitException('tuần này', limits.weeklyLimit);
     }
   }
@@ -96,10 +111,8 @@ export class QuotaService {
    * ngữ nghĩa "còn bao nhiêu lượt" của daily/weekly.
    */
   async getStatus(userId: string) {
-    return this.cache.getOrSet(
-      this.statusCacheKey(userId),
-      STATUS_TTL,
-      () => this.computeStatus(userId),
+    return this.cache.getOrSet(this.statusCacheKey(userId), STATUS_TTL, () =>
+      this.computeStatus(userId),
     );
   }
 
@@ -108,7 +121,12 @@ export class QuotaService {
     const usage = await this.getUsage(userId);
 
     if (limits.isUnlimited) {
-      return { unlimited: true, daily: null, weekly: null, todayCount: usage.daily };
+      return {
+        unlimited: true,
+        daily: null,
+        weekly: null,
+        todayCount: usage.daily,
+      };
     }
     return {
       unlimited: false,

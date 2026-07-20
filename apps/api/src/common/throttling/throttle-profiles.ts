@@ -103,14 +103,14 @@ export const THROTTLE_HEAVY_UPLOAD = throttleProfile(
   2 * MINUTE_MS,
 );
 
-// Score/improve đưa job AI vào queue. QuotaGuard kiểm soát hạn mức nghiệp vụ,
+// Score/improve/ mockInterview đưa job AI vào queue. QuotaGuard kiểm soát hạn mức nghiệp vụ,
 // AiJobsService dedup job theo session và service trả cache khi đã có kết quả.
 // Limit này vì vậy chỉ cần chặn spam click/script quá mức.
 export const THROTTLE_AI_ACTION = throttleProfile(
   'ai-action',
   60,
   10 * MINUTE_MS,
-  60 * SECOND_MS,
+  2 * MINUTE_MS,
 );
 
 // Checkout là endpoint "tạo hoặc tái dùng" đơn PENDING. Người dùng có thể

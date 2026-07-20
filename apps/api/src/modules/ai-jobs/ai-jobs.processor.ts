@@ -7,13 +7,19 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import type { Job } from 'bullmq';
-import type { Prisma } from '@prisma/client';
+import {
+  MockInterviewStatus,
+  MockOverviewStatus,
+  MockQuestionScoreStatus,
+  type Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { ScoringService } from '../scoring/scoring.service';
 import { ImprovementService } from '../scoring/improvement.service';
 import { WebsocketGateway } from '../../websocket/websocket.gateway';
 import { SCORING_PROMPT_VERSION } from '../scoring/prompts/scoring.prompt';
+import type { MockInterviewOverviewInput } from '../scoring/prompts/mock-interview-overview.prompt';
 import {
   deleteSessionAndAudio,
   transientZeroScore,
@@ -104,7 +110,7 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
     try {
       const session = await this.prisma.session.findUnique({
         where: { id: sessionId },
-        include: { question: true },
+        include: { question: true, mockInterviewQuestion: true },
       });
       // Session có thể đã bị xóa (vd điểm 0 ở lần thử trước) — báo lỗi thay vì
       // im lặng, để frontend không phải đợi hết JOB_WAIT_TIMEOUT_MS mới biết.
@@ -123,6 +129,7 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
         where: { sessionId },
       });
       if (existing) {
+        await this.markMockScoreSuccess(sessionId);
         this.websocket.emitToUser(userId, 'score:ready', {
           sessionId,
           score: existing,
@@ -130,18 +137,34 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
         return;
       }
 
-      const result = await this.scoring.score(session.transcript, {
-        content: session.question.content,
-        answerKeySummary: session.question.answerKeySummary,
-        answerKeywords: session.question.answerKeywords,
-      });
+      const result = session.transcript.trim()
+        ? await this.scoring.score(session.transcript, {
+            content: session.question.content,
+            answerKeySummary: session.question.answerKeySummary,
+            answerKeywords: session.question.answerKeywords,
+          })
+        : {
+            technicalScore: 0,
+            completenessScore: 0,
+            clarityScore: 0,
+            overallScore: 0,
+            matchedKeywords: [],
+            missedKeywords: session.question.answerKeywords,
+            feedback: {
+              summary:
+                'Mình chưa nghe được câu trả lời nào. Bạn thử ghi âm lại và trả lời câu hỏi nhé!',
+              improvements: [],
+            },
+            promptVersion: SCORING_PROMPT_VERSION,
+          };
 
       let score: unknown;
       if (
         result.technicalScore +
           result.completenessScore +
           result.clarityScore ===
-        0
+          0 &&
+        !session.mockInterviewQuestion
       ) {
         await deleteSessionAndAudio(
           this.prisma,
@@ -154,8 +177,10 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
         score = await this.createScore(sessionId, result);
       }
 
+      await this.markMockScoreSuccess(sessionId);
       this.websocket.emitToUser(userId, 'score:ready', { sessionId, score });
     } catch (err) {
+      await this.markMockScoreFailure(sessionId, err);
       this.emitFailure(job.id, userId, sessionId, 'score:failed', err);
       throw err;
     }
@@ -258,6 +283,7 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
     }
   }
 
+  // Tạo bản ghi Improvement, chịu được race: Bull
   private async createImprovement(
     sessionId: string,
     result: Awaited<ReturnType<ImprovementService['improve']>>,
@@ -283,12 +309,224 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
     }
   }
 
+  // Đánh dấu session đã được chấm thành công, và nếu tất cả câu trong mock interview đã chấm xong thì tổng hợp overview.
+  private async markMockScoreSuccess(sessionId: string) {
+    const item = await this.prisma.mockInterviewQuestion.findUnique({
+      where: { sessionId },
+      select: { mockInterviewId: true },
+    });
+    if (!item) return;
+
+    await this.prisma.mockInterviewQuestion.update({
+      where: { sessionId },
+      data: { scoreStatus: MockQuestionScoreStatus.SCORED, scoreError: null },
+    });
+
+    // Kiểm tra xem tất cả câu đã được chấm xong chưa, nếu xong thì tổng hợp overview.
+    await this.completeMockInterviewIfReady(item.mockInterviewId);
+  }
+
+  // Đánh dấu session chấm thất bại, và nếu tất cả câu trong mock interview đã chấm xong thì tổng hợp overview.
+  private async markMockScoreFailure(sessionId: string, err: unknown) {
+    const item = await this.prisma.mockInterviewQuestion.findUnique({
+      where: { sessionId },
+      select: { mockInterviewId: true },
+    });
+    if (!item) return;
+
+    await this.prisma.mockInterviewQuestion.update({
+      where: { sessionId },
+      data: {
+        scoreStatus: MockQuestionScoreStatus.FAILED,
+        scoreError: this.messageFromError(err),
+      },
+    });
+    await this.completeMockInterviewIfReady(item.mockInterviewId);
+  }
+
+  // Được gọi bởi markMockScoreSuccess/Failure() khi tất cả câu đã được chấm xong, để tổng hợp overview.
+  private async completeMockInterviewIfReady(mockInterviewId: string) {
+    const mock = await this.prisma.mockInterview.findUnique({
+      where: { id: mockInterviewId },
+      include: {
+        questions: {
+          orderBy: { order: 'asc' },
+          include: {
+            question: { select: { content: true } },
+            session: { include: { score: true } },
+          },
+        },
+      },
+    });
+    if (!mock || mock.status !== MockInterviewStatus.SCORING) return;
+
+    const terminalStatuses = new Set<MockQuestionScoreStatus>([
+      MockQuestionScoreStatus.SCORED,
+      MockQuestionScoreStatus.FAILED,
+      MockQuestionScoreStatus.SKIPPED,
+    ]);
+
+    // Nếu còn câu nào chưa chấm xong (khác SCORED, FAILED, SKIPPED), chưa tổng hợp overview.
+    if (mock.questions.some((q) => !terminalStatuses.has(q.scoreStatus))) {
+      return;
+    }
+
+    // Lock mock interview bằng cách đổi status thành SUBMITTED để tránh race: 2 job
+    const lock = await this.prisma.mockInterview.updateMany({
+      where: { id: mockInterviewId, status: MockInterviewStatus.SCORING },
+      data: { status: MockInterviewStatus.SUBMITTED },
+    });
+    if (lock.count === 0) return;
+
+    // Lọc ra các câu được chấm thành công (SCORED) để tổng hợp overview. Nếu không có câu nào được chấm thành công, fallback.
+    const scored = mock.questions.filter((q) => q.session?.score);
+    if (scored.length === 0) {
+      await this.prisma.mockInterview.update({
+        where: { id: mockInterviewId },
+        data: {
+          status: MockInterviewStatus.SCORED,
+          scoredAt: new Date(),
+          overviewStatus: MockOverviewStatus.FALLBACK,
+          summary: 'Chưa có câu trả lời nào được chấm thành công.',
+          strengths: [],
+          weaknesses: ['Các câu trả lời chưa thể chấm điểm.'],
+          nextRecommendations: [
+            'Bạn có thể thử nộp lại hoặc tạo một mock interview mới.',
+          ],
+        },
+      });
+      return;
+    }
+
+    // Tính điểm trung bình từ các câu đã chấm
+    const averages = this.averageScores(scored.map((q) => q.session!.score!));
+    // Viết input cho prompt tổng hợp overview
+    const overviewInput: MockInterviewOverviewInput = {
+      title: mock.title,
+      durationSeconds: mock.durationSeconds,
+      answeredQuestions: scored.length,
+      totalQuestions: mock.totalQuestions,
+      ...averages,
+      scores: scored.map((q) => ({
+        order: q.order,
+        question: q.question.content,
+        technicalScore: q.session!.score!.technicalScore,
+        completenessScore: q.session!.score!.completenessScore,
+        clarityScore: q.session!.score!.clarityScore,
+        summary: q.session!.score!.summary,
+        improvements: q.session!.score!.improvements,
+        matchedKeywords: q.session!.score!.matchedKeywords,
+        missedKeywords: q.session!.score!.missedKeywords,
+      })),
+    };
+
+    // Gọi AI để tổng hợp overview, nếu thất bại thì fallback.
+    try {
+      const overview = await this.scoring.mockInterviewOverview(overviewInput);
+      await this.prisma.mockInterview.update({
+        where: { id: mockInterviewId },
+        data: {
+          status: MockInterviewStatus.SCORED,
+          scoredAt: new Date(),
+          ...averages,
+          summary: overview.summary,
+          strengths: overview.strengths,
+          weaknesses: overview.weaknesses,
+          nextRecommendations: overview.nextRecommendations,
+          overviewStatus: MockOverviewStatus.GENERATED,
+          overviewError: null,
+        },
+      });
+    } catch (err) {
+      const fallback = this.buildFallbackOverview(overviewInput);
+      await this.prisma.mockInterview.update({
+        where: { id: mockInterviewId },
+        data: {
+          status: MockInterviewStatus.SCORED,
+          scoredAt: new Date(),
+          ...averages,
+          ...fallback,
+          overviewStatus: MockOverviewStatus.FALLBACK,
+          overviewError: this.messageFromError(err),
+        },
+      });
+    }
+  }
+
+  // Hàm tính điểm trung bình từ các câu đã chấm, để lưu vào mock interview tổng quan.
+  private averageScores(
+    scores: Array<{
+      technicalScore: number;
+      completenessScore: number;
+      clarityScore: number;
+    }>,
+  ) {
+    const technical = scores.reduce((sum, s) => sum + s.technicalScore, 0);
+    const completeness = scores.reduce(
+      (sum, s) => sum + s.completenessScore,
+      0,
+    );
+    const clarity = scores.reduce((sum, s) => sum + s.clarityScore, 0);
+    const n = scores.length;
+    const averageTechnicalScore = round1(technical / n);
+    const averageCompletenessScore = round1(completeness / n);
+    const averageClarityScore = round1(clarity / n);
+    const overallScore = round1(
+      (averageTechnicalScore + averageCompletenessScore + averageClarityScore) /
+        3,
+    );
+
+    return {
+      averageTechnicalScore,
+      averageCompletenessScore,
+      averageClarityScore,
+      overallScore,
+    };
+  }
+
+  // Nếu tổng hợp overview thất bại (vd LLM timeout, lỗi API...), vẫn tạo 1 bản fallback để user nhận được thông báo thay vì treo.
+  private buildFallbackOverview(input: MockInterviewOverviewInput) {
+    const missed = topKeywords(input.scores.flatMap((s) => s.missedKeywords));
+    const weakQuestions = input.scores
+      .map((s) => ({
+        label: `Câu ${s.order}`,
+        score: (s.technicalScore + s.completenessScore + s.clarityScore) / 3,
+      }))
+      .sort((a, b) => a.score - b.score)
+      .slice(0, 2)
+      .map((q) => q.label);
+
+    return {
+      summary: `Bạn đã hoàn thành ${input.answeredQuestions}/${input.totalQuestions} câu, điểm trung bình ${input.overallScore}.`,
+      strengths:
+        input.overallScore >= 7
+          ? ['Bạn có nền tảng trả lời khá ổn ở các câu đã hoàn thành.']
+          : [],
+      weaknesses:
+        missed.length > 0
+          ? [`Bạn còn thiếu các ý quan trọng: ${missed.join(', ')}.`]
+          : ['Một số câu trả lời cần đầy đủ và rõ ý hơn.'],
+      nextRecommendations:
+        weakQuestions.length > 0
+          ? [
+              `Ôn lại ${weakQuestions.join(', ')} và luyện trả lời có ví dụ cụ thể hơn.`,
+            ]
+          : ['Tiếp tục luyện thêm một mock interview cùng chủ đề.'],
+    };
+  }
+
   private isUniqueViolation(err: unknown): boolean {
     return (
       typeof err === 'object' &&
       err !== null &&
       (err as { code?: string }).code === 'P2002'
     );
+  }
+
+  private messageFromError(err: unknown): string {
+    return err instanceof HttpException || err instanceof Error
+      ? err.message
+      : GENERIC_FAILURE_MESSAGE;
   }
 
   private emitFailure(
@@ -329,4 +567,21 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
       message: GENERIC_FAILURE_MESSAGE,
     });
   }
+}
+
+function round1(n: number): number {
+  return Math.round(n * 10) / 10;
+}
+
+function topKeywords(values: string[]): string[] {
+  const counts = new Map<string, number>();
+  for (const value of values) {
+    const key = value.trim();
+    if (!key) continue;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([key]) => key);
 }
