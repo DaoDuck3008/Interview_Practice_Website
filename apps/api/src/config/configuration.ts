@@ -20,6 +20,7 @@ export const validationSchema = Joi.object({
   R2_BUCKET_NAME: Joi.string().required(),
   R2_PUBLIC_URL: Joi.string().required(),
   GROQ_API_KEY: Joi.string().required(),
+  GROQ_TRANSCRIPTION_MODEL: Joi.string().default('whisper-large-v3-turbo'),
   DEEPSEEK_API_KEY: Joi.string().required(),
   SEPAY_WEBHOOK_SECRET: Joi.string().allow('').default(''),
   SEPAY_BANK_ACCOUNT: Joi.string().default(''),
@@ -56,6 +57,8 @@ export default () => ({
   },
   groq: {
     apiKey: process.env.GROQ_API_KEY,
+    transcriptionModel:
+      process.env.GROQ_TRANSCRIPTION_MODEL ?? 'whisper-large-v3-turbo',
   },
   deepseek: {
     apiKey: process.env.DEEPSEEK_API_KEY,

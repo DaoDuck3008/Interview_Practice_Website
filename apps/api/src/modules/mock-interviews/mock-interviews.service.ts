@@ -48,6 +48,7 @@ const DETAIL_INCLUDE = {
       session: {
         select: {
           id: true,
+          audioUrl: true,
           transcript: true,
           duration: true,
           createdAt: true,
@@ -313,6 +314,7 @@ export class MockInterviewsService {
       return {
         id: session.id,
         questionId: session.questionId,
+        audioUrl: session.audioUrl,
         transcript: session.transcript,
         duration: session.duration,
         createdAt: session.createdAt,

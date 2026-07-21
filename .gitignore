@@ -48,3 +48,6 @@ next-env.d.ts
 
 # Standalone question-importer tooling (kept off git)
 /tools/
+
+/.od-skills
+/.claude

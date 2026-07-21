@@ -1,0 +1,26 @@
+{
+  "kind": "critique-panel",
+  "score": 4,
+  "axes": {
+    "clarity": {
+      "score": 4,
+      "notes": "Result page separates overall status, score breakdown, AI overview, and per-question review without mixing actions from the interview room."
+    },
+    "hierarchy": {
+      "score": 4,
+      "notes": "Overall score and scoring status lead the page; detailed transcript/audio/keywords are contained in lower-priority question cards."
+    },
+    "typography": {
+      "score": 4,
+      "notes": "Uses the existing Be Vietnam Pro app typography with tabular numerics for score and progress values."
+    },
+    "motion": {
+      "score": 4,
+      "notes": "Uses restrained loading spinners, transitions, and auto-refresh during SCORING without adding decorative animation."
+    },
+    "brand": {
+      "score": 4,
+      "notes": "Keeps the dark Phong van IT surface system, canonical token classes, restrained accent use, and clear success/danger states."
+    }
+  }
+}

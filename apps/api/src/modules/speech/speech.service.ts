@@ -14,11 +14,16 @@ import { MAX_TRANSCRIPT_CHARS } from '../../common/upload/audio.constants';
 export class SpeechService {
   private readonly groq: Groq;
   private readonly logger = new Logger(SpeechService.name);
+  private readonly transcriptionModel: string;
 
   constructor(private config: ConfigService) {
     this.groq = new Groq({
       apiKey: this.config.getOrThrow<string>('groq.apiKey'),
     });
+    this.transcriptionModel = this.config.get<string>(
+      'groq.transcriptionModel',
+      'whisper-large-v3-turbo',
+    );
   }
 
   /**
@@ -37,7 +42,7 @@ export class SpeechService {
 
       const result = await this.groq.audio.transcriptions.create({
         file: audioFile,
-        model: 'whisper-large-v3',
+        model: this.transcriptionModel,
         response_format: 'verbose_json',
       });
       // Type của SDK chỉ khai báo `text` cho response_format 'json', nhưng
@@ -64,6 +69,12 @@ export class SpeechService {
       if (err instanceof Groq.AuthenticationError) {
         throw new ServiceUnavailableException(
           'Dịch vụ phiên âm tạm thời không khả dụng. Vui lòng thử lại sau.',
+        );
+      }
+
+      if (err instanceof Groq.PermissionDeniedError) {
+        throw new ServiceUnavailableException(
+          'Model phiên âm chưa được bật trong Groq project. Vui lòng kiểm tra cấu hình Groq.',
         );
       }
 

@@ -24,6 +24,7 @@ import type { Score, Improvement, Session } from "@/lib/api/sessions";
 import { quotaDescriptor } from "@/lib/api/quota";
 import { formatTime } from "@/lib/utils/format";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
+import { audioFileNameFromBlob } from "@/lib/audioFile";
 import { useQuota } from "@/hooks/useQuota";
 import { usePracticeCountStore } from "@/stores/practiceCount.store";
 import { waitForScoreResult, waitForImproveResult } from "@/lib/ws/jobs";
@@ -97,7 +98,7 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
       let createdSession: Session | null = null;
       try {
         const formData = new FormData();
-        formData.append("audio", blob, "recording.webm");
+        formData.append("audio", blob, audioFileNameFromBlob(blob));
         formData.append("questionId", questionId);
         formData.append("duration", String(duration));
         createdSession = await createSession(formData);
@@ -158,7 +159,13 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
       }
       setPhase("evaluated");
     },
-    [questionId, onSessionSaved, refreshQuota, refreshPracticeCount, applyScore],
+    [
+      questionId,
+      onSessionSaved,
+      refreshQuota,
+      refreshPracticeCount,
+      applyScore,
+    ],
   );
 
   const {
