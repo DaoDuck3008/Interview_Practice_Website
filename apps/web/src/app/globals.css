@@ -65,6 +65,29 @@ h6 {
   transform: none !important;
 }
 
+@keyframes pricingCardPushIn {
+  0% {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(26px) scale(0.96);
+  }
+  62% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(-4px) scale(1.012);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: none;
+  }
+}
+
+.pricing-card-push-in {
+  animation: pricingCardPushIn 0.72s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: center bottom;
+}
+
 /* AnswerEvaluation — panel trượt/đẩy vào khi hiện kết quả */
 @keyframes evalEnter {
   from {
@@ -96,6 +119,9 @@ h6 {
 
 @media (prefers-reduced-motion: reduce) {
   .eval-enter {
+    animation: none;
+  }
+  .pricing-card-push-in {
     animation: none;
   }
   .skeleton-pulse {

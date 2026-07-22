@@ -51,3 +51,6 @@ next-env.d.ts
 
 /.od-skills
 /.claude
+/assets
+/examples
+/open-designs

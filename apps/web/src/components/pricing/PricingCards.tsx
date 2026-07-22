@@ -7,7 +7,10 @@ import { Check, BadgeCheck, Sparkles, Loader2, Info } from "lucide-react";
 import { AnimateOnScroll } from "@/components/ui/AnimateOnScroll";
 import { getPlans, type Plan } from "@/lib/api/plans";
 import { createCheckout } from "@/lib/api/payments";
-import { getMySubscription, type MySubscription } from "@/lib/api/subscriptions";
+import {
+  getMySubscription,
+  type MySubscription,
+} from "@/lib/api/subscriptions";
 import { useAuthStore } from "@/stores/auth.store";
 import { toastApiError } from "@/lib/utils/apiError";
 import { formatDay, formatNumber } from "@/lib/utils/format";
@@ -20,7 +23,7 @@ const FEATURES = [
 ];
 
 const cardClass =
-  "group relative flex flex-col h-full rounded-2xl p-8 backdrop-blur-xl transition-all duration-300";
+  "group relative flex flex-col h-full rounded-2xl p-8 transition-all duration-300";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -123,8 +126,8 @@ export default function PricingCards() {
             <span className="font-semibold text-[var(--color-text-primary)]">
               {sub!.plan.name}
             </span>{" "}
-            · còn <span className="font-semibold">{remainingDays}</span> ngày (hết
-            hạn {expiryStr}). Mua thêm hoặc đổi gói sẽ{" "}
+            · còn <span className="font-semibold">{remainingDays}</span> ngày
+            (hết hạn {expiryStr}). Mua thêm hoặc đổi gói sẽ{" "}
             <span className="font-semibold text-[var(--color-text-primary)]">
               cộng dồn
             </span>{" "}
@@ -140,7 +143,7 @@ export default function PricingCards() {
           return (
             <AnimateOnScroll key={plan.id} variant="fade-up" delay={i * 120}>
               <div
-                className={`${cardClass} hover:-translate-y-1 hover:border-[var(--color-accent)] hover:shadow-[0_0_40px_-5px_rgba(124,58,237,0.55)] ${
+                className={`${cardClass} pricing-card-push-in hover:-translate-y-1 hover:border-[var(--color-accent)] hover:shadow-[0_0_40px_-5px_rgba(124,58,237,0.55)] ${
                   isCurrent
                     ? "border border-[var(--color-success)]/60"
                     : popular
@@ -148,9 +151,8 @@ export default function PricingCards() {
                       : "border border-white/10"
                 }`}
                 style={{
-                  background: isCurrent
-                    ? "rgba(34,197,94,0.08)"
-                    : "rgba(255,255,255,0.05)",
+                  background: "rgba(255,255,255, 0.055)",
+                  animationDelay: `${i * 110}ms`,
                 }}
               >
                 {isCurrent ? (

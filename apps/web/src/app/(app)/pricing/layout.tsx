@@ -14,13 +14,20 @@ export default function PricingLayout({
       <div
         className="fixed inset-0 z-0 pointer-events-none"
         style={{
-          backgroundImage: "url('/images/register_background_2.jpg')",
+          backgroundImage: "url('/images/pricing-bg-glass-wave.png')",
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
       />
       {/* Lớp phủ tối */}
-      <div className="fixed inset-0 z-0 pointer-events-none bg-black/65" />
+      <div
+        className="fixed inset-0 z-0 pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(6,6,12,0.62) 0%, rgba(6,6,12,0.45) 38%, rgba(6,6,12,0.80) 100%)",
+        }}
+      />
+      <div className="fixed inset-0 z-0 pointer-events-none bg-black/30" />
 
       {/* Nội dung nằm trên nền */}
       <div className="relative z-10">{children}</div>

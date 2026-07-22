@@ -21,10 +21,10 @@ export default function PricingPage() {
           <h1 className="text-3xl md:text-4xl font-extrabold text-[var(--color-text-primary)] tracking-tight">
             Chọn gói luyện tập phù hợp
           </h1>
-          <p className="mt-4 text-[var(--color-text-secondary)]">
+          {/* <p className="mt-4 text-[var(--color-text-secondary)]">
             Nâng cấp để mở khóa chấm điểm AI không giới hạn và theo dõi tiến bộ
             của bạn qua từng buổi luyện.
-          </p>
+          </p> */}
         </div>
       </AnimateOnScroll>
 
