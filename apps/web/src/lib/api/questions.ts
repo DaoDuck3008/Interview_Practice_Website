@@ -12,14 +12,14 @@ export interface Question {
   id: string;
   topicId: string;
   content: string;
-  detailAnswerKey: string;
+  detailAnswerKey?: string;
   answerKeySummary: string;
   answerKeywords: string[];
   level: Level;
   isActive: boolean;
   isFeatured: boolean;
   createdAt?: string;
-  topic?: { id: string; slug: string; name: string };
+  topic?: { id: string; slug: string; name: string; iconUrl?: string | null };
 }
 
 export interface QuestionInput {
@@ -38,6 +38,7 @@ export interface Paginated<T> {
   page: number;
   limit: number;
   totalPages: number;
+  levelCounts?: Record<Level, number>;
 }
 
 export type QuestionSortBy = "topic" | "level" | "content" | "status";
@@ -58,7 +59,7 @@ export interface PublicQuestionQuery {
   topicId?: string;
   level?: Level;
   search?: string;
-  sortBy?: "default" | "createdAt";
+  sortBy?: "default" | "createdAt" | "level";
   order?: SortOrder;
   page?: number;
   limit?: number;
@@ -86,6 +87,7 @@ export async function getQuestionsPublic(
       page: 1,
       limit: query.limit ?? 30,
       totalPages: 0,
+      levelCounts: { EASY: 0, MEDIUM: 0, HARD: 0 },
     };
   }
 }

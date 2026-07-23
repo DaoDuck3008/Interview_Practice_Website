@@ -15,6 +15,27 @@ import { QueryAdminQuestionDto } from './dto/query-admin-question.dto';
 const ORDER_TTL = 300; // 5 phút — danh sách id/level/content cho nút prev/next, đổi khi admin CRUD câu hỏi
 const STATS_TTL = 60; // 1 phút — thẻ thống kê admin, chấp nhận trễ vài chục giây
 
+const PUBLIC_QUESTION_SELECT = {
+  id: true,
+  topicId: true,
+  content: true,
+  answerKeySummary: true,
+  answerKeywords: true,
+  level: true,
+  isActive: true,
+  isFeatured: true,
+  createdAt: true,
+  topic: {
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      iconUrl: true,
+      parentId: true,
+    },
+  },
+} satisfies Prisma.QuestionSelect;
+
 @Injectable()
 export class QuestionsService {
   constructor(
@@ -27,15 +48,32 @@ export class QuestionsService {
   }
 
   async findAll(query: QueryQuestionDto) {
+    // Sort theo createdAt hoặc level thì ưu tiên isFeatured trước, sau đó mới đến createdAt/level/id.
     const orderBy: Prisma.QuestionOrderByWithRelationInput[] =
       query.sortBy === 'createdAt'
-        ? [{ createdAt: query.order ?? 'desc' }, { id: 'asc' }]
-        : [
-            { isFeatured: 'desc' },
-            { level: 'asc' },
-            { createdAt: 'asc' },
-            { id: 'asc' },
-          ];
+        ? [{ createdAt: 'desc' }, { id: 'asc' }]
+        : query.sortBy === 'level'
+          ? [
+              { isFeatured: 'desc' },
+              { level: query.order ?? 'asc' },
+              { createdAt: 'asc' },
+              { id: 'asc' },
+            ]
+          : [
+              { isFeatured: 'desc' },
+              { level: 'asc' },
+              { createdAt: 'asc' },
+              { id: 'asc' },
+            ];
+
+    // Đếm số lượng theo level để hiển thị thẻ thống kê
+    const levelCountWhere: Prisma.QuestionWhereInput = {
+      isActive: true,
+      ...(query.topicId && { topicId: query.topicId }),
+      ...(query.search && {
+        content: { contains: query.search, mode: 'insensitive' },
+      }),
+    };
 
     const where: Prisma.QuestionWhereInput = {
       isActive: true,
@@ -49,32 +87,50 @@ export class QuestionsService {
     if (query.page !== undefined || query.limit !== undefined) {
       const page = query.page ?? 1;
       const limit = query.limit ?? 30;
-      const [items, total] = await this.prisma.$transaction([
-        this.prisma.question.findMany({
-          where,
-          include: { topic: true },
-          orderBy,
-          skip: (page - 1) * limit,
-          take: limit,
-        }),
-        this.prisma.question.count({ where }),
-      ]);
+      const [items, total, easyCount, mediumCount, hardCount] =
+        await this.prisma.$transaction([
+          this.prisma.question.findMany({
+            where,
+            select: PUBLIC_QUESTION_SELECT,
+            orderBy,
+            skip: (page - 1) * limit,
+            take: limit,
+          }),
+          this.prisma.question.count({ where }),
+          this.prisma.question.count({
+            where: { ...levelCountWhere, level: 'EASY' },
+          }),
+          this.prisma.question.count({
+            where: { ...levelCountWhere, level: 'MEDIUM' },
+          }),
+          this.prisma.question.count({
+            where: { ...levelCountWhere, level: 'HARD' },
+          }),
+        ]);
       return {
         items,
         total,
         page,
         limit,
         totalPages: Math.ceil(total / limit) || 1,
+        levelCounts: {
+          EASY: easyCount,
+          MEDIUM: mediumCount,
+          HARD: hardCount,
+        },
       };
     }
 
-    return this.prisma.question.findMany({
+    const items = await this.prisma.question.findMany({
       where,
-      include: { topic: true },
+      select: PUBLIC_QUESTION_SELECT,
       orderBy,
     });
+    return items;
   }
 
+  // Public: random 1 câu hỏi theo topicId + level (dùng cho practice)
+  // Phục vụ cho chức năng practice random, không cần cache vì mỗi lần random là khác nhau
   async findRandom(query: QueryQuestionDto) {
     const count = await this.prisma.question.count({
       where: {
@@ -90,7 +146,7 @@ export class QuestionsService {
         ...(query.topicId && { topicId: query.topicId }),
         ...(query.level && { level: query.level }),
       },
-      include: { topic: true },
+      select: PUBLIC_QUESTION_SELECT,
       take: 1,
       skip,
     });

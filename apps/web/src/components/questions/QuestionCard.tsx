@@ -23,6 +23,7 @@ import {
   getLearningQuestionHref,
   getPracticeQuestionHref,
 } from "@/lib/utils/question-url";
+import { getQuestion } from "@/lib/api/questions";
 import { useAuthStore } from "@/stores/auth.store";
 import { useFavoritesStore } from "@/stores/favorites.store";
 
@@ -202,6 +203,9 @@ export default function QuestionCard({
   onFavoriteRemoved,
 }: QuestionCardProps) {
   const [open, setOpen] = useState(false);
+  const [fullAnswer, setFullAnswer] = useState(question.detailAnswerKey ?? "");
+  const [loadingAnswer, setLoadingAnswer] = useState(false);
+  const [answerError, setAnswerError] = useState(false);
   const levelStyle = LEVEL_STYLE[question.level];
   const topicSlug = question.topic?.slug ?? "";
 
@@ -214,6 +218,29 @@ export default function QuestionCard({
     const wasFavorited = isFavorited;
     await toggleFavorite(question);
     if (wasFavorited) onFavoriteRemoved?.(question.id);
+  }
+
+  async function loadFullAnswer() {
+    if (fullAnswer || loadingAnswer) return;
+    setLoadingAnswer(true);
+    setAnswerError(false);
+    try {
+      const detail = await getQuestion(question.id);
+      setFullAnswer(detail?.detailAnswerKey ?? "");
+      if (!detail?.detailAnswerKey) setAnswerError(true);
+    } catch {
+      setAnswerError(true);
+    } finally {
+      setLoadingAnswer(false);
+    }
+  }
+
+  function handleToggleOpen() {
+    setOpen((value) => {
+      const next = !value;
+      if (next) void loadFullAnswer();
+      return next;
+    });
   }
 
   return (
@@ -233,7 +260,7 @@ export default function QuestionCard({
     >
       {/* Row */}
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleToggleOpen}
         className="group flex w-full cursor-pointer items-center gap-3 px-4 py-3.5 text-left sm:gap-4 sm:px-6"
       >
         {/* Featured crown */}
@@ -307,15 +334,21 @@ export default function QuestionCard({
           className="border-t px-5 pb-5 pt-3 sm:px-10 lg:px-16"
           style={{ borderColor: "rgba(255,255,255,0.06)" }}
         >
-          {question.detailAnswerKey ? (
+          {fullAnswer ? (
             <div className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
               <ReactMarkdown
                 components={mdComponents}
                 remarkPlugins={[remarkGfm]}
               >
-                {question.detailAnswerKey}
+                {fullAnswer}
               </ReactMarkdown>
             </div>
+          ) : loadingAnswer ? (
+            <p className="text-sm text-[#a78bfa]">Đang tải đáp án...</p>
+          ) : answerError ? (
+            <p className="text-sm text-[#94a3b8]">
+              Chưa tải được đáp án. Bạn có thể mở trang chi tiết để xem tiếp.
+            </p>
           ) : (
             <p className="text-sm text-[#606072] italic">
               Chưa có đáp án chi tiết.
@@ -342,9 +375,17 @@ export default function QuestionCard({
 
           {topicSlug && (
             <div
-              className="mt-4 flex justify-stretch border-t pt-4 sm:justify-end"
+              className="mt-4 flex flex-col gap-2 border-t pt-4 sm:flex-row sm:justify-end"
               style={{ borderColor: "rgba(255,255,255,0.06)" }}
             >
+              {/* Separate CTAs make the read-next and practice paths obvious. */}
+              <Link
+                href={getLearningQuestionHref(topicSlug, question)}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-[#e9d5ff] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[#c4b5fd]/35 hover:bg-white/[0.11] sm:w-auto"
+              >
+                Xem chi tiết
+                <BookOpen size={14} />
+              </Link>
               <Link
                 href={getPracticeQuestionHref(topicSlug, question)}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#c4b5fd]/30 bg-[#7c3aed]/20 px-4 py-2 text-sm font-semibold text-[#f4f4f6] shadow-[0_0_22px_rgba(124,58,237,0.12)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[#ddd6fe]/55 hover:bg-[rgba(139,92,246,0.24)] sm:w-auto"

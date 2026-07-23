@@ -25,8 +25,8 @@ export class QueryQuestionDto {
   search?: string;
 
   @IsOptional()
-  @IsIn(['default', 'createdAt'])
-  sortBy?: 'default' | 'createdAt';
+  @IsIn(['default', 'createdAt', 'level'])
+  sortBy?: 'default' | 'createdAt' | 'level';
 
   @IsOptional()
   @IsIn(['asc', 'desc'])

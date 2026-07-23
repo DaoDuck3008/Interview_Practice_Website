@@ -21,6 +21,7 @@ interface PageProps {
     page?: string;
     level?: string;
     search?: string;
+    sort?: string;
   }>;
 }
 
@@ -29,7 +30,7 @@ export default async function LearningQuestionsPage({
   searchParams,
 }: PageProps) {
   const { topicSlug } = await params;
-  const { page: pageStr, level, search } = await searchParams;
+  const { page: pageStr, level, search, sort } = await searchParams;
 
   const page = Math.max(1, parseInt(pageStr ?? "1") || 1);
   const limit = 30;
@@ -39,19 +40,32 @@ export default async function LearningQuestionsPage({
     ? (level as Level)
     : undefined;
   const searchQuery = search?.trim() || undefined;
+  const sortMode = sort === "latest" || sort === "hard" ? sort : "easy";
 
   const topics = await getTopicsWithCounts();
-  const currentTopic = topics.find((t) => t.slug === topicSlug);
+  const isAllTopics = topicSlug === "all";
+  const currentTopic = isAllTopics
+    ? null
+    : topics.find((t) => t.slug === topicSlug);
 
-  const result = currentTopic
+  const result = isAllTopics || currentTopic
     ? await getQuestionsPublic({
-        topicId: currentTopic.id,
+        topicId: currentTopic?.id,
         level: levelFilter,
         search: searchQuery,
+        sortBy: sortMode === "latest" ? "createdAt" : "level",
+        order: sortMode === "hard" ? "desc" : "asc",
         page,
         limit,
       })
-    : { items: [], total: 0, page, limit, totalPages: 0 };
+    : {
+        items: [],
+        total: 0,
+        page,
+        limit,
+        totalPages: 0,
+        levelCounts: { EASY: 0, MEDIUM: 0, HARD: 0 },
+      };
 
   // Tạo dữ liệu JSON-LD cho SEO
   const pageUrl = getAbsoluteUrl(`/learning/${topicSlug}/questions`);
@@ -94,6 +108,7 @@ export default async function LearningQuestionsPage({
         initialLimit={limit}
         initialLevel={levelFilter}
         initialSearch={searchQuery}
+        initialSort={sortMode}
       />
     </>
   );

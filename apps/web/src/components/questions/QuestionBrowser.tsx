@@ -4,13 +4,21 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowUp, Search, X } from "lucide-react";
+import { ArrowUp, ChevronDown, Search, X } from "lucide-react";
 import TopicsSidebar from "./TopicsSidebar";
 import QuestionCard from "./QuestionCard";
 import LearningPagination from "./LearningPagination";
 import type { TopicWithCount } from "@/lib/api/topics";
 import type { Level, Paginated, Question } from "@/lib/api/questions";
 import { LEVELS } from "@/lib/utils/levels";
+
+type SortMode = "latest" | "easy" | "hard";
+
+const SORT_OPTIONS: { value: SortMode; label: string }[] = [
+  { value: "latest", label: "Mới nhất" },
+  { value: "easy", label: "Dễ trước" },
+  { value: "hard", label: "Khó trước" },
+];
 
 interface QuestionBrowserProps {
   topics: TopicWithCount[];
@@ -20,6 +28,7 @@ interface QuestionBrowserProps {
   initialLimit: number;
   initialLevel?: Level;
   initialSearch?: string;
+  initialSort: SortMode;
 }
 
 export default function QuestionBrowser({
@@ -30,6 +39,7 @@ export default function QuestionBrowser({
   initialLimit,
   initialLevel,
   initialSearch,
+  initialSort,
 }: QuestionBrowserProps) {
   const router = useRouter();
   const { items, total, totalPages } = initialResult;
@@ -38,35 +48,57 @@ export default function QuestionBrowser({
   const [showBackToTop, setShowBackToTop] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-const currentTopic = topics.find((t) => t.slug === currentTopicSlug);
+  const currentTopic = topics.find((t) => t.slug === currentTopicSlug);
+  const isAllTopics = currentTopicSlug === "all";
+  const currentTopicLabel = currentTopic?.name ?? "Tất cả topic";
   const childTopics = topics.filter((t) => t.parentId !== null);
+  const levelCounts = initialResult.levelCounts ?? {
+    EASY: 0,
+    MEDIUM: 0,
+    HARD: 0,
+  };
+  const allLevelCount =
+    levelCounts.EASY + levelCounts.MEDIUM + levelCounts.HARD;
+
   const levelBadgeClass: Record<Level, string> = {
     EASY: "bg-[#22c55e] shadow-[0_0_14px_rgba(34,197,94,0.45)]",
     MEDIUM: "bg-[#8b5cf6] shadow-[0_0_14px_rgba(139,92,246,0.45)]",
     HARD: "bg-[#ef4444] shadow-[0_0_14px_rgba(239,68,68,0.42)]",
   };
 
-  function topicHref(slug: string) {
-    return `/learning/${slug}/questions${initialLevel ? `?level=${initialLevel}` : ""}`;
+  function buildHref(
+    updates: {
+      slug?: string;
+      page?: number;
+      level?: Level | "ALL";
+      search?: string;
+      sort?: SortMode;
+    } = {},
+  ) {
+    const params = new URLSearchParams();
+    const slug = updates.slug ?? currentTopicSlug;
+    const newPage = updates.page ?? initialPage;
+    const newLevel = updates.level !== undefined ? updates.level : initialLevel;
+    const newSearch =
+      updates.search !== undefined ? updates.search : initialSearch;
+    const newSort = updates.sort ?? initialSort;
+
+    if (newPage > 1) params.set("page", String(newPage));
+    if (newLevel && newLevel !== "ALL") params.set("level", newLevel);
+    if (newSearch?.trim()) params.set("search", newSearch.trim());
+    if (newSort !== "easy") params.set("sort", newSort);
+
+    const qs = params.toString();
+    return `/learning/${slug}/questions${qs ? `?${qs}` : ""}`;
   }
 
   function navigate(updates: {
     page?: number;
     level?: Level | "ALL";
     search?: string;
+    sort?: SortMode;
   }) {
-    const params = new URLSearchParams();
-    const newPage = updates.page ?? initialPage;
-    const newLevel = updates.level !== undefined ? updates.level : initialLevel;
-    const newSearch =
-      updates.search !== undefined ? updates.search : initialSearch;
-
-    if (newPage > 1) params.set("page", String(newPage));
-    if (newLevel && newLevel !== "ALL") params.set("level", newLevel);
-    if (newSearch?.trim()) params.set("search", newSearch.trim());
-
-    const qs = params.toString();
-    router.push(`/learning/${currentTopicSlug}/questions${qs ? `?${qs}` : ""}`);
+    router.push(buildHref(updates));
   }
 
   function handleSearchChange(value: string) {
@@ -93,24 +125,22 @@ const currentTopic = topics.find((t) => t.slug === currentTopicSlug);
   }
 
   return (
-    <div className="flex items-start gap-3 mt-4">
-      {/* Sidebar — sticky block */}
+    <div className="mt-4 flex items-start gap-3">
       <TopicsSidebar
         topics={topics}
         currentSlug={currentTopicSlug}
         currentLevel={initialLevel}
       />
 
-      {/* Main — transparent container */}
       <main className="flex min-w-0 flex-1 flex-col gap-2">
-        {/* Mobile topic switcher — cuộn ngang, thay cho sidebar (ẩn từ md trở lên) */}
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:hidden">
           {childTopics.map((topic) => {
             const active = topic.slug === currentTopicSlug;
+
             return (
               <Link
                 key={topic.id}
-                href={topicHref(topic.slug)}
+                href={buildHref({ slug: topic.slug, page: 1 })}
                 className="flex h-8 flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border pl-1.5 pr-3 text-[13px] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.12]"
                 style={{
                   background: active
@@ -134,7 +164,7 @@ const currentTopic = topics.find((t) => t.slug === currentTopicSlug);
                   <span className="h-5 w-5 flex-shrink-0 rounded-full bg-white/[0.07]" />
                 )}
                 {topic.name}
-                <span className="font-mono text-[11px] text-[#606072]">
+                <span className="font-mono text-[11px] text-[#94a3b8]">
                   {topic.questionCount}
                 </span>
               </Link>
@@ -142,7 +172,6 @@ const currentTopic = topics.find((t) => t.slug === currentTopicSlug);
           })}
         </div>
 
-        {/* Header block — rounded */}
         <div
           className="mb-2 overflow-hidden rounded-[28px] backdrop-blur-2xl"
           style={{
@@ -152,7 +181,6 @@ const currentTopic = topics.find((t) => t.slug === currentTopicSlug);
               "inset 0 1px 0 rgba(255,255,255,0.12), 0 22px 60px rgba(2,6,23,0.26)",
           }}
         >
-          {/* Sub-header row */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 px-4 py-3 sm:px-5">
             <span className="inline-flex flex-shrink-0 items-center gap-2 rounded-full border border-white/10 bg-white/[0.075] py-1 pl-1.5 pr-3 text-sm font-semibold text-[#f4f4f6]">
               {currentTopic?.iconUrl ? (
@@ -166,7 +194,7 @@ const currentTopic = topics.find((t) => t.slug === currentTopicSlug);
               ) : (
                 <span className="h-5.5 w-5.5 flex-shrink-0 rounded-full bg-white/[0.1]" />
               )}
-              {currentTopic?.name ?? currentTopicSlug}
+              {currentTopicLabel}
             </span>
 
             <div className="order-last flex w-full justify-center sm:order-none sm:w-auto sm:flex-1">
@@ -192,8 +220,9 @@ const currentTopic = topics.find((t) => t.slug === currentTopicSlug);
                   <button
                     onClick={() => {
                       setSearchValue("");
-                      if (debounceRef.current)
+                      if (debounceRef.current) {
                         clearTimeout(debounceRef.current);
+                      }
                       navigate({ search: "", page: 1 });
                     }}
                     className="absolute right-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-[#94a3b8] transition-colors hover:bg-white/10 hover:text-white"
@@ -207,15 +236,36 @@ const currentTopic = topics.find((t) => t.slug === currentTopicSlug);
             <span className="hidden flex-shrink-0 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs text-[#c4b5fd] sm:block">
               {total} câu hỏi
             </span>
+
+            <label className="relative inline-flex flex-shrink-0 items-center">
+              <span className="sr-only">Sắp xếp câu hỏi</span>
+              <select
+                value={initialSort}
+                onChange={(e) =>
+                  navigate({ sort: e.target.value as SortMode, page: 1 })
+                }
+                className="h-9 cursor-pointer appearance-none rounded-full border border-white/10 bg-[#262639] pl-4 pr-9 text-sm font-semibold text-white outline-none backdrop-blur-xl transition-colors hover:bg-[#262639]/80"
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                size={14}
+                className="pointer-events-none absolute right-3 text-[#c4b5fd]"
+              />
+            </label>
           </div>
 
-          {/* Level tabs */}
           <div className="flex items-center gap-2 overflow-x-auto border-t border-white/[0.08] px-4 py-3 sm:px-5">
             {LEVELS.map((lvl) => {
               const active =
                 lvl.value === "ALL"
                   ? !initialLevel
                   : initialLevel === lvl.value;
+
               return (
                 <button
                   key={lvl.value}
@@ -236,32 +286,132 @@ const currentTopic = topics.find((t) => t.slug === currentTopicSlug);
                     />
                   )}
                   {lvl.label}
-                  {lvl.value === "ALL" && (
-                    <span
-                      className={`rounded-full px-1.5 py-0.5 font-mono text-[11px] ${active ? "bg-[#7c3aed] text-white" : "text-[#c4b5fd]"}`}
-                      style={
-                        !active
-                          ? { background: "rgba(255,255,255,0.075)" }
-                          : undefined
-                      }
-                    >
-                      {total}
-                    </span>
-                  )}
+                  <span
+                    className={`rounded-full px-1.5 py-0.5 font-mono text-[11px] ${
+                      active ? "bg-[#7c3aed] text-white" : "text-[#ddd6fe]"
+                    }`}
+                    style={
+                      active
+                        ? undefined
+                        : { background: "rgba(255,255,255,0.075)" }
+                    }
+                  >
+                    {lvl.value === "ALL"
+                      ? allLevelCount
+                      : levelCounts[lvl.value]}
+                  </span>
                 </button>
               );
             })}
           </div>
+
+          {(currentTopic ||
+            isAllTopics ||
+            initialLevel ||
+            initialSearch ||
+            initialSort !== "easy") && (
+            <div className="flex flex-wrap items-center gap-2 border-t border-white/[0.08] px-4 py-3 sm:px-5">
+              {/* Applied filters keep context visible and removable. */}
+              {currentTopic && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push(buildHref({ slug: "all", page: 1 }))
+                  }
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-3 py-1.5 text-xs font-semibold text-[#e9d5ff] transition-all hover:bg-white/[0.11]"
+                >
+                  {currentTopic.name}
+                  <X size={12} />
+                </button>
+              )}
+              {isAllTopics && (
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-3 py-1.5 text-xs font-semibold text-[#e9d5ff]">
+                  Tất cả topic
+                </span>
+              )}
+              {initialLevel && (
+                <button
+                  type="button"
+                  onClick={() => navigate({ level: "ALL", page: 1 })}
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-3 py-1.5 text-xs font-semibold text-[#e9d5ff] transition-all hover:bg-white/[0.11]"
+                >
+                  {LEVELS.find((level) => level.value === initialLevel)?.label}
+                  <X size={12} />
+                </button>
+              )}
+              {initialSearch && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchValue("");
+                    navigate({ search: "", page: 1 });
+                  }}
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-3 py-1.5 text-xs font-semibold text-[#e9d5ff] transition-all hover:bg-white/[0.11]"
+                >
+                  Search: {initialSearch}
+                  <X size={12} />
+                </button>
+              )}
+              {initialSort !== "easy" && (
+                <button
+                  type="button"
+                  onClick={() => navigate({ sort: "easy", page: 1 })}
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-3 py-1.5 text-xs font-semibold text-[#e9d5ff] transition-all hover:bg-white/[0.11]"
+                >
+                  {
+                    SORT_OPTIONS.find((option) => option.value === initialSort)
+                      ?.label
+                  }
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Question rows */}
         {items.length === 0 ? (
           <div className="flex items-center justify-center py-24">
-            <p className="rounded-full border border-white/10 bg-white/[0.06] px-5 py-3 text-sm text-[#cbd5e1] backdrop-blur-xl">
-              {searchValue
-                ? `Không tìm thấy kết quả cho "${searchValue}".`
-                : "Không có câu hỏi nào."}
-            </p>
+            <div className="max-w-xl rounded-[28px] border border-white/10 bg-white/[0.06] px-6 py-5 text-center text-sm text-[#cbd5e1] backdrop-blur-xl">
+              <p className="font-semibold text-[#f4f4f6]">
+                {initialSearch
+                  ? `Không tìm thấy kết quả cho "${initialSearch}".`
+                  : "Không có câu hỏi nào phù hợp."}
+              </p>
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                {initialLevel && (
+                  <button
+                    type="button"
+                    onClick={() => navigate({ level: "ALL", page: 1 })}
+                    className="rounded-full border border-white/10 bg-white/[0.075] px-3 py-1.5 text-xs font-semibold text-[#e9d5ff] transition-colors hover:bg-white/[0.12]"
+                  >
+                    Xóa level filter
+                  </button>
+                )}
+                {initialSearch && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchValue("");
+                      navigate({ search: "", page: 1 });
+                    }}
+                    className="rounded-full border border-white/10 bg-white/[0.075] px-3 py-1.5 text-xs font-semibold text-[#e9d5ff] transition-colors hover:bg-white/[0.12]"
+                  >
+                    Xóa tìm kiếm
+                  </button>
+                )}
+                {!isAllTopics && initialSearch && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      router.push(buildHref({ slug: "all", page: 1 }))
+                    }
+                    className="rounded-full border border-[#c4b5fd]/35 bg-[rgba(124,58,237,0.24)] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[rgba(139,92,246,0.3)]"
+                  >
+                    Tìm trong tất cả topic
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col gap-2">
@@ -276,7 +426,6 @@ const currentTopic = topics.find((t) => t.slug === currentTopicSlug);
           </div>
         )}
 
-        {/* Pagination */}
         <LearningPagination
           page={initialPage}
           totalPages={totalPages}
