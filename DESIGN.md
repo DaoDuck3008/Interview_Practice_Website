@@ -4,7 +4,7 @@
 
 Phong van IT is a Vietnamese-first interview practice platform for software engineers. The product combines a curated IT question bank, AI scoring, answer improvement, mock interviews, subscriptions, and admin operations.
 
-The interface should feel focused, technical, and calm: a dark learning cockpit with precise surfaces, restrained purple AI glow, readable Vietnamese typography, and dashboard-grade clarity. Avoid playful learning-app colors, generic SaaS gradients, and noisy decoration.
+The interface should feel focused, technical, and calm: a dark learning cockpit with precise surfaces, restrained purple AI glow, readable Vietnamese typography, and dashboard-grade clarity. Public marketing pages use a softer cinematic layer: slate-purple backgrounds, white edge light, glassmorphism, and illustrated IT interview imagery.
 
 ## Design Thesis
 
@@ -13,6 +13,8 @@ Use a dark, high-contrast product UI that makes practice feel serious but approa
 - A near-black base with a subtle dot grid.
 - Layered charcoal surfaces with thin borders.
 - One primary violet accent for AI, progress, and primary actions.
+- A slate-purple marketing canvas for landing, pricing, footer, and other public sections.
+- Soft white-violet light blooms placed near the top or bottom edge of image-led sections.
 - Sparse success, warning, and danger colors only for state.
 - Be Vietnam Pro for Vietnamese readability and product consistency.
 - Compact, repeatable controls for learning and admin workflows.
@@ -21,23 +23,39 @@ Use a dark, high-contrast product UI that makes practice feel serious but approa
 
 ### Color
 
-| Token | Hex | Use |
-| --- | --- | --- |
-| `--color-base` | `#06060c` | App background, page shell |
-| `--color-surface` | `#0d0d14` | Standard cards, menus, sidebars |
-| `--color-elevated` | `#13131c` | Raised panels, hover surfaces, nested controls |
-| `--color-border` | `#1c1c28` | Default border and dividers |
-| `--color-text-primary` | `#f4f4f6` | Primary text |
-| `--color-text-secondary` | `#9898aa` | Body copy, secondary labels |
-| `--color-text-muted` | `#606072` | Helper text, placeholders, inactive icons |
-| `--color-text-faint` | `#3d3d54` | Disabled text, skeleton hints |
-| `--color-accent` | `#7c3aed` | Primary CTA, selected state, AI affordance |
-| `--color-accent-light` | `#8b5cf6` | Hover accent, icon accent, emphasis |
-| `--color-success` | `#22c55e` | Positive score, active subscription |
-| `--color-danger` | `#ef4444` | Error, destructive action, recording stop |
-| Warning | `#f59e0b` | Warning score, quota/payment notices |
+| Token                    | Hex       | Use                                               |
+| ------------------------ | --------- | ------------------------------------------------- |
+| `--color-base`           | `#06060c` | App background, page shell                        |
+| Landing canvas           | `#0f172a` | Public landing sections, image edges, footer base |
+| `--color-surface`        | `#0d0d14` | Standard cards, menus, sidebars                   |
+| `--color-elevated`       | `#13131c` | Raised panels, hover surfaces, nested controls    |
+| `--color-border`         | `#1c1c28` | Default border and dividers                       |
+| `--color-text-primary`   | `#f4f4f6` | Primary text                                      |
+| `--color-text-secondary` | `#9898aa` | Body copy, secondary labels                       |
+| `--color-text-muted`     | `#606072` | Helper text, placeholders, inactive icons         |
+| `--color-text-faint`     | `#3d3d54` | Disabled text, skeleton hints                     |
+| `--color-accent`         | `#7c3aed` | Primary CTA, selected state, AI affordance        |
+| `--color-accent-light`   | `#8b5cf6` | Hover accent, icon accent, emphasis               |
+| `--color-success`        | `#22c55e` | Positive score, active subscription               |
+| `--color-danger`         | `#ef4444` | Error, destructive action, recording stop         |
+| Warning                  | `#f59e0b` | Warning score, quota/payment notices              |
 
-Use violet as the only brand accent. Do not introduce extra blues, teals, oranges, or multicolor gradients for normal UI.
+Use violet as the only brand accent in product UI. Do not introduce extra blues, teals, oranges, or multicolor gradients for normal workflow screens.
+
+Landing and pricing pages may use image-led gradients and glow because they are part of the brand atmosphere. Keep those gradients inside section backgrounds, generated images, text masks, or global landing utilities; normal cards, forms, tables, and admin surfaces stay token-based.
+
+### Marketing Visual Language
+
+The current public-page direction is dark slate with purple-white light:
+
+- Base color: `rgb(15, 23, 42)` / `#0f172a`.
+- Glow: violet core (`#7c3aed`, `#8b5cf6`) with soft white bloom (`#f8fafc`, `#ddd6fe`).
+- Assets: use `apps/web/public/images/landing-redesign/` for hero, workflow, and question-bank backgrounds.
+- Background images must use `object-cover` and should visually connect to the slate canvas at their edges.
+- Avoid black overlays that hide the generated light. Use only subtle readability treatment when text contrast truly needs it.
+- Glass elements use translucent white surfaces, thin white borders, inner highlight, and `backdrop-blur-xl`.
+- Icons and illustration language: IT interview, practice, recording, question bank, CV analysis, frameworks, language logos, data structures, OOP, and algorithm motifs.
+- Text treatments may use `text-edge-fade` and `landing-heading-gradient` for large public headers.
 
 ### Typography
 
@@ -55,14 +73,14 @@ Guidelines:
 
 Suggested scale:
 
-| Role | Classes |
-| --- | --- |
-| Hero display | `text-[2rem] sm:text-5xl md:text-6xl lg:text-[4.5rem] font-extrabold leading-[1.07] tracking-tight` |
-| Page title | `text-3xl sm:text-4xl font-extrabold tracking-tight` |
-| Section title | `text-xl md:text-2xl font-bold` |
-| Card title | `text-sm md:text-base font-semibold` |
-| Body | `text-sm text-[var(--color-text-secondary)] leading-relaxed` |
-| Metadata | `text-xs text-[var(--color-text-muted)]` |
+| Role          | Classes                                                                                             |
+| ------------- | --------------------------------------------------------------------------------------------------- |
+| Hero display  | `text-[2rem] sm:text-5xl md:text-6xl lg:text-[4.5rem] font-extrabold leading-[1.07] tracking-tight` |
+| Page title    | `text-3xl sm:text-4xl font-extrabold tracking-tight`                                                |
+| Section title | `text-xl md:text-2xl font-bold`                                                                     |
+| Card title    | `text-sm font-semibold`                                                                             |
+| Body          | `text-sm text-[var(--color-text-secondary)] leading-relaxed`                                        |
+| Metadata      | `text-xs text-[var(--color-text-muted)]`                                                            |
 
 ## Layout System
 
@@ -88,7 +106,7 @@ Use asymmetric layouts for landing pages, but keep product workflows scannable a
 Default product card:
 
 ```tsx
-className="rounded-2xl border border-[#1c1c28] bg-[#0d0d14]"
+className = "rounded-2xl border border-[#1c1c28] bg-[#0d0d14]";
 ```
 
 Glass card:
@@ -121,20 +139,22 @@ Rules:
 Primary:
 
 ```tsx
-className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#7c3aed] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#8b5cf6]"
+className =
+  "inline-flex items-center justify-center gap-2 rounded-lg bg-[#7c3aed] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#8b5cf6]";
 ```
 
 Hero CTA:
 
 ```tsx
-className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#7c3aed] px-8 text-base font-bold text-white transition-all duration-200 hover:-translate-y-1 hover:bg-[#6d28d9]"
+className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#7c3aed] px-8 text-white font-bold text-white transition-all duration-200 hover:-translate-y-1 hover:bg-[#6d28d9]"
 style={{ boxShadow: "0 0 28px rgba(124,58,237,0.5), 0 1px 0 rgba(167,139,250,0.3) inset" }}
 ```
 
 Secondary:
 
 ```tsx
-className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#1c1c28] bg-[#0d0d14]/60 px-4 py-2 text-sm font-semibold text-[#9898aa] transition-colors hover:border-[#7c3aed]/50 hover:bg-[#13131c] hover:text-[#f4f4f6]"
+className =
+  "inline-flex items-center justify-center gap-2 rounded-lg border border-[#1c1c28] bg-[#0d0d14]/60 px-4 py-2 text-sm font-semibold text-[#9898aa] transition-colors hover:border-[#7c3aed]/50 hover:bg-[#13131c] hover:text-[#f4f4f6]";
 ```
 
 Icon buttons should be square (`h-8 w-8`, `h-10 w-10`, or `h-11 w-11`) and use lucide icons already present in the project.
@@ -144,7 +164,8 @@ Icon buttons should be square (`h-8 w-8`, `h-10 w-10`, or `h-11 w-11`) and use l
 Use dark rounded inputs with visible focus and placeholder contrast:
 
 ```tsx
-className="h-10 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-[#f4f4f6] placeholder-[#606072] outline-none transition-colors focus:border-[#7c3aed]/60"
+className =
+  "h-10 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-[#f4f4f6] placeholder-[#606072] outline-none transition-colors focus:border-[#7c3aed]/60";
 ```
 
 Search inputs may use rounded-full when they sit inside filter bars.
@@ -204,9 +225,16 @@ Respect `prefers-reduced-motion`.
 
 ### Landing
 
-Hero uses a full-viewport visual scene with `hero-bg.png`, radial edge dissolve, and violet spotlight. Keep hero copy centered, compact, and product-specific.
+Landing is a four-part public page:
 
-Feature sections use one large AI-scoring card plus smaller cards. Avoid a plain row of three equal feature cards when adding new sections.
+- Hero keeps the core copy, uses `landing-hero-soft-strong-glow.png`, and embeds the topic marquee inside the hero so it inherits the same background.
+- Topic cards are smaller glass pills, rounded-full, translucent, and auto-scroll continuously from right to left.
+- Features use full-background workflow imagery. The parent background changes when a feature tab is selected, and it also advances automatically after 10 seconds.
+- Question bank uses the dedicated question-bank background image with only concise copy and a glass CTA.
+
+Feature and question-bank sections should not add a separate right-side information panel over the image. Let the background carry the workflow illustration. Keep section margins small, corners rounded, and the surrounding page background `#0f172a` so sections feel connected.
+
+Use `FlyInOnView` for public-page CTA and feature-button entrances. Motion should feel smooth and soft, with opacity and transform rather than layout shifts.
 
 ### Auth
 
@@ -281,4 +309,3 @@ Avoid:
 - Do not add a second design token source unless the project intentionally introduces one.
 - Prefer CSS variables already defined under `@theme`.
 - Keep new UI consistent with existing dark system before introducing new visual directions.
-

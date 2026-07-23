@@ -1,163 +1,148 @@
-import { Database, BarChart2, Cpu, Mic } from "lucide-react";
+"use client";
+
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { ArrowRight, BrainCircuit, FileSearch, Mic } from "lucide-react";
+import { FlyInOnView } from "../ui/FlyInOnView";
+
+const ACTIVE_INTERVAL_MS = 10000;
+
+const FEATURES = [
+  {
+    id: "answer",
+    eyebrow: "Practice flow",
+    title: "Trả lời từng câu hỏi",
+    cta: "Luyện câu đầu tiên",
+    href: "/practice",
+    image:
+      "/images/landing-redesign/workflow-answer-question-soft-strong-glow.png",
+    icon: Mic,
+  },
+  {
+    id: "mock",
+    eyebrow: "Mock interview",
+    title: "Phỏng vấn thử theo chủ đề",
+    cta: "Tạo mock interview",
+    href: "/mock-interviews",
+    image:
+      "/images/landing-redesign/workflow-mock-interview-soft-strong-glow.png",
+    icon: BrainCircuit,
+  },
+  {
+    id: "cv",
+    eyebrow: "CV analysis",
+    title: "Gợi ý câu hỏi theo CV",
+    cta: "Đang phát triển",
+    href: "/pricing",
+    image: "/images/landing-redesign/workflow-cv-analysis-soft-strong-glow.png",
+    icon: FileSearch,
+  },
+];
 
 export default function FeaturesSection() {
+  const [activeId, setActiveId] = useState(FEATURES[0].id);
+  const active =
+    FEATURES.find((feature) => feature.id === activeId) ?? FEATURES[0];
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const activeIndex = FEATURES.findIndex(
+        (feature) => feature.id === activeId,
+      );
+      const nextIndex =
+        activeIndex === -1 ? 0 : (activeIndex + 1) % FEATURES.length;
+
+      setActiveId(FEATURES[nextIndex].id);
+    }, ACTIVE_INTERVAL_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [activeId]);
+
   return (
     <section
       id="tinh-nang"
-      className="py-28 relative overflow-hidden"
-      style={{ borderTop: "1px solid rgba(124,58,237,0.15)" }}
+      className="relative isolate overflow-hidden bg-[#0f172a] py-14 text-white shadow-[0_22px_90px_rgba(2,6,23,0.34)]"
     >
-      {/* Top glow line */}
-      <div
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-px pointer-events-none"
-        style={{
-          background:
-            "linear-gradient(to right, transparent, rgba(124,58,237,0.55), transparent)",
-        }}
-        aria-hidden="true"
-      />
-      <div
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-[160px] pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(ellipse at top, rgba(88,28,135,0.22) 0%, transparent 70%)",
-          filter: "blur(30px)",
-        }}
-        aria-hidden="true"
-      />
+      {FEATURES.map((feature) => (
+        <Image
+          key={feature.id}
+          src={feature.image}
+          alt=""
+          fill
+          sizes="100vw"
+          className={`pointer-events-none object-cover object-center transition-[opacity,transform,filter] duration-700 ${
+            feature.id === active.id
+              ? "scale-100 opacity-100 blur-0"
+              : "scale-[1.015] opacity-0 blur-sm"
+          }`}
+          aria-hidden="true"
+        />
+      ))}
 
-      <div className="mx-auto max-w-7xl px-6">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <p className="text-xs font-bold uppercase tracking-widest text-[#7c3aed] mb-3">
-            Tính năng
+      <div className="relative z-10 mx-auto min-h-[620px] max-w-7xl px-4 sm:px-6">
+        <div className="flex min-h-[620px] max-w-xl flex-col justify-center py-8">
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-[#c4b5fd]">
+            Luồng luyện tập
           </p>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#fafafa] tracking-tight">
-            Tất cả những gì bạn cần để chuẩn bị
+          <h2 className="text-edge-fade landing-heading-gradient text-balance text-3xl font-extrabold tracking-tight sm:text-5xl">
+            Mỗi chức năng là một cách chuẩn bị khác nhau
           </h2>
-        </div>
+          <p className="mt-4 max-w-lg text-pretty leading-8 text-white">
+            Chọn một luồng luyện tập để xem hình minh họa workflow tương ứng.
+          </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* AI Scoring — prominent, 2 cols wide & 2 rows tall */}
-          <div
-            className="group relative flex flex-col justify-between gap-6 p-7 rounded-2xl border border-[#1c1c28] bg-[#0d0d14] md:col-span-2 md:row-span-2 min-h-[260px] overflow-hidden hover:border-[#7c3aed]/40 transition-all duration-300"
-            style={{
-              boxShadow: "inset 0 0 60px rgba(124,58,237,0.04)",
-            }}
-          >
-            {/* Background glow inside card */}
-            <div
-              className="absolute bottom-0 left-0 w-[300px] h-[200px] rounded-full blur-3xl pointer-events-none transition-all duration-500 group-hover:opacity-100 opacity-50"
-              style={{ background: "rgba(124,58,237,0.08)" }}
-              aria-hidden="true"
-            />
-
-            <div className="relative z-10 flex flex-col gap-4">
-              <div className="w-11 h-11 rounded-xl bg-[#13131c] border border-[#222232] flex items-center justify-center group-hover:border-[#7c3aed]/50 transition-colors duration-300">
-                <Cpu size={20} className="text-[#8b5cf6]" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-[#fafafa] mb-2">
-                  Chấm Điểm AI
-                </h3>
-                <p className="text-sm text-[#71717a] leading-relaxed max-w-md">
-                  Phản hồi tức thì về độ chính xác kỹ thuật, sự đầy đủ và rõ
-                  ràng của câu trả lời — được phân tích bởi DeepSeek AI bằng
-                  Tiếng Việt.
-                </p>
-              </div>
-            </div>
-
-            {/* Score preview */}
-            <div className="relative z-10 grid grid-cols-3 gap-3">
-              {[
-                { label: "Kỹ thuật", value: "8/10" },
-                { label: "Đầy đủ", value: "9/10" },
-                { label: "Rõ ràng", value: "7/10" },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="flex flex-col gap-1 p-3 rounded-xl bg-[#13131c] border border-[#1c1c28]"
+          <div className="mt-8 grid gap-3">
+            {FEATURES.map((feature, index) => {
+              const Icon = feature.icon;
+              const selected = feature.id === active.id;
+              return (
+                <FlyInOnView
+                  key={feature.id}
+                  className="block w-full max-w-[25rem]"
+                  delay={index * 90}
+                  direction="left"
                 >
-                  <span className="text-xs text-[#71717a]">{item.label}</span>
-                  <span
-                    className="text-lg font-bold text-[#8b5cf6]"
-                    style={{ textShadow: "0 0 12px rgba(139,92,246,0.4)" }}
+                  <button
+                    type="button"
+                    onClick={() => setActiveId(feature.id)}
+                    aria-pressed={selected}
+                    className={`group relative flex h-14 w-full items-center gap-3 overflow-hidden rounded-full border px-3.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_44px_rgba(91,33,182,0.16)] backdrop-blur-xl transition-all duration-500 active:scale-[0.985] ${
+                      selected
+                        ? "translate-x-1 scale-[1.015] border-[#ddd6fe]/70 bg-white/[0.17] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_18px_52px_rgba(124,58,237,0.25)]"
+                        : "border-white/15 bg-white/[0.075] text-white hover:translate-x-1 hover:border-white/30 hover:bg-white/[0.12]"
+                    }`}
                   >
-                    {item.value}
-                  </span>
-                </div>
-              ))}
-            </div>
+                    {selected ? (
+                      <span className="feature-tab-progress pointer-events-none absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-[#ddd6fe] to-transparent" />
+                    ) : null}
+                    <span
+                      className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-all duration-500 group-hover:scale-110 ${
+                        selected
+                          ? "border-[#ddd6fe]/60 bg-white/[0.18] text-white shadow-[0_0_24px_rgba(196,181,253,0.28)]"
+                          : "border-white/15 bg-white/[0.08] text-[#efe7ff]"
+                      }`}
+                    >
+                      <Icon size={18} />
+                    </span>
+                    <span className="relative min-w-0 truncate text-sm font-bold text-white sm:text-white">
+                      {feature.title}
+                    </span>
+                  </button>
+                </FlyInOnView>
+              );
+            })}
           </div>
 
-          {/* 300+ Questions */}
-          <div className="group flex flex-col gap-4 p-6 rounded-2xl border border-[#1c1c28] bg-[#0d0d14] hover:border-[#7c3aed]/30 hover:bg-[#13131c] transition-all duration-300">
-            <div className="w-11 h-11 rounded-xl bg-[#13131c] border border-[#222232] flex items-center justify-center group-hover:border-[#7c3aed]/50 transition-colors duration-300">
-              <Database size={20} className="text-[#8b5cf6]" />
-            </div>
-            <div>
-              <p
-                className="text-3xl font-extrabold text-[#fafafa] mb-1"
-                style={{ textShadow: "0 0 20px rgba(139,92,246,0.3)" }}
-              >
-                300+
-              </p>
-              <h3 className="text-base font-bold text-[#fafafa] mb-1.5">
-                Câu Hỏi Thực Tế
-              </h3>
-              <p className="text-sm text-[#71717a] leading-relaxed">
-                Ngân hàng câu hỏi từ các công ty công nghệ hàng đầu, liên tục
-                cập nhật.
-              </p>
-            </div>
-          </div>
-
-          {/* 3 Levels */}
-          <div className="group flex flex-col gap-4 p-6 rounded-2xl border border-[#1c1c28] bg-[#0d0d14] hover:border-[#7c3aed]/30 hover:bg-[#13131c] transition-all duration-300">
-            <div className="w-11 h-11 rounded-xl bg-[#13131c] border border-[#222232] flex items-center justify-center group-hover:border-[#7c3aed]/50 transition-colors duration-300">
-              <BarChart2 size={20} className="text-[#8b5cf6]" />
-            </div>
-            <div>
-              <div className="flex gap-1.5 mb-2">
-                {["Easy", "Medium", "Hard"].map((lvl) => (
-                  <span
-                    key={lvl}
-                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full border border-[#1c1c28] bg-[#13131c] text-[#a1a1aa]"
-                  >
-                    {lvl}
-                  </span>
-                ))}
-              </div>
-              <h3 className="text-base font-bold text-[#fafafa] mb-1.5">
-                3 Cấp Độ
-              </h3>
-              <p className="text-sm text-[#71717a] leading-relaxed">
-                Luyện đúng vị trí bạn đang ứng tuyển. Tiến bộ theo từng cấp độ.
-              </p>
-            </div>
-          </div>
-
-          {/* Voice Recording — full width, short */}
-          <div className="group relative flex flex-col sm:flex-row items-start sm:items-center gap-5 p-6 rounded-2xl border border-[#1c1c28] bg-[#0d0d14] md:col-span-3 overflow-hidden hover:border-[#7c3aed]/20 transition-all duration-300">
-            <div className="flex-shrink-0 w-11 h-11 rounded-xl bg-[#13131c] border border-[#222232] flex items-center justify-center">
-              <Mic size={20} className="text-[#71717a]" />
-            </div>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1">
-              <div className="flex-1">
-                <h3 className="text-base font-bold text-[#71717a] mb-0.5">
-                  Ghi Âm Giọng Nói
-                </h3>
-                <p className="text-sm text-[#52525b]">
-                  Luyện trả lời bằng giọng nói như phỏng vấn thực sự. AI chuyển
-                  giọng nói thành văn bản và chấm điểm.
-                </p>
-              </div>
-              <span className="flex-shrink-0 text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-[#7c3aed]/30 text-[#8b5cf6] bg-[#7c3aed]/8">
-                Sắp Ra Mắt
-              </span>
-            </div>
-          </div>
+          <FlyInOnView delay={320} direction="left">
+            <Link
+              href={active.href}
+              className="mt-7 inline-flex h-11 w-fit items-center justify-center gap-2 rounded-full border border-white/20 bg-white/[0.13] px-5 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_0_28px_rgba(167,139,250,0.24)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#ddd6fe]/65 hover:bg-white/[0.18] active:scale-[0.98]"
+            >
+              {active.cta}
+              <ArrowRight size={15} />
+            </Link>
+          </FlyInOnView>
         </div>
       </div>
     </section>

@@ -11,7 +11,7 @@
   --color-accent: #7c3aed;
   --color-accent-light: #8b5cf6;
   --color-success: #22c55e;
-  --color-danger: #ef4444;     /* đỏ — lỗi / cảnh báo / huỷ */
+  --color-danger: #ef4444; /* đỏ — lỗi / cảnh báo / huỷ */
   --color-text-faint: #3d3d54; /* xám rất nhạt — chữ placeholder */
 
   --font-heading: var(--font-be-vietnam), "Be Vietnam Pro", sans-serif;
@@ -51,14 +51,54 @@ h6 {
   font-family: var(--font-be-vietnam), "Be Vietnam Pro", sans-serif;
 }
 
+.text-edge-fade {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.34),
+    #000 12%,
+    #000 88%,
+    rgba(0, 0, 0, 0.34)
+  );
+  mask-image: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.34),
+    #000 12%,
+    #000 88%,
+    rgba(0, 0, 0, 0.34)
+  );
+}
+
+.landing-heading-gradient {
+  background: linear-gradient(
+    105deg,
+    #f8fafc 0%,
+    #ddd6fe 22%,
+    #9b7cff 52%,
+    #c4b5fd 78%,
+    #eef2ff 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 34px rgba(139, 92, 246, 0.22);
+}
+
 /* Scroll animations */
 .will-animate {
   opacity: 0;
-  transition: opacity 0.65s ease, transform 0.65s ease;
+  transition:
+    opacity 0.65s ease,
+    transform 0.65s ease;
 }
-.will-animate--fade-up   { transform: translateY(28px); }
-.will-animate--fade-in   { transform: none; }
-.will-animate--fade-left { transform: translateX(-28px); }
+.will-animate--fade-up {
+  transform: translateY(28px);
+}
+.will-animate--fade-in {
+  transform: none;
+}
+.will-animate--fade-left {
+  transform: translateX(-28px);
+}
 
 .will-animate.is-visible {
   opacity: 1;
@@ -88,7 +128,69 @@ h6 {
   transform-origin: center bottom;
 }
 
+@keyframes topicMarquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.topic-marquee-track {
+  animation: topicMarquee 50s linear infinite;
+  width: max-content;
+}
+
+.topic-marquee-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes landingGlowDrift {
+  0%,
+  100% {
+    opacity: 0.68;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    opacity: 0.92;
+    transform: translate3d(18px, -12px, 0) scale(1.06);
+  }
+}
+
+.landing-glow-drift {
+  animation: landingGlowDrift 8s ease-in-out infinite;
+}
+
+@keyframes landingFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.landing-float {
+  animation: landingFloat 6s ease-in-out infinite;
+}
+
 /* AnswerEvaluation — panel trượt/đẩy vào khi hiện kết quả */
+@keyframes featureTabProgress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.feature-tab-progress {
+  animation: featureTabProgress 10s linear both;
+  transform-origin: left center;
+}
+
 @keyframes evalEnter {
   from {
     opacity: 0;
@@ -123,6 +225,15 @@ h6 {
   }
   .pricing-card-push-in {
     animation: none;
+  }
+  .topic-marquee-track,
+  .landing-glow-drift,
+  .landing-float,
+  .feature-tab-progress {
+    animation: none;
+  }
+  .feature-tab-progress {
+    transform: scaleX(1);
   }
   .skeleton-pulse {
     animation: none;

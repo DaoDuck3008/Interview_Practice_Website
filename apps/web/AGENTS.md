@@ -57,9 +57,9 @@ NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID=   # Google OAuth Client ID (ID token flow �
 
 ## Design System
 
-### Colors — use canonical Tailwind classes, never hard-coded hex or `var()`
+### Colors — use canonical Tailwind classes first
 
-All color values are defined in the `@theme` block in `src/app/globals.css`, so Tailwind v4 auto-generates a canonical utility class for each token. Always use those canonical classes directly. **Never write raw hex codes, and never wrap a token in arbitrary-value `var()` syntax** — `text-[var(--color-text-primary)]` is redundant, the plain `text-text-primary` class already exists and does the same thing.
+Product color values are defined in the `@theme` block in `src/app/globals.css`, so Tailwind v4 auto-generates a canonical utility class for each token. Use those canonical classes directly for standard UI. **Do not wrap a token in arbitrary-value `var()` syntax** — `text-[var(--color-text-primary)]` is redundant, the plain `text-text-primary` class already exists and does the same thing.
 
 ```
 --color-base             #06060c   dark navy — page background
@@ -85,13 +85,23 @@ All color values are defined in the `@theme` block in `src/app/globals.css`, so 
 <div className="bg-surface border border-border">
 <button className="bg-accent hover:bg-accent-light">
 
-// Wrong — do not do this
+// Wrong for normal product UI
 <p className="text-[#f4f4f6]">
 <p className="text-[var(--color-text-primary)]">
 <div style={{ backgroundColor: '#0d0d14' }}>
 ```
 
 Use `style={{}}` only for values that are **computed at runtime** (e.g., dynamic width percentages, waveform progress). Static design tokens always go in className.
+
+Public landing/pricing sections are the exception when they need art-directed values that Tailwind cannot express cleanly: generated background images, glow layers, mask effects, and glass refraction shadows may use raw `rgb(15, 23, 42)`, `rgba(...)`, `linear-gradient(...)`, or `radial-gradient(...)`. Keep these exceptions local to marketing surfaces or `globals.css` utilities.
+
+Landing/public canvas:
+
+```
+#0f172a / rgb(15, 23, 42)   slate-purple page background and image edge tone
+#f8fafc / #ddd6fe           soft white-violet glow and headline highlights
+#7c3aed / #8b5cf6           violet accent core
+```
 
 ### Typography — Be Vietnam Pro only
 
@@ -101,9 +111,17 @@ One font for the entire app: **Be Vietnam Pro**. It is registered in `src/app/la
 - Do not use system font stacks (`font-sans`, `font-mono`) unless absolutely necessary for code blocks.
 - Font weights in use: 400, 500, 600, 700, 800.
 
-### No Gradients
+### Gradients and glow
 
-Do not use CSS gradients (`gradient-to-r`, `bg-gradient-*`, `linear-gradient`, `radial-gradient`) for UI decoration. The only exception is the dot-grid background pattern already defined in `globals.css` — do not add new ones.
+Do not use random CSS gradients for normal product UI decoration. Dashboards, forms, question lists, admin screens, and practice rooms should stay token-based and readable.
+
+Landing, pricing, and other public marketing sections may use controlled gradients, masks, and glow because they are part of the current visual identity. Prefer:
+
+- generated bitmap backgrounds in `public/images/landing-redesign/`,
+- `object-cover` image backgrounds,
+- subtle text gradients for large section headers,
+- glassmorphism with translucent white fills and thin white borders,
+- soft transform/opacity animation via `FlyInOnView` or the shared animation utilities.
 
 ---
 
@@ -154,7 +172,7 @@ One-off UI sections that live in a single page stay inline or in the same file. 
 
 ```
 src/components/
-├── landing/     # Homepage sections (Hero, HowItWorks, etc.)
+├── landing/     # Homepage sections (Hero, TopicsPreview, FeaturesSection, QuestionBankShowcase)
 ├── layout/      # Global chrome — Header, Footer
 ├── practice/    # Practice session UI
 ├── questions/   # Learning / browse UI
@@ -314,9 +332,23 @@ interface Improvement { id, improvedAnswer, annotations: Annotation[], keyChange
 
 ---
 
+## Landing Visual Rules
+
+- Keep the homepage layout as `Hero` -> topic marquee inside hero -> `FeaturesSection` -> `QuestionBankShowcase` -> `Footer`.
+- Use the shared landing images from `public/images/landing-redesign/`. Do not bring back `hero-bg.png`, `HowItWorks`, or the old standalone CTA landing sections.
+- Topic cards are rounded-full glass pills and scroll continuously from right to left.
+- Feature buttons show only icon + title on one line. The active feature changes the parent background and auto-advances every 10 seconds.
+- Feature and question-bank sections should not add a separate right-side info panel; the background image is the visual explanation.
+- Public-page buttons/cards should be rounded, translucent, and glassy, with hover, active, focus-visible, and scroll-entry states.
+- Keep section margins small and edges rounded so backgrounds feel connected to the common `#0f172a` page color.
+
+---
+
 ## Scroll Animations
 
 Use `AnimateOnScroll` (`src/components/ui/AnimateOnScroll.tsx`) to animate elements into view. Do not write custom intersection observer code.
+
+Use `FlyInOnView` (`src/components/ui/FlyInOnView.tsx`) for landing CTAs and feature buttons that need a directional push-in/fly-in effect.
 
 ```tsx
 <AnimateOnScroll variant="fade-up" delay={100}>
@@ -358,8 +390,8 @@ showModal({
 
 ## What NOT to Do
 
-- **No hex values or `var(--color-*)` arbitrary values in className or style** — use the canonical Tailwind classes (`text-text-primary`, `bg-surface`, etc.).
-- **No gradients** — neither Tailwind `bg-gradient-*` nor inline `linear-gradient`.
+- **No product token hex values or `var(--color-*)` arbitrary values in className or style** — use the canonical Tailwind classes (`text-text-primary`, `bg-surface`, etc.).
+- **No arbitrary decorative gradients in product UI** — landing/pricing glow utilities are allowed when they match the documented visual direction.
 - **No additional fonts** — Be Vietnam Pro is the only typeface.
 - **No `"use client"` by default** — add it only when the component actually needs hooks or browser APIs.
 - **No raw CSS in component files** — write styles in `globals.css` only when Tailwind can't express them.

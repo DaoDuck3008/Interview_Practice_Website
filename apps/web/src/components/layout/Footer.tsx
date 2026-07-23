@@ -58,56 +58,52 @@ export default function Footer() {
     <footer
       className="relative overflow-hidden"
       style={{
-        borderTop: "1px solid rgba(124,58,237,0.18)",
-        background: "#000000",
+        borderTop: "1px solid rgba(148,163,184,0.16)",
+        background:
+          "radial-gradient(circle at 50% 0%, rgba(124,58,237,0.14), transparent 34%), rgb(15, 23, 42)",
       }}
     >
-      {/* Top glow line */}
       <div
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-px pointer-events-none"
+        className="pointer-events-none absolute left-1/2 top-0 h-px w-[700px] -translate-x-1/2"
         style={{
           background:
-            "linear-gradient(to right, transparent, rgba(124,58,237,0.5), transparent)",
+            "linear-gradient(to right, transparent, rgba(196,181,253,0.42), transparent)",
         }}
         aria-hidden="true"
       />
 
-      {/* Subtle ambient glow */}
       <div
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[180px] pointer-events-none"
+        className="pointer-events-none absolute left-1/2 top-0 h-[180px] w-[600px] -translate-x-1/2"
         style={{
           background:
-            "radial-gradient(ellipse at top, rgba(88,28,135,0.18) 0%, transparent 70%)",
+            "radial-gradient(ellipse at top, rgba(124,58,237,0.14) 0%, transparent 70%)",
           filter: "blur(40px)",
         }}
         aria-hidden="true"
       />
 
       <div className="relative z-10 mx-auto max-w-7xl px-6">
-        {/* ── Main footer grid ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 py-14">
-          {/* Brand column */}
+        <div className="grid grid-cols-1 gap-10 py-14 sm:grid-cols-2 lg:grid-cols-4">
           <div className="flex flex-col gap-5">
             <Link
               href="/"
-              className="font-extrabold text-lg text-[#f4f4f6] tracking-tight"
+              className="text-lg font-extrabold tracking-tight text-[#f4f4f6]"
             >
               Phỏng vấn <span className="text-[#8b5cf6]">IT</span>
             </Link>
 
-            <p className="text-sm text-[#606072] leading-relaxed max-w-[220px]">
+            <p className="max-w-[220px] text-sm leading-relaxed text-[#c9c5d8]">
               Nền tảng luyện tập phỏng vấn IT với phản hồi tức thì từ AI. Dành
               cho lập trình viên Việt Nam.
             </p>
 
-            {/* Social links */}
-            <div className="flex items-center gap-3 mt-1">
+            <div className="mt-1 flex items-center gap-3">
               {SOCIAL_LINKS.map(({ href, label, path }) => (
                 <Link
                   key={label}
                   href={href}
                   aria-label={label}
-                  className="w-8 h-8 rounded-lg border border-[#1c1c28] bg-[#0d0d14] flex items-center justify-center text-[#606072] hover:text-[#a78bfa] hover:border-[#7c3aed]/40 transition-all duration-200 cursor-pointer"
+                  className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-white/10 bg-white/[0.05] text-[#c9c5d8] transition-all duration-200 hover:border-[#7c3aed]/40 hover:text-[#a78bfa]"
                 >
                   <svg
                     width="14"
@@ -123,10 +119,9 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Link columns */}
           {Object.values(FOOTER_LINKS).map((col) => (
             <div key={col.title} className="flex flex-col gap-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-[#9898aa]">
+              <p className="text-xs font-bold uppercase tracking-widest text-[#ddd6fe]">
                 {col.title}
               </p>
               <ul className="flex flex-col gap-2.5">
@@ -134,7 +129,7 @@ export default function Footer() {
                   <li key={link.label}>
                     <Link
                       href={link.href}
-                      className="text-sm text-[#606072] hover:text-[#c4b5fd] transition-colors duration-200 cursor-pointer"
+                      className="cursor-pointer text-sm text-[#c9c5d8] transition-colors duration-200 hover:text-[#c4b5fd]"
                     >
                       {link.label}
                     </Link>
@@ -145,15 +140,12 @@ export default function Footer() {
           ))}
         </div>
 
-        {/* ── Bottom bar ── */}
         <div
-          className="flex flex-col sm:flex-row items-center justify-between gap-3 py-6 text-xs text-[#48485c]"
-          style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
+          className="flex flex-col items-center justify-between gap-3 py-6 text-xs text-[#9898aa] sm:flex-row"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
         >
-          <p>
-            © {new Date().getFullYear()} Phỏng vấn IT. All rights reserved.
-          </p>
-          <p>Made in Vietnam 🇻🇳 · Powered by DeepSeek AI & Groq</p>
+          <p>© {new Date().getFullYear()} Phỏng vấn IT. All rights reserved.</p>
+          <p>Made in Vietnam · Powered by DeepSeek AI & Groq</p>
         </div>
       </div>
     </footer>
