@@ -38,8 +38,13 @@ export default function QuestionBrowser({
   const [showBackToTop, setShowBackToTop] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const currentTopic = topics.find((t) => t.slug === currentTopicSlug);
+const currentTopic = topics.find((t) => t.slug === currentTopicSlug);
   const childTopics = topics.filter((t) => t.parentId !== null);
+  const levelBadgeClass: Record<Level, string> = {
+    EASY: "bg-[#22c55e] shadow-[0_0_14px_rgba(34,197,94,0.45)]",
+    MEDIUM: "bg-[#8b5cf6] shadow-[0_0_14px_rgba(139,92,246,0.45)]",
+    HARD: "bg-[#ef4444] shadow-[0_0_14px_rgba(239,68,68,0.42)]",
+  };
 
   function topicHref(slug: string) {
     return `/learning/${slug}/questions${initialLevel ? `?level=${initialLevel}` : ""}`;
@@ -88,7 +93,7 @@ export default function QuestionBrowser({
   }
 
   return (
-    <div className="flex gap-3 items-start">
+    <div className="flex items-start gap-3 mt-4">
       {/* Sidebar — sticky block */}
       <TopicsSidebar
         topics={topics}
@@ -97,24 +102,24 @@ export default function QuestionBrowser({
       />
 
       {/* Main — transparent container */}
-      <main className="flex-1 min-w-0 flex flex-col gap-2">
+      <main className="flex min-w-0 flex-1 flex-col gap-2">
         {/* Mobile topic switcher — cuộn ngang, thay cho sidebar (ẩn từ md trở lên) */}
-        <div className="md:hidden -mx-4 px-4 flex gap-2 overflow-x-auto pb-1">
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:hidden">
           {childTopics.map((topic) => {
             const active = topic.slug === currentTopicSlug;
             return (
               <Link
                 key={topic.id}
                 href={topicHref(topic.slug)}
-                className="flex items-center gap-1.5 h-8 pl-1.5 pr-3 rounded-full border whitespace-nowrap flex-shrink-0 text-[13px] transition-colors duration-150"
+                className="flex h-8 flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border pl-1.5 pr-3 text-[13px] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.12]"
                 style={{
                   background: active
-                    ? "rgba(124,58,237,0.18)"
-                    : "rgba(255,255,255,0.04)",
+                    ? "rgba(124,58,237,0.24)"
+                    : "rgba(255,255,255,0.075)",
                   borderColor: active
-                    ? "rgba(124,58,237,0.5)"
-                    : "rgba(255,255,255,0.08)",
-                  color: active ? "#f4f4f6" : "#9898aa",
+                    ? "rgba(196,181,253,0.34)"
+                    : "rgba(255,255,255,0.12)",
+                  color: active ? "#f4f4f6" : "#cbd5e1",
                 }}
               >
                 {topic.iconUrl ? (
@@ -123,10 +128,10 @@ export default function QuestionBrowser({
                     alt=""
                     width={20}
                     height={20}
-                    className="w-5 h-5 object-contain rounded flex-shrink-0"
+                    className="h-5 w-5 flex-shrink-0 rounded-full object-contain"
                   />
                 ) : (
-                  <span className="w-5 h-5 rounded flex-shrink-0 bg-white/[0.07]" />
+                  <span className="h-5 w-5 flex-shrink-0 rounded-full bg-white/[0.07]" />
                 )}
                 {topic.name}
                 <span className="font-mono text-[11px] text-[#606072]">
@@ -139,38 +144,48 @@ export default function QuestionBrowser({
 
         {/* Header block — rounded */}
         <div
-          className="rounded-2xl overflow-hidden mb-2"
+          className="mb-2 overflow-hidden rounded-[28px] backdrop-blur-2xl"
           style={{
-            background: "#141320",
-            border: "1px solid rgba(255,255,255,0.07)",
+            background: "rgba(15, 23, 42, 0.56)",
+            border: "1px solid rgba(255,255,255,0.13)",
+            boxShadow:
+              "inset 0 1px 0 rgba(255,255,255,0.12), 0 22px 60px rgba(2,6,23,0.26)",
           }}
         >
           {/* Sub-header row */}
-          <div
-            className="flex flex-wrap items-center gap-x-4 gap-y-2.5 px-4 sm:px-5 py-3"
-            style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
-          >
-            <span className="text-sm font-semibold text-[#f4f4f6] flex-shrink-0">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 px-4 py-3 sm:px-5">
+            <span className="inline-flex flex-shrink-0 items-center gap-2 rounded-full border border-white/10 bg-white/[0.075] py-1 pl-1.5 pr-3 text-sm font-semibold text-[#f4f4f6]">
+              {currentTopic?.iconUrl ? (
+                <Image
+                  src={currentTopic.iconUrl}
+                  alt=""
+                  width={22}
+                  height={22}
+                  className="h-5.5 w-5.5 flex-shrink-0 rounded-full object-contain"
+                />
+              ) : (
+                <span className="h-5.5 w-5.5 flex-shrink-0 rounded-full bg-white/[0.1]" />
+              )}
               {currentTopic?.name ?? currentTopicSlug}
             </span>
 
-            <div className="order-last w-full sm:order-none sm:w-auto sm:flex-1 flex justify-center">
+            <div className="order-last flex w-full justify-center sm:order-none sm:w-auto sm:flex-1">
               <div className="relative w-full max-w-sm">
                 <Search
                   size={13}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[#606072] pointer-events-none"
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#a78bfa]"
                 />
                 <input
                   type="text"
                   value={searchValue}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder="Tìm câu hỏi..."
-                  className="w-full h-8 pl-8 pr-7 text-sm rounded-full outline-none text-[#f4f4f6] placeholder-[#606072]"
+                  className="h-9 w-full rounded-full pl-8 pr-9 text-sm text-[#f4f4f6] outline-none placeholder-[#94a3b8]"
                   style={{
-                    background: "rgba(255,255,255,0.05)",
+                    background: "rgba(255,255,255,0.085)",
                     border: searchValue
-                      ? "1px solid rgba(124,58,237,0.4)"
-                      : "1px solid rgba(255,255,255,0.08)",
+                      ? "1px solid rgba(196,181,253,0.34)"
+                      : "1px solid rgba(255,255,255,0.13)",
                   }}
                 />
                 {searchValue && (
@@ -181,7 +196,7 @@ export default function QuestionBrowser({
                         clearTimeout(debounceRef.current);
                       navigate({ search: "", page: 1 });
                     }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#606072] hover:text-[#9898aa] cursor-pointer"
+                    className="absolute right-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-[#94a3b8] transition-colors hover:bg-white/10 hover:text-white"
                   >
                     <X size={12} />
                   </button>
@@ -189,13 +204,13 @@ export default function QuestionBrowser({
               </div>
             </div>
 
-            <span className="hidden sm:block text-xs text-[#606072] flex-shrink-0">
+            <span className="hidden flex-shrink-0 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs text-[#c4b5fd] sm:block">
               {total} câu hỏi
             </span>
           </div>
 
           {/* Level tabs */}
-          <div className="flex items-center gap-0 px-4 sm:px-5 overflow-x-auto">
+          <div className="flex items-center gap-2 overflow-x-auto border-t border-white/[0.08] px-4 py-3 sm:px-5">
             {LEVELS.map((lvl) => {
               const active =
                 lvl.value === "ALL"
@@ -208,17 +223,27 @@ export default function QuestionBrowser({
                     navigate({ level: lvl.value as Level | "ALL", page: 1 })
                   }
                   className={[
-                    "flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium whitespace-nowrap border-b-2 -mb-px transition-colors duration-150 cursor-pointer",
+                    "flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border px-4 py-2 text-[13px] font-semibold backdrop-blur-xl transition-all duration-200",
                     active
-                      ? "border-[#7c3aed] text-[#f4f4f6]"
-                      : "border-transparent text-[#9898aa] hover:text-[#e4e4f0]",
+                      ? "border-[#c4b5fd]/35 bg-[rgba(124,58,237,0.24)] text-[#f4f4f6] shadow-[0_0_22px_rgba(124,58,237,0.16)]"
+                      : "border-white/[0.08] bg-white/[0.045] text-[#cbd5e1] hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white",
                   ].join(" ")}
                 >
+                  {lvl.value !== "ALL" && (
+                    <span
+                      className={`h-2.5 w-2.5 rounded-full ${levelBadgeClass[lvl.value]}`}
+                      aria-hidden="true"
+                    />
+                  )}
                   {lvl.label}
                   {lvl.value === "ALL" && (
                     <span
-                      className={`text-[11px] font-mono px-1.5 py-0.5 rounded ${active ? "bg-[#7c3aed] text-white" : "text-[#606072]"}`}
-                      style={!active ? { background: "rgba(255,255,255,0.06)" } : undefined}
+                      className={`rounded-full px-1.5 py-0.5 font-mono text-[11px] ${active ? "bg-[#7c3aed] text-white" : "text-[#c4b5fd]"}`}
+                      style={
+                        !active
+                          ? { background: "rgba(255,255,255,0.075)" }
+                          : undefined
+                      }
                     >
                       {total}
                     </span>
@@ -232,7 +257,7 @@ export default function QuestionBrowser({
         {/* Question rows */}
         {items.length === 0 ? (
           <div className="flex items-center justify-center py-24">
-            <p className="text-[#606072] text-sm">
+            <p className="rounded-full border border-white/10 bg-white/[0.06] px-5 py-3 text-sm text-[#cbd5e1] backdrop-blur-xl">
               {searchValue
                 ? `Không tìm thấy kết quả cho "${searchValue}".`
                 : "Không có câu hỏi nào."}
@@ -265,7 +290,7 @@ export default function QuestionBrowser({
           onClick={scrollToTop}
           aria-label="Lên đầu trang"
           title="Lên đầu trang"
-          className="fixed bottom-36 right-4 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-[#141320] text-[#d4d4e0] shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#7c3aed]/50 hover:text-white"
+          className="fixed bottom-36 right-4 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-[#0f172a]/60 text-[#d4d4e0] shadow-[0_18px_44px_rgba(2,6,23,0.34)] backdrop-blur-2xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[#c4b5fd]/50 hover:bg-white/[0.1] hover:text-white"
         >
           <ArrowUp size={18} />
         </button>

@@ -4,7 +4,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div
       className="relative min-h-screen flex flex-col"
-      style={{ background: "#06060c" }}
+      style={{ background: "#0f172a" }}
     >
       {/* Background image — low opacity */}
       <div
@@ -13,19 +13,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           backgroundImage: "url('/images/learning_background.jpg')",
           backgroundSize: "cover",
           backgroundPosition: "center top",
-          opacity: 0.35,
+          opacity: 0.58,
         }}
       />
-
-      {/* Dot grid overlay */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle, rgba(255,255,255,0.08) 2px, transparent 2px)",
-          backgroundSize: "24px 24px",
-        }}
-      />
+      <div className="pointer-events-none absolute inset-0 bg-black/20" />
 
       <Header />
 

@@ -56,13 +56,14 @@ export default function TopicsSidebar({
 
   return (
     <aside
-      className="hidden md:flex h-full max-h-[1000px] w-60 flex-shrink-0 flex-col rounded-2xl overflow-hidden sticky top-4 self-start"
+      className="sticky hidden h-full max-h-[calc(150dvh)] w-60 flex-shrink-0 flex-col overflow-hidden rounded-[28px] md:flex"
       style={{
-        background: "rgba(16, 15, 26, 0.82)",
-        backdropFilter: "blur(16px)",
-        WebkitBackdropFilter: "blur(16px)",
-        border: "1px solid rgba(255,255,255,0.07)",
-        boxShadow: "0 4px 24px rgba(0,0,0,0.35)",
+        background: "rgba(15, 23, 42, 0.56)",
+        backdropFilter: "blur(22px)",
+        WebkitBackdropFilter: "blur(22px)",
+        border: "1px solid rgba(255,255,255,0.13)",
+        boxShadow:
+          "inset 0 1px 0 rgba(255,255,255,0.12), 0 22px 60px rgba(2,6,23,0.32)",
       }}
     >
       {/* Header */}
@@ -72,10 +73,7 @@ export default function TopicsSidebar({
       >
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-semibold text-[#f4f4f6]">Tất Cả</span>
-          <span
-            className="text-xs font-mono text-[#606072] px-2 py-0.5 rounded-md"
-            style={{ background: "rgba(255,255,255,0.06)" }}
-          >
+          <span className="rounded-full border border-white/10 bg-white/[0.075] px-2.5 py-0.5 font-mono text-xs text-[#ddd6fe]">
             {total}
           </span>
         </div>
@@ -83,24 +81,24 @@ export default function TopicsSidebar({
         <div className="relative">
           <Search
             size={12}
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#606072] pointer-events-none"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#a78bfa]"
           />
           <input
             type="text"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="Lọc danh mục..."
-            className="w-full h-7 pl-7 pr-3 text-xs rounded-lg outline-none text-[#f4f4f6] placeholder-[#606072]"
+            className="h-8 w-full rounded-full pl-8 pr-3 text-xs text-[#f4f4f6] outline-none placeholder-[#94a3b8]"
             style={{
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              background: "rgba(255,255,255,0.08)",
+              border: "1px solid rgba(255,255,255,0.12)",
             }}
           />
         </div>
       </div>
 
       {/* Topic list */}
-      <nav className="flex-1 overflow-y-auto py-1.5">
+      <nav className="flex-1 overflow-y-auto px-2 py-2">
         {visibleParents.map((parent) => {
           const children = (childrenByParent[parent.id] ?? []).filter(
             (c) => !filterLower || c.name.toLowerCase().includes(filterLower),
@@ -109,8 +107,8 @@ export default function TopicsSidebar({
           return (
             <div key={parent.id}>
               {/* Parent group header — not clickable */}
-              <div className="flex items-center gap-2 px-4 py-1.5 mt-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#484860]">
+              <div className="mt-2 flex items-center gap-2 px-3 py-1.5">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#c4b5fd]">
                   {parent.name}
                 </span>
                 <span
@@ -127,14 +125,17 @@ export default function TopicsSidebar({
                     key={topic.id}
                     href={buildHref(topic.slug)}
                     className={[
-                      "flex items-center justify-between gap-2 pl-4 pr-4 py-[7px] text-[13px] transition-colors duration-100",
+                      "flex items-center justify-between gap-2 rounded-full px-3.5 py-2 text-[13px] transition-all duration-200",
                       active
-                        ? "text-[#f4f4f6]"
-                        : "text-[#9898aa] hover:text-[#e4e4f0]",
+                        ? "text-[#f4f4f6] shadow-[0_0_22px_rgba(124,58,237,0.16)]"
+                        : "text-[#cbd5e1] hover:bg-white/[0.075] hover:text-white",
                     ].join(" ")}
                     style={
                       active
-                        ? { background: "rgba(124,58,237,0.18)" }
+                        ? {
+                            background: "rgba(124,58,237,0.24)",
+                            border: "1px solid rgba(196,181,253,0.24)",
+                          }
                         : undefined
                     }
                   >
@@ -145,24 +146,24 @@ export default function TopicsSidebar({
                           alt=""
                           width={20}
                           height={20}
-                          className="w-5 h-5 object-contain rounded-md flex-shrink-0"
+                          className="h-5 w-5 flex-shrink-0 rounded-full object-contain"
                         />
                       ) : (
                         <span
-                          className="w-5 h-5 flex-shrink-0 rounded-md"
+                          className="h-5 w-5 flex-shrink-0 rounded-full"
                           style={{ background: "rgba(255,255,255,0.07)" }}
                         />
                       )}
                       <span className="truncate">{topic.name}</span>
                     </span>
                     <span
-                      className="flex-shrink-0 text-[11px] font-mono min-w-[24px] text-center px-1.5 py-0.5 rounded-md"
+                      className="min-w-[24px] flex-shrink-0 rounded-full px-1.5 py-0.5 text-center font-mono text-[11px]"
                       style={
                         active
                           ? { background: "#7c3aed", color: "white" }
                           : {
-                              background: "rgba(255,255,255,0.06)",
-                              color: "#606072",
+                              background: "rgba(255,255,255,0.075)",
+                              color: "#c4b5fd",
                             }
                       }
                     >

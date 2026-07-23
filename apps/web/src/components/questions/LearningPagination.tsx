@@ -34,12 +34,12 @@ export default function LearningPagination({
   const pages = buildPages(page, totalPages);
 
   return (
-    <div className="flex items-center justify-center gap-1 py-6">
+    <div className="flex items-center justify-center gap-1.5 py-6">
       {/* Prev */}
       <button
         onClick={() => onPageChange(page - 1)}
         disabled={page <= 1}
-        className="flex items-center justify-center w-8 h-8 rounded-lg text-[#9898aa] hover:text-[#f4f4f6] hover:bg-[#1c1c28] disabled:opacity-25 disabled:pointer-events-none transition-all duration-150 cursor-pointer"
+        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-[#cbd5e1] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[#c4b5fd]/35 hover:bg-white/[0.12] hover:text-white disabled:pointer-events-none disabled:opacity-25"
         aria-label="Trang trước"
       >
         <ChevronLeft size={15} />
@@ -50,7 +50,7 @@ export default function LearningPagination({
         p === "…" ? (
           <span
             key={`gap-${i}`}
-            className="w-8 h-8 flex items-center justify-center text-sm text-[#606072] select-none"
+            className="flex h-9 w-9 select-none items-center justify-center text-sm text-[#94a3b8]"
           >
             …
           </span>
@@ -58,33 +58,11 @@ export default function LearningPagination({
           <button
             key={p}
             onClick={() => onPageChange(p)}
-            className="w-8 h-8 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer"
-            style={
+            className={`h-9 w-9 cursor-pointer rounded-full border text-sm font-semibold backdrop-blur-xl transition-all duration-200 ${
               p === page
-                ? {
-                    background: "rgba(124,58,237,0.2)",
-                    color: "#a78bfa",
-                    border: "1px solid rgba(124,58,237,0.35)",
-                    boxShadow: "0 0 10px rgba(124,58,237,0.15)",
-                  }
-                : {
-                    background: "transparent",
-                    color: "#9898aa",
-                    border: "1px solid transparent",
-                  }
-            }
-            onMouseEnter={(e) => {
-              if (p !== page) {
-                e.currentTarget.style.background = "rgba(28,28,40,0.8)";
-                e.currentTarget.style.color = "#f4f4f6";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (p !== page) {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.color = "#9898aa";
-              }
-            }}
+                ? "border-[#c4b5fd]/35 bg-[rgba(124,58,237,0.24)] text-white shadow-[0_0_22px_rgba(124,58,237,0.16)]"
+                : "border-white/10 bg-white/[0.045] text-[#cbd5e1] hover:-translate-y-0.5 hover:bg-white/[0.11] hover:text-white"
+            }`}
           >
             {p}
           </button>
@@ -95,7 +73,7 @@ export default function LearningPagination({
       <button
         onClick={() => onPageChange(page + 1)}
         disabled={page >= totalPages}
-        className="flex items-center justify-center w-8 h-8 rounded-lg text-[#9898aa] hover:text-[#f4f4f6] hover:bg-[#1c1c28] disabled:opacity-25 disabled:pointer-events-none transition-all duration-150 cursor-pointer"
+        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-[#cbd5e1] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[#c4b5fd]/35 hover:bg-white/[0.12] hover:text-white disabled:pointer-events-none disabled:opacity-25"
         aria-label="Trang sau"
       >
         <ChevronRight size={15} />

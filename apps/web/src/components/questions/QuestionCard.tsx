@@ -218,17 +218,23 @@ export default function QuestionCard({
 
   return (
     <div
-      className="rounded-xl border overflow-hidden transition-all duration-150"
+      className="overflow-hidden rounded-[24px] border backdrop-blur-2xl transition-all duration-300 hover:-translate-y-0.5"
       style={{
-        borderColor: open ? "rgba(124,58,237,0.3)" : "rgba(255,255,255,0.07)",
-        background: open ? "#1c1a2c" : "#141320",
-        boxShadow: open ? "0 0 20px rgba(124,58,237,0.06)" : "none",
+        borderColor: open
+          ? "rgba(196,181,253,0.28)"
+          : "rgba(255,255,255,0.11)",
+        background: open
+          ? "rgba(76, 29, 149, 0.26)"
+          : "rgba(15, 23, 42, 0.52)",
+        boxShadow: open
+          ? "inset 0 1px 0 rgba(255,255,255,0.12), 0 22px 54px rgba(76,29,149,0.16)"
+          : "inset 0 1px 0 rgba(255,255,255,0.08), 0 14px 40px rgba(2,6,23,0.18)",
       }}
     >
       {/* Row */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3.5 text-left cursor-pointer group"
+        className="group flex w-full cursor-pointer items-center gap-3 px-4 py-3.5 text-left sm:gap-4 sm:px-6"
       >
         {/* Featured crown */}
         {question.isFeatured && (
@@ -236,18 +242,18 @@ export default function QuestionCard({
         )}
 
         {/* Index */}
-        <span className="flex-shrink-0 font-mono text-[11px] text-[#606072] w-5 text-right">
+        <span className="w-5 flex-shrink-0 text-right font-mono text-[11px] text-[#94a3b8]">
           #{index}
         </span>
 
         {/* Content */}
-        <p className="flex-1 min-w-0 truncate text-[14px] text-[#d4d4e0] font-bold group-hover:text-[#f4f4f6] transition-colors duration-100">
+        <p className="min-w-0 flex-1 truncate text-[14px] font-bold text-[#d4d4e0] transition-colors duration-200 group-hover:text-[#f4f4f6]">
           <HighlightText text={question.content} query={searchQuery} />
         </p>
 
         {/* Level badge */}
         <span
-          className={`flex-shrink-0 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md ${levelStyle.className}`}
+          className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${levelStyle.className}`}
         >
           {levelStyle.label}
         </span>
@@ -267,7 +273,7 @@ export default function QuestionCard({
                 handleToggleFavorite(e);
               }
             }}
-            className="flex-shrink-0 transition-colors duration-100 cursor-pointer"
+            className="flex h-8 w-8 flex-shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/[0.055] transition-all duration-200 hover:bg-white/[0.11]"
             style={{ color: isFavorited ? "#fbbf24" : "#606072" }}
             title={isFavorited ? "Bỏ lưu" : "Lưu câu hỏi"}
           >
@@ -280,7 +286,7 @@ export default function QuestionCard({
           <Link
             href={getLearningQuestionHref(topicSlug, question)}
             onClick={(e) => e.stopPropagation()}
-            className="flex-shrink-0 text-[#606072] hover:text-[#8b5cf6] transition-colors duration-100"
+            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.055] text-[#94a3b8] transition-all duration-200 hover:border-[#c4b5fd]/40 hover:bg-white/[0.11] hover:text-[#c4b5fd]"
             title="Xem chi tiết"
           >
             <BookOpen size={14} />
@@ -290,7 +296,7 @@ export default function QuestionCard({
         {/* Chevron */}
         <ChevronDown
           size={14}
-          className="flex-shrink-0 text-[#606072] transition-transform duration-200"
+          className="flex-shrink-0 text-[#94a3b8] transition-transform duration-200"
           style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
         />
       </button>
@@ -298,7 +304,7 @@ export default function QuestionCard({
       {/* Expanded answer */}
       {open && (
         <div
-          className="px-5 sm:px-10 lg:px-16 pb-5 pt-3 border-t"
+          className="border-t px-5 pb-5 pt-3 sm:px-10 lg:px-16"
           style={{ borderColor: "rgba(255,255,255,0.06)" }}
         >
           {question.detailAnswerKey ? (
@@ -321,7 +327,7 @@ export default function QuestionCard({
               {question.answerKeywords.map((kw) => (
                 <span
                   key={kw}
-                  className="font-mono text-xs px-2 py-0.5 rounded border"
+                  className="rounded-full border px-2.5 py-0.5 font-mono text-xs"
                   style={{
                     background: "rgba(124,58,237,0.07)",
                     borderColor: "rgba(124,58,237,0.2)",
@@ -341,7 +347,7 @@ export default function QuestionCard({
             >
               <Link
                 href={getPracticeQuestionHref(topicSlug, question)}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#7c3aed]/30 bg-[#7c3aed]/10 px-3.5 py-2 text-sm font-semibold text-[#f4f4f6] transition-colors duration-100 hover:border-[#8b5cf6]/50 hover:bg-[#8b5cf6]/15 sm:w-auto"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#c4b5fd]/30 bg-[#7c3aed]/20 px-4 py-2 text-sm font-semibold text-[#f4f4f6] shadow-[0_0_22px_rgba(124,58,237,0.12)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[#ddd6fe]/55 hover:bg-[rgba(139,92,246,0.24)] sm:w-auto"
               >
                 Luyện tập
                 <ArrowUpRight size={14} />
