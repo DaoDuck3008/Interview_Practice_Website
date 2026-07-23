@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -202,6 +203,8 @@ export default function QuestionCard({
   searchQuery,
   onFavoriteRemoved,
 }: QuestionCardProps) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
   const [fullAnswer, setFullAnswer] = useState(question.detailAnswerKey ?? "");
   const [loadingAnswer, setLoadingAnswer] = useState(false);
@@ -212,6 +215,16 @@ export default function QuestionCard({
   const loggedIn = useAuthStore((s) => s.hydrated && !!s.user);
   const isFavorited = useFavoritesStore((s) => s.ids.has(question.id));
   const toggleFavorite = useFavoritesStore((s) => s.toggleFavorite);
+  const currentQuery = searchParams.toString();
+  const returnTo = `${pathname}${currentQuery ? `?${currentQuery}` : ""}`;
+
+  function getDetailHref() {
+    const href = getLearningQuestionHref(topicSlug, question);
+    const params = new URLSearchParams({ returnTo });
+
+    // Giữ lại query search nếu có, để khi mở trang chi tiết xong quay về vẫn còn filter/sort/search.
+    return `${href}?${params.toString()}`;
+  }
 
   async function handleToggleFavorite(e: React.SyntheticEvent) {
     e.stopPropagation();
@@ -247,12 +260,8 @@ export default function QuestionCard({
     <div
       className="overflow-hidden rounded-[24px] border backdrop-blur-2xl transition-all duration-300 hover:-translate-y-0.5"
       style={{
-        borderColor: open
-          ? "rgba(196,181,253,0.28)"
-          : "rgba(255,255,255,0.11)",
-        background: open
-          ? "rgba(76, 29, 149, 0.26)"
-          : "rgba(15, 23, 42, 0.52)",
+        borderColor: open ? "rgba(196,181,253,0.28)" : "rgba(255,255,255,0.11)",
+        background: open ? "rgba(76, 29, 149, 0.26)" : "rgba(15, 23, 42, 0.52)",
         boxShadow: open
           ? "inset 0 1px 0 rgba(255,255,255,0.12), 0 22px 54px rgba(76,29,149,0.16)"
           : "inset 0 1px 0 rgba(255,255,255,0.08), 0 14px 40px rgba(2,6,23,0.18)",
@@ -311,7 +320,7 @@ export default function QuestionCard({
         {/* Detail link */}
         {topicSlug && (
           <Link
-            href={getLearningQuestionHref(topicSlug, question)}
+            href={getDetailHref()}
             onClick={(e) => e.stopPropagation()}
             className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.055] text-[#94a3b8] transition-all duration-200 hover:border-[#c4b5fd]/40 hover:bg-white/[0.11] hover:text-[#c4b5fd]"
             title="Xem chi tiết"
@@ -380,7 +389,7 @@ export default function QuestionCard({
             >
               {/* Separate CTAs make the read-next and practice paths obvious. */}
               <Link
-                href={getLearningQuestionHref(topicSlug, question)}
+                href={getDetailHref()}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-[#e9d5ff] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[#c4b5fd]/35 hover:bg-white/[0.11] sm:w-auto"
               >
                 Xem chi tiết

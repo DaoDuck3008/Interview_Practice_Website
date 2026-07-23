@@ -15,6 +15,7 @@ import {
 
 interface PageProps {
   params: Promise<{ topicSlug: string; questionSlugId: string }>;
+  searchParams: Promise<{ returnTo?: string }>;
 }
 
 const DEFAULT_METADATA = createSeoMetadata({
@@ -32,6 +33,17 @@ function truncateSeoText(text: string, maxLength: number) {
   const safeText = lastSpace > 40 ? sliced.slice(0, lastSpace) : sliced;
 
   return `${safeText}…`;
+}
+
+function getSafeReturnHref(returnTo: string | undefined, fallbackHref: string) {
+  if (!returnTo) return fallbackHref;
+
+  // Chỉ cho phép các đường dẫn tương đối, không cho phép các URL tuyệt đối hoặc các đường dẫn bắt đầu bằng "//" (có thể dẫn đến các miền khác).
+  if (returnTo.startsWith("/") && !returnTo.startsWith("//")) {
+    return returnTo;
+  }
+
+  return fallbackHref;
 }
 
 export async function generateMetadata({
@@ -61,19 +73,25 @@ export async function generateMetadata({
 
 export default async function LearningQuestionDetailPage({
   params,
+  searchParams,
 }: PageProps) {
   const { topicSlug, questionSlugId } = await params;
+  const { returnTo } = await searchParams;
   const { id: questionId } = parseQuestionSlugId(questionSlugId);
   const question = await getQuestion(questionId);
 
   if (!question) notFound();
 
   const canonicalTopicSlug = question.topic?.slug ?? topicSlug;
+  const defaultBackHref = `/learning/${canonicalTopicSlug}/questions`;
+  const returnHref = getSafeReturnHref(returnTo, defaultBackHref);
   if (
     topicSlug !== canonicalTopicSlug ||
     !isCanonicalQuestionSlugId(questionSlugId, question)
   ) {
-    permanentRedirect(getLearningQuestionHref(canonicalTopicSlug, question));
+    const canonicalHref = getLearningQuestionHref(canonicalTopicSlug, question);
+    const params = new URLSearchParams({ returnTo: returnHref });
+    permanentRedirect(`${canonicalHref}?${params.toString()}`);
   }
 
   const [sameTopicResult, latestResult] = await Promise.all([
@@ -162,6 +180,7 @@ export default async function LearningQuestionDetailPage({
         sameTopicQuestions={sameTopicResult.items}
         latestQuestions={latestResult.items}
         topicSlug={canonicalTopicSlug}
+        returnHref={returnHref}
       />
     </>
   );

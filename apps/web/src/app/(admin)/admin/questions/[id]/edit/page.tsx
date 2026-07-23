@@ -25,7 +25,7 @@ export default function EditQuestionPage({
         setInitial({
           topicId: q.topicId,
           content: q.content,
-          detailAnswerKey: q.detailAnswerKey,
+          detailAnswerKey: q.detailAnswerKey ?? "",
           answerKeySummary: q.answerKeySummary,
           answerKeywords: q.answerKeywords,
           level: q.level,
