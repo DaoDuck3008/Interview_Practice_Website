@@ -17,7 +17,7 @@ import { useAuthStore } from "@/stores/auth.store";
 import { usePracticeCountStore } from "@/stores/practiceCount.store";
 import { useFavoritesStore } from "@/stores/favorites.store";
 import { logoutApi } from "@/lib/api/auth";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import FavoritesDrawer from "./FavoritesDrawer";
 import Avatar from "@/components/ui/Avatar";
 
@@ -40,7 +40,7 @@ function PracticeCountBadge() {
   return (
     <div
       title={tier.message}
-      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg flex-shrink-0"
+      className="flex flex-shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5"
       style={{
         border: `1px solid ${tier.color}33`,
         background: `${tier.color}14`,
@@ -65,6 +65,12 @@ const NAV_LINKS = [
   // { href: "#tinh-nang", label: "Tính Năng" },
   // { href: "#cach-hoat-dong", label: "Cách Hoạt Động" },
 ];
+
+function isNavActive(pathname: string, href: string) {
+  if (href === "/") return pathname === "/";
+  if (href.startsWith("/learning")) return pathname.startsWith("/learning");
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 function UserDropdown({
   name,
@@ -107,7 +113,7 @@ function UserDropdown({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-[#13131c] transition-colors duration-200 cursor-pointer"
+        className="flex cursor-pointer items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 transition-all duration-300 hover:border-violet-300/25 hover:bg-white/[0.1] hover:text-white"
       >
         <Avatar
           name={name}
@@ -128,11 +134,11 @@ function UserDropdown({
 
       {open && (
         <div
-          className="absolute right-0 top-full mt-2 w-48 rounded-md overflow-hidden z-50"
+          className="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-2xl backdrop-blur-2xl"
           style={{
-            background: "#11111b98",
-            border: "1px solid #1c1c28",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+            background: "rgba(15, 23, 42, 0.82)",
+            border: "1px solid rgba(255,255,255,0.12)",
+            boxShadow: "0 18px 50px rgba(2,6,23,0.38)",
           }}
         >
           <div className="py-1">
@@ -140,7 +146,7 @@ function UserDropdown({
               <Link
                 href="/admin"
                 onClick={() => setOpen(false)}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#9898aa] hover:text-[#f4f4f6] hover:bg-[#13131c] transition-colors duration-150 cursor-pointer border-b border-[#1c1c28]"
+                className="flex w-full cursor-pointer items-center gap-2.5 px-4 py-2.5 text-sm text-[#ddd6fe] transition-colors duration-200 hover:bg-white/[0.08] hover:text-white"
               >
                 <LayoutDashboard size={14} />
                 Trang quản trị
@@ -149,14 +155,14 @@ function UserDropdown({
             <Link
               href="/overview"
               onClick={() => setOpen(false)}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#9898aa] hover:text-[#f4f4f6] hover:bg-[#13131c] transition-colors duration-150 cursor-pointer border-b border-[#1c1c28]"
+              className="flex w-full cursor-pointer items-center gap-2.5 px-4 py-2.5 text-sm text-[#ddd6fe] transition-colors duration-200 hover:bg-white/[0.08] hover:text-white"
             >
               <CreditCard size={14} />
               Trang cá nhân
             </Link>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#9898aa] hover:text-[#f4f4f6] hover:bg-[#13131c] transition-colors duration-150 cursor-pointer"
+              className="flex w-full cursor-pointer items-center gap-2.5 px-4 py-2.5 text-sm text-[#ddd6fe] transition-colors duration-200 hover:bg-white/[0.08] hover:text-white"
             >
               <LogOut size={14} />
               Đăng xuất
@@ -172,6 +178,7 @@ export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [favDrawerOpen, setFavDrawerOpen] = useState(false);
+  const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const hydrated = useAuthStore((s) => s.hydrated);
   const clearAuth = useAuthStore((s) => s.clearAuth);
@@ -216,11 +223,15 @@ export default function Header() {
   return (
     <header
       ref={headerRef}
-      className={`sticky top-0 left-0 right-0 z-50 backdrop-blur-md transition-all duration-300 ${
-        scrolled ? "bg-black/60 border-b border-[#1c1c28]" : "bg-black/30"
-      }`}
+      className="sticky left-0 right-0 top-3 z-50 px-3 transition-all duration-300 sm:px-5"
     >
-      <nav className="mx-auto max-w-7xl px-4 sm:px-6 h-16 flex items-center justify-between">
+      <nav
+        className={`mx-auto flex h-16 max-w-7xl items-center justify-between rounded-full border px-3 pr-2 shadow-[0_18px_65px_rgba(2,6,23,0.28)] backdrop-blur-2xl transition-all duration-300 sm:px-4 sm:pr-3 ${
+          scrolled
+            ? "border-white/[0.14] bg-[#0f172a]/72"
+            : "border-white/[0.1] bg-[#0f172a]/46"
+        }`}
+      >
         {/* Logo */}
         <Link href="/" className="flex-shrink-0">
           <Image
@@ -230,22 +241,31 @@ export default function Header() {
             height={316}
             priority
             sizes="(max-width: 640px) 140px, 160px"
-            className="h-14 sm:h-16 w-auto"
+            className="h-12 w-auto sm:h-14"
           />
         </Link>
 
         {/* Desktop links */}
-        <ul className="hidden md:flex items-center gap-8">
-          {NAV_LINKS.map((link) => (
-            <li key={link.href}>
-              <Link
-                href={link.href}
-                className="text-sm text-[#a1a1aa] hover:text-[#fafafa] transition-colors duration-200 cursor-pointer"
-              >
-                {link.label}
-              </Link>
-            </li>
-          ))}
+        <ul className="hidden items-center gap-1 rounded-full border border-white/[0.08] bg-white/[0.035] p-1 md:flex">
+          {NAV_LINKS.map((link) => {
+            const active = isNavActive(pathname, link.href);
+
+            return (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`relative inline-flex cursor-pointer items-center rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 ${
+                    active
+                      ? "bg-violet-500/24 text-white shadow-[0_0_24px_rgba(139,92,246,0.26)] ring-1 ring-violet-300/25"
+                      : "text-[#cbd5e1] hover:bg-white/[0.08] hover:text-white"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
 
         {/* Desktop CTAs */}
@@ -256,7 +276,7 @@ export default function Header() {
                 <PracticeCountBadge />
                 <button
                   onClick={() => setFavDrawerOpen(true)}
-                  className="flex items-center justify-center w-8 h-8 rounded-lg text-[#a1a1aa] hover:text-[#f4f4f6] hover:bg-[#13131c] transition-colors duration-200 cursor-pointer"
+                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-[#cbd5e1] transition-all duration-300 hover:border-violet-300/25 hover:bg-white/[0.1] hover:text-white"
                   aria-label="Câu hỏi đã lưu"
                   title="Câu hỏi đã lưu"
                 >
@@ -273,13 +293,13 @@ export default function Header() {
               <>
                 <Link
                   href="/login"
-                  className="text-sm text-[#a1a1aa] hover:text-[#fafafa] transition-colors duration-200 cursor-pointer px-3 py-1.5"
+                  className="cursor-pointer rounded-full px-4 py-2 text-sm font-medium text-[#cbd5e1] transition-all duration-300 hover:bg-white/[0.08] hover:text-white"
                 >
                   Đăng nhập
                 </Link>
                 <Link
                   href="/register"
-                  className="text-sm font-semibold bg-[#7c3aed] hover:bg-[#6d28d9] text-white px-4 py-2 rounded-lg transition-colors duration-200 cursor-pointer"
+                  className="cursor-pointer rounded-full bg-[#7c3aed]/90 px-4 py-2 text-sm font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-violet-400"
                   style={{ boxShadow: "0 0 14px rgba(124,58,237,0.3)" }}
                 >
                   Bắt đầu
@@ -290,7 +310,7 @@ export default function Header() {
 
         {/* Mobile menu button */}
         <button
-          className="md:hidden text-[#a1a1aa] hover:text-[#fafafa] transition-colors cursor-pointer p-2"
+          className="cursor-pointer rounded-full border border-white/[0.08] bg-white/[0.04] p-2 text-[#cbd5e1] transition-all duration-300 hover:bg-white/[0.1] hover:text-white md:hidden"
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label={menuOpen ? "Đóng menu" : "Mở menu"}
         >
@@ -300,22 +320,31 @@ export default function Header() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="md:hidden bg-[#06060c]/95 backdrop-blur-md border-b border-[#1c1c28] px-4 sm:px-6 pb-6">
-          <ul className="flex flex-col gap-4 pt-4">
-            {NAV_LINKS.map((link) => (
-              <li key={link.href}>
-                <Link
-                  href={link.href}
-                  onClick={() => setMenuOpen(false)}
-                  className="block text-sm text-[#a1a1aa] hover:text-[#fafafa] transition-colors duration-200 cursor-pointer py-1"
-                >
-                  {link.label}
-                </Link>
-              </li>
-            ))}
+        <div className="mx-auto mt-2 max-w-7xl overflow-hidden rounded-3xl border border-white/[0.1] bg-[#0f172a]/82 px-4 pb-5 shadow-[0_22px_70px_rgba(2,6,23,0.42)] backdrop-blur-2xl md:hidden">
+          <ul className="flex flex-col gap-2 pt-4">
+            {NAV_LINKS.map((link) => {
+              const active = isNavActive(pathname, link.href);
+
+              return (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    aria-current={active ? "page" : undefined}
+                    onClick={() => setMenuOpen(false)}
+                    className={`block cursor-pointer rounded-full px-4 py-2.5 text-sm font-medium transition-all duration-300 ${
+                      active
+                        ? "bg-violet-500/24 text-white ring-1 ring-violet-300/25"
+                        : "text-[#cbd5e1] hover:bg-white/[0.08] hover:text-white"
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              );
+            })}
 
             {hydrated && (
-              <li className="pt-2 flex flex-col gap-3">
+              <li className="flex flex-col gap-3 pt-2">
                 {user ? (
                   <>
                     <div className="flex items-center gap-3 py-1">
@@ -334,7 +363,7 @@ export default function Header() {
                       <Link
                         href="/admin"
                         onClick={() => setMenuOpen(false)}
-                        className="flex items-center justify-center gap-2 text-sm text-[#a1a1aa] hover:text-[#fafafa] transition-colors duration-200 cursor-pointer py-2 border border-[#1c1c28] rounded-lg"
+                        className="flex cursor-pointer items-center justify-center gap-2 rounded-full border border-white/[0.1] bg-white/[0.04] py-2 text-sm text-[#cbd5e1] transition-all duration-300 hover:bg-white/[0.1] hover:text-white"
                       >
                         <LayoutDashboard size={14} />
                         Trang quản trị
@@ -345,7 +374,7 @@ export default function Header() {
                         setMenuOpen(false);
                         setFavDrawerOpen(true);
                       }}
-                      className="flex items-center justify-center gap-2 text-sm text-[#a1a1aa] hover:text-[#fafafa] transition-colors duration-200 cursor-pointer py-2 border border-[#1c1c28] rounded-lg"
+                      className="flex cursor-pointer items-center justify-center gap-2 rounded-full border border-white/[0.1] bg-white/[0.04] py-2 text-sm text-[#cbd5e1] transition-all duration-300 hover:bg-white/[0.1] hover:text-white"
                     >
                       <Bookmark size={14} />
                       Câu hỏi đã lưu
@@ -353,14 +382,14 @@ export default function Header() {
                     <Link
                       href="/billing"
                       onClick={() => setMenuOpen(false)}
-                      className="flex items-center justify-center gap-2 text-sm text-[#a1a1aa] hover:text-[#fafafa] transition-colors duration-200 cursor-pointer py-2 border border-[#1c1c28] rounded-lg"
+                      className="flex cursor-pointer items-center justify-center gap-2 rounded-full border border-white/[0.1] bg-white/[0.04] py-2 text-sm text-[#cbd5e1] transition-all duration-300 hover:bg-white/[0.1] hover:text-white"
                     >
                       <CreditCard size={14} />
                       Gói của tôi
                     </Link>
                     <button
                       onClick={mobileLogout}
-                      className="flex items-center justify-center gap-2 text-sm text-[#606072] hover:text-[#9898aa] transition-colors duration-200 cursor-pointer py-2 border border-[#1c1c28] rounded-lg"
+                      className="flex cursor-pointer items-center justify-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.025] py-2 text-sm text-[#94a3b8] transition-all duration-300 hover:bg-white/[0.08] hover:text-white"
                     >
                       <LogOut size={14} />
                       Đăng xuất
@@ -371,14 +400,14 @@ export default function Header() {
                     <Link
                       href="/login"
                       onClick={() => setMenuOpen(false)}
-                      className="text-sm text-center text-[#a1a1aa] hover:text-[#fafafa] transition-colors duration-200 cursor-pointer py-2 border border-[#1c1c28] rounded-lg"
+                      className="cursor-pointer rounded-full border border-white/[0.1] bg-white/[0.04] py-2 text-center text-sm text-[#cbd5e1] transition-all duration-300 hover:bg-white/[0.1] hover:text-white"
                     >
                       Đăng nhập
                     </Link>
                     <Link
                       href="/register"
                       onClick={() => setMenuOpen(false)}
-                      className="text-sm font-semibold text-center bg-[#7c3aed] hover:bg-[#6d28d9] text-white py-2 rounded-lg transition-colors duration-200 cursor-pointer"
+                      className="cursor-pointer rounded-full bg-[#7c3aed]/90 py-2 text-center text-sm font-semibold text-white transition-all duration-300 hover:bg-violet-400"
                     >
                       Bắt đầu
                     </Link>
