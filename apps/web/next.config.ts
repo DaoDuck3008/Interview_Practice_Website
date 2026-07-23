@@ -73,6 +73,7 @@ const styleSrc = unique([
   "'self'",
   "'unsafe-inline'",
   "https://fonts.googleapis.com",
+  "https://accounts.google.com",
 ]);
 
 // Danh sách các nguồn được phép trong Content Security Policy (CSP) cho connect-src

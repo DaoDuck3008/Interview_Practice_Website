@@ -22,20 +22,8 @@ html {
   color-scheme: dark;
 }
 
-/*
-  Dot grid lives HERE on body — the only reliable layer.
-  A separate div with z-index never shows through sections
-  that inherit the body background-color.
-*/
 body {
-  background-color: #06060c;
-  /* Dot grid pattern */
-  background-image: radial-gradient(
-    circle,
-    rgba(255, 255, 255, 0.18) 1.5px,
-    transparent 1.5px
-  );
-  background-size: 30px 30px;
+  background-color: #0f172a;
   color: #f4f4f6;
   font-family: var(--font-be-vietnam), "Be Vietnam Pro", sans-serif;
   -webkit-font-smoothing: antialiased;

@@ -13,6 +13,7 @@ const beVietnam = Be_Vietnam_Pro({
   variable: "--font-be-vietnam",
   weight: ["400", "500", "600", "700", "800"],
   display: "swap",
+  preload: false,
 });
 
 export const metadata: Metadata = {

@@ -79,8 +79,8 @@ export default async function Hero() {
           </h1>
 
           <p className="mt-6 max-w-2xl text-pretty leading-8 text-[#d6d2e5] sm:text-lg">
-            Luyện tập câu hỏi phỏng vấn thực tế theo chủ đề và cấp độ. Nhận
-            điểm số và phân tích chi tiết từ AI ngay lập tức bằng Tiếng Việt.
+            Luyện tập câu hỏi phỏng vấn thực tế theo chủ đề và cấp độ. Nhận điểm
+            số và phân tích chi tiết từ AI ngay lập tức bằng Tiếng Việt.
           </p>
 
           <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">

@@ -10,7 +10,7 @@ The interface should feel focused, technical, and calm: a dark learning cockpit 
 
 Use a dark, high-contrast product UI that makes practice feel serious but approachable. The visual identity is built from:
 
-- A near-black base with a subtle dot grid.
+- A dark slate base without global decorative grids.
 - Layered charcoal surfaces with thin borders.
 - One primary violet accent for AI, progress, and primary actions.
 - A slate-purple marketing canvas for landing, pricing, footer, and other public sections.
