@@ -13,8 +13,8 @@ export interface Question {
   topicId: string;
   content: string;
   detailAnswerKey?: string;
-  answerKeySummary: string;
-  answerKeywords: string[];
+  answerKeySummary?: string;
+  answerKeywords?: string[];
   level: Level;
   isActive: boolean;
   isFeatured: boolean;

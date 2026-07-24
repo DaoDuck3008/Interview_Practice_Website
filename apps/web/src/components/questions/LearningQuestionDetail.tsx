@@ -142,6 +142,7 @@ export default function LearningQuestionDetail({
   const levelStyle = LEVEL_STYLE[question.level];
   const backHref = returnHref ?? `/learning/${canonicalTopicSlug}/questions`;
   const practiceHref = getPracticeQuestionHref(canonicalTopicSlug, question);
+  const answerKeywords = question.answerKeywords ?? [];
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-5 md:px-6 md:py-7 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
@@ -179,9 +180,9 @@ export default function LearningQuestionDetail({
             {question.content}
           </h1>
 
-          {question.answerKeywords.length > 0 && (
+          {answerKeywords.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-2">
-              {question.answerKeywords.map((keyword) => (
+              {answerKeywords.map((keyword) => (
                 <span
                   key={keyword}
                   className="rounded-full border border-white/10 bg-white/[0.055] px-3 py-1 text-xs font-semibold text-[#cbd5e1] backdrop-blur-xl"

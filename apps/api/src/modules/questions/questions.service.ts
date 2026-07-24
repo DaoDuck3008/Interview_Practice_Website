@@ -19,8 +19,6 @@ const PUBLIC_QUESTION_SELECT = {
   id: true,
   topicId: true,
   content: true,
-  answerKeySummary: true,
-  answerKeywords: true,
   level: true,
   isActive: true,
   isFeatured: true,

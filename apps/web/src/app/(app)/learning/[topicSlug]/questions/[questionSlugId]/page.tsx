@@ -110,6 +110,7 @@ export default async function LearningQuestionDetailPage({
   const pagePath = getLearningQuestionHref(canonicalTopicSlug, question);
   const pageUrl = getAbsoluteUrl(pagePath);
   const answerText = question.detailAnswerKey || question.answerKeySummary;
+  const answerKeywords = question.answerKeywords ?? [];
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -147,8 +148,8 @@ export default async function LearningQuestionDetailPage({
           text: question.content,
           url: pageUrl,
           ...(question.createdAt ? { datePublished: question.createdAt } : {}),
-          ...(question.answerKeywords.length > 0
-            ? { keywords: question.answerKeywords }
+          ...(answerKeywords.length > 0
+            ? { keywords: answerKeywords }
             : {}),
           ...(answerText
             ? {

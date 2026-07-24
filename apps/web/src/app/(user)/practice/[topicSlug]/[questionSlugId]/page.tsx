@@ -146,7 +146,7 @@ export default async function QuestionPage({ params, searchParams }: PageProps) 
           {/* Keywords + history + recorder/transcript/evaluation */}
           <PracticeContent
             questionId={questionId}
-            keywords={question.answerKeywords}
+            keywords={question.answerKeywords ?? []}
           />
         </div>
       </div>
