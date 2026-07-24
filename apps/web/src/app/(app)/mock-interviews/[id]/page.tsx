@@ -1,8 +1,8 @@
-import { createSeoMetadata } from "@/lib/seo";
 import MockInterviewRoom from "@/components/mock-interviews/mock-room/MockInterviewRoom";
+import { createSeoMetadata } from "@/lib/seo";
 
 export const metadata = createSeoMetadata({
-  title: "Phòng mock interview — Phỏng vấn IT",
+  title: "Phòng mock interview - Phỏng vấn IT",
   description:
     "Trả lời bộ câu hỏi phỏng vấn theo thời gian giới hạn, ghi âm từng câu và nộp bài để AI chấm tổng quan.",
 });
