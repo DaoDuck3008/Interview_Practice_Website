@@ -1,5 +1,5 @@
 import { createSeoMetadata } from "@/lib/seo";
-import MockInterviewRoom from "@/components/mock-interviews/MockInterviewRoom";
+import MockInterviewRoom from "@/components/mock-interviews/mock-room/MockInterviewRoom";
 
 export const metadata = createSeoMetadata({
   title: "Phòng mock interview — Phỏng vấn IT",

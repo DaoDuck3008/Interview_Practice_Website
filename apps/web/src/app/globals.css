@@ -164,6 +164,50 @@ h6 {
   animation: landingFloat 6s ease-in-out infinite;
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes cardPushIn {
+  0% {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translateY(22px) scale(0.97);
+  }
+  68% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(-3px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: none;
+  }
+}
+
+@keyframes textTypeCursorBlink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  46%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.text-type-cursor {
+  animation: textTypeCursorBlink 0.72s steps(1, end) infinite;
+}
+
 /* AnswerEvaluation — panel trượt/đẩy vào khi hiện kết quả */
 @keyframes featureTabProgress {
   from {
@@ -217,6 +261,9 @@ h6 {
   .topic-marquee-track,
   .landing-glow-drift,
   .landing-float,
+  [class*="animate-\\[fadeIn_"],
+  [class*="animate-\\[cardPushIn_"],
+  .text-type-cursor,
   .feature-tab-progress {
     animation: none;
   }

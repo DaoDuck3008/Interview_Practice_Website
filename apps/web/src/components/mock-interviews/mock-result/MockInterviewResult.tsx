@@ -763,14 +763,7 @@ function ScoreBar({
 }) {
   const [animatedWidth, setAnimatedWidth] = useState(0);
   const normalized = value === null ? 0 : Math.max(0, Math.min(10, value));
-  const fill =
-    value === null
-      ? "bg-border"
-      : value >= 7
-        ? "bg-success"
-        : value >= 5
-          ? "bg-accent"
-          : "bg-danger";
+  const scoreBand = mockInterviewScoreBand(value);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() =>
@@ -791,13 +784,15 @@ function ScoreBar({
         >
           {label}
         </span>
-        <span className="font-mono text-sm font-bold tabular-nums text-text-primary">
+        <span
+          className={`font-mono text-sm font-bold tabular-nums ${scoreBand.textClassName}`}
+        >
           {value === null ? "—" : value.toFixed(1)}
         </span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-border">
         <div
-          className={`h-full rounded-full transition-all duration-500 ${fill}`}
+          className={`h-full rounded-full transition-all duration-500 ${scoreBand.progressClassName}`}
           style={{ width: `${animatedWidth}%` }}
         />
       </div>

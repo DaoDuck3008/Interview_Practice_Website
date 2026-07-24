@@ -160,3 +160,7 @@ export function mockInterviewScoreBand(
     shadowClassName: "shadow-blue-500/10",
   };
 }
+
+export function mockInterviewScoreText(score: number | null | undefined) {
+  return score === null || score === undefined ? "--" : score.toFixed(1);
+}
