@@ -1,8 +1,3 @@
-/**
- * Layout riêng cho trang Pricing: phủ ảnh nền register_background_2 ra TOÀN màn hình.
- * Dùng `fixed inset-0` để đè lên nền (learning_background + dot-grid) của (app)/layout
- * — layout con lồng trong layout cha nên không thể gỡ nền cha, chỉ có thể che lên.
- */
 export default function PricingLayout({
   children,
 }: {
@@ -10,26 +5,33 @@ export default function PricingLayout({
 }) {
   return (
     <>
-      {/* Ảnh nền full màn hình */}
+      <div className="fixed inset-0 z-0 bg-[#0f172a] pointer-events-none" />
       <div
         className="fixed inset-0 z-0 pointer-events-none"
         style={{
           backgroundImage: "url('/images/pricing-bg-glass-wave.png')",
           backgroundSize: "cover",
           backgroundPosition: "center",
+          opacity: 0.68,
+          mixBlendMode: "screen",
+          filter: "saturate(0.82) hue-rotate(6deg)",
         }}
       />
-      {/* Lớp phủ tối */}
       <div
         className="fixed inset-0 z-0 pointer-events-none"
         style={{
           background:
-            "linear-gradient(180deg, rgba(6,6,12,0.62) 0%, rgba(6,6,12,0.45) 38%, rgba(6,6,12,0.80) 100%)",
+            "linear-gradient(180deg, rgba(15,23,42,0.28) 0%, rgba(15,23,42,0.08) 36%, rgba(15,23,42,0.34) 62%, rgba(15,23,42,0.92) 100%)",
         }}
       />
-      <div className="fixed inset-0 z-0 pointer-events-none bg-black/30" />
+      <div
+        className="fixed inset-0 z-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(circle at 50% 38%, rgba(196,181,253,0.14), transparent 34%), radial-gradient(circle at 50% 86%, rgba(15,23,42,0.5), rgba(15,23,42,0.9) 58%)",
+        }}
+      />
 
-      {/* Nội dung nằm trên nền */}
       <div className="relative z-10">{children}</div>
     </>
   );
