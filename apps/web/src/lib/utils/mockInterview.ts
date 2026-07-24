@@ -47,7 +47,7 @@ export const MOCK_SCORE_STATUS_LABEL: Record<MockQuestionScoreStatus, string> =
     SKIPPED: "Bỏ qua",
   };
 
-const BADGE_BASE = "border px-2 py-0.5 text-xs font-semibold";
+const BADGE_BASE = "border px-2.5 py-1 text-xs font-bold";
 
 export function mockInterviewStatusBadge(
   status: MockInterviewStatus,
@@ -61,7 +61,7 @@ export function mockInterviewStatusBadge(
         ? "border-accent/30 bg-accent/10 text-accent-light"
         : status === "ABANDONED"
           ? "border-danger/30 bg-danger/10 text-danger"
-          : "border-border bg-elevated text-text-secondary";
+          : "border-white/15 bg-white/[0.055] text-white/70";
 
   return {
     label: MOCK_INTERVIEW_STATUS_LABEL[status],
@@ -80,14 +80,14 @@ export function mockQuestionStatusBadge(item: {
         ? "border-danger/30 bg-danger/10 text-danger"
         : item.scoreStatus === "QUEUED" || item.scoreStatus === "PENDING"
           ? "border-accent/30 bg-accent/10 text-accent-light"
-          : "border-border bg-elevated text-text-secondary";
+          : "border-white/15 bg-white/[0.055] text-white/70";
 
   return {
     label:
       item.answerStatus === "ANSWERED"
         ? MOCK_SCORE_STATUS_LABEL[item.scoreStatus]
         : MOCK_ANSWER_STATUS_LABEL[item.answerStatus],
-    className: `rounded-md ${BADGE_BASE} ${tone}`,
+    className: `rounded-full ${BADGE_BASE} ${tone}`,
   };
 }
 
@@ -110,11 +110,11 @@ export function mockInterviewScoreBand(
   if (score === null || score === undefined) {
     return {
       label: "Chưa có điểm",
-      textClassName: "text-text-muted",
-      borderClassName: "border-border",
-      backgroundClassName: "bg-elevated/70",
-      progressClassName: "bg-border",
-      shadowClassName: "shadow-base/20",
+      textClassName: "text-white/45",
+      borderClassName: "border-white/15",
+      backgroundClassName: "bg-white/[0.045]",
+      progressClassName: "bg-white/15",
+      shadowClassName: "shadow-slate-950/20",
     };
   }
 
