@@ -14,38 +14,27 @@ export default async function PracticeLayout({
   const { topicSlug } = await params;
   const topics = await getTopicsWithCounts();
   const topic = topics.find((t) => t.slug === topicSlug);
-  const topicName = formatTopicName(topicSlug);
+  const topicName = topic?.name ?? formatTopicName(topicSlug);
 
   return (
     <div
-      className="relative h-screen flex flex-col overflow-hidden"
-      style={{ background: "#06060c" }}
+      className="relative flex h-screen flex-col overflow-hidden"
+      style={{ background: "#0f172a" }}
     >
-      {/* Background image — low opacity */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="pointer-events-none absolute inset-0"
         style={{
           backgroundImage: "url('/images/learning_background.jpg')",
           backgroundSize: "cover",
           backgroundPosition: "center top",
-          opacity: 0.35,
+          opacity: 0.58,
         }}
       />
-
-      {/* Dot grid overlay */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle, rgba(255,255,255,0.08) 2px, transparent 2px)",
-          backgroundSize: "24px 24px",
-        }}
-      />
+      <div className="pointer-events-none absolute inset-0 bg-black/20" />
 
       <Header />
 
-      {/* Sidebar */}
-      <div className="relative flex flex-1 gap-3 p-3 overflow-hidden">
+      <div className="relative flex flex-1 gap-3 overflow-hidden mt-4 p-3">
         {topic && (
           <Suspense fallback={null}>
             <PracticeSidebar

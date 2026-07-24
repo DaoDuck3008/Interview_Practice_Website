@@ -16,7 +16,7 @@ import {
 } from "@/lib/utils/question-url";
 
 const DEFAULT_METADATA = createSeoMetadata({
-  title: "Câu hỏi luyện tập phỏng vấn IT — Phỏng vấn IT",
+  title: "Câu hỏi luyện tập phỏng vấn IT - Phỏng vấn IT",
   description:
     "Trả lời câu hỏi phỏng vấn IT, ghi âm phần trình bày và nhận đánh giá AI kèm gợi ý cải thiện.",
 });
@@ -34,7 +34,7 @@ function truncateSeoText(text: string, maxLength: number) {
   const lastSpace = sliced.lastIndexOf(" ");
   const safeText = lastSpace > 40 ? sliced.slice(0, lastSpace) : sliced;
 
-  return `${safeText}…`;
+  return `${safeText}...`;
 }
 
 export async function generateMetadata({
@@ -56,7 +56,7 @@ export async function generateMetadata({
 
   return {
     ...createSeoMetadata({
-      title: `${questionTitle} — Phỏng vấn IT`,
+      title: `${questionTitle} - Phỏng vấn IT`,
       description: questionDescription,
     }),
     alternates: {
@@ -65,7 +65,10 @@ export async function generateMetadata({
   };
 }
 
-export default async function QuestionPage({ params, searchParams }: PageProps) {
+export default async function QuestionPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { topicSlug, questionSlugId } = await params;
   const { id: questionId } = parseQuestionSlugId(questionSlugId);
 
@@ -91,72 +94,47 @@ export default async function QuestionPage({ params, searchParams }: PageProps) 
   const levelStyle = LEVEL_STYLE[question.level];
 
   return (
-    /* Cột nội dung — glassy panel (sidebar nằm ở layout) */
-    <main
-      className="flex-1 flex flex-col overflow-hidden rounded-2xl"
-      style={{
-        background: "rgba(16, 15, 26, 0.55)",
-        border: "1px solid rgba(255,255,255,0.07)",
-      }}
-    >
+    <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-[28px] border border-white/[0.13] bg-[#0f172a]/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_24px_70px_rgba(2,6,23,0.26)] backdrop-blur-2xl">
       <div className="flex-1 overflow-y-auto">
-        <div className="w-full flex flex-col gap-4 px-5 sm:px-10 lg:px-16 py-7">
-          {/* Question card */}
-          <section
-            className="rounded-2xl px-6 py-6 flex flex-col gap-5"
-            style={{
-              background: "rgba(255,255,255,0.025)",
-              border: "1px solid rgba(255,255,255,0.06)",
-            }}
-          >
-            {/* Breadcrumbs */}
-            <nav className="flex items-center gap-1.5 text-xs text-[#606072] min-w-0">
+        <div className="flex w-full flex-col gap-4 px-4 py-5 sm:px-8 lg:px-12">
+          <section className="flex flex-col gap-5 rounded-[24px] border border-white/10 bg-white/[0.055] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:px-6">
+            <nav className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-[#94a3b8]">
               <Link
                 href="/"
-                className="hover:text-[#9898aa] transition-colors flex-shrink-0"
+                className="rounded-full border border-white/10 bg-white/[0.045] px-3 py-1.5 font-semibold transition-colors hover:bg-white/[0.1] hover:text-white"
               >
                 Trang chủ
               </Link>
-              <ChevronRight size={12} className="flex-shrink-0" />
+              <ChevronRight size={13} className="text-[#64748b]" />
               <Link
-                href={`/practice/${topicSlug}`}
-                className="hover:text-[#9898aa] transition-colors flex-shrink-0"
+                href={`/practice/${canonicalTopicSlug}`}
+                className="rounded-full border border-white/10 bg-white/[0.045] px-3 py-1.5 font-semibold text-[#ddd6fe] transition-colors hover:bg-white/[0.1] hover:text-white"
               >
                 {topicName}
               </Link>
-              <ChevronRight size={12} className="flex-shrink-0" />
-              <span className="text-[#9898aa] truncate">
-                {question.content}
-              </span>
             </nav>
 
-            {/* Question text + level */}
-            <div className="flex items-start justify-between gap-3">
-              <p className="text-xl sm:text-2xl font-bold text-[#f4f4f6] leading-snug">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <h1 className="text-xl font-extrabold leading-snug text-[#f4f4f6] sm:text-2xl">
                 {question.content}
-              </p>
+              </h1>
               <span
-                className={`flex-shrink-0 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full ${levelStyle.className}`}
+                className={`w-fit flex-shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest ${levelStyle.className}`}
               >
                 {levelStyle.label}
               </span>
             </div>
           </section>
 
-          {/* Keywords + history + recorder/transcript/evaluation */}
-          <PracticeContent
-            questionId={questionId}
-            keywords={question.answerKeywords ?? []}
-          />
+          <PracticeContent questionId={questionId} />
         </div>
       </div>
 
-      {/* Thanh điều hướng prev/next */}
       <Suspense fallback={null}>
         <PracticeNavFooter
           order={order}
           currentQuestionId={questionId}
-          topicSlug={topicSlug}
+          topicSlug={canonicalTopicSlug}
           questionTitle={question.content}
         />
       </Suspense>

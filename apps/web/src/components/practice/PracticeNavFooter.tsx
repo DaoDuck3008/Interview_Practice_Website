@@ -26,7 +26,8 @@ export default function PracticeNavFooter({
   const currentIdx = filtered.findIndex((q) => q.id === currentQuestionId);
 
   const prev = currentIdx > 0 ? filtered[currentIdx - 1] : null;
-  const next = currentIdx < filtered.length - 1 ? filtered[currentIdx + 1] : null;
+  const next =
+    currentIdx < filtered.length - 1 ? filtered[currentIdx + 1] : null;
 
   const levelParam = level ? `?level=${level}` : "";
   const prevHref = prev
@@ -36,48 +37,38 @@ export default function PracticeNavFooter({
     ? getPracticeQuestionHref(topicSlug, next, levelParam)
     : null;
 
+  const navClass =
+    "inline-flex h-9 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.055] px-3 text-xs font-semibold text-[#cbd5e1] backdrop-blur-xl transition-all duration-200 hover:border-[#c4b5fd]/35 hover:bg-white/[0.11] hover:text-white";
+  const disabledClass =
+    "inline-flex h-9 items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.025] px-3 text-xs font-semibold text-[#475569]";
+
   return (
-    <div
-      className="flex-shrink-0 flex items-center justify-between px-5 py-3 border-t"
-      style={{
-        background: "rgba(255,255,255,0.02)",
-        borderColor: "rgba(255,255,255,0.06)",
-      }}
-    >
-      {/* Prev */}
+    <div className="flex flex-shrink-0 items-center justify-between gap-3 border-t border-white/[0.08] bg-[#0f172a]/48 px-4 py-3 backdrop-blur-2xl">
       {prevHref ? (
-        <Link
-          href={prevHref}
-          className="flex items-center gap-1 font-mono text-xs text-[#606072] hover:text-[#9898aa] transition-colors duration-200 cursor-pointer"
-        >
-          <ChevronLeft size={13} />
-          <span className="hidden sm:inline">prev</span>
+        <Link href={prevHref} className={navClass}>
+          <ChevronLeft size={14} />
+          <span className="hidden sm:inline">Trước</span>
         </Link>
       ) : (
-        <span className="flex items-center gap-1 font-mono text-xs text-[#3d3d54] cursor-not-allowed select-none">
-          <ChevronLeft size={13} />
-          <span className="hidden sm:inline">prev</span>
+        <span className={disabledClass}>
+          <ChevronLeft size={14} />
+          <span className="hidden sm:inline">Trước</span>
         </span>
       )}
 
-      {/* Question title */}
-      <p className="flex-1 min-w-0 px-4 text-center text-xs text-[#9898aa] truncate">
+      <p className="min-w-0 flex-1 truncate px-2 text-center text-xs font-medium text-[#94a3b8]">
         {questionTitle}
       </p>
 
-      {/* Next */}
       {nextHref ? (
-        <Link
-          href={nextHref}
-          className="flex items-center gap-1 font-mono text-xs text-[#606072] hover:text-[#9898aa] transition-colors duration-200 cursor-pointer"
-        >
-          <span className="hidden sm:inline">next</span>
-          <ChevronRight size={13} />
+        <Link href={nextHref} className={navClass}>
+          <span className="hidden sm:inline">Tiếp</span>
+          <ChevronRight size={14} />
         </Link>
       ) : (
-        <span className="flex items-center gap-1 font-mono text-xs text-[#3d3d54] cursor-not-allowed select-none">
-          <span className="hidden sm:inline">next</span>
-          <ChevronRight size={13} />
+        <span className={disabledClass}>
+          <span className="hidden sm:inline">Tiếp</span>
+          <ChevronRight size={14} />
         </span>
       )}
     </div>

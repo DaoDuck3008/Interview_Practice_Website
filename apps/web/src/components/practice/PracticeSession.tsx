@@ -254,10 +254,10 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
 
   return (
     <div
-      className="flex flex-col divide-y divide-white/[0.06] rounded-2xl overflow-hidden"
+      className="flex flex-col divide-y divide-white/[0.07] overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.055] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl"
       style={{
-        background: "rgba(255,255,255,0.025)",
-        border: "1px solid rgba(255,255,255,0.06)",
+        boxShadow:
+          "inset 0 1px 0 rgba(255,255,255,0.08), 0 18px 48px rgba(2,6,23,0.18)",
       }}
     >
       {/* Recorder pane */}

@@ -159,10 +159,12 @@ export default function PracticeSidebar({
           md:static md:inset-auto md:z-auto md:w-[320px] md:max-w-none md:flex-shrink-0 md:translate-x-0 md:rounded-2xl
           ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
         style={{
-          background: "rgba(16, 15, 26, 0.55)",
+          background: "rgba(15, 23, 42, 0.56)",
           backdropFilter: "blur(16px)",
           WebkitBackdropFilter: "blur(16px)",
-          border: "1px solid rgba(255,255,255,0.07)",
+          border: "1px solid rgba(255,255,255,0.13)",
+          boxShadow:
+            "inset 0 1px 0 rgba(255,255,255,0.1), 0 24px 70px rgba(2,6,23,0.24)",
         }}
       >
       {/* Header — topic picker + level filter */}
@@ -181,7 +183,7 @@ export default function PracticeSidebar({
         {/* Level filter — segmented control */}
         <div
           className="flex gap-1 p-1 rounded-xl"
-          style={{ background: "rgba(255,255,255,0.04)" }}
+          style={{ background: "rgba(255,255,255,0.055)" }}
         >
           {LEVELS.map(({ value, label }) => {
             const isActive =
@@ -192,7 +194,7 @@ export default function PracticeSidebar({
                 onClick={() => setLevel(value)}
                 className="flex-1 text-[11px] font-semibold py-1.5 rounded-lg transition-colors duration-200 cursor-pointer"
                 style={{
-                  background: isActive ? "#7c3aed" : "transparent",
+                  background: isActive ? "rgba(124,58,237,0.34)" : "transparent",
                   color: isActive ? "#ffffff" : "#9898aa",
                 }}
               >
@@ -279,8 +281,8 @@ export default function PracticeSidebar({
             disabled={isFetchingNextPage}
             className="mt-1 mx-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-semibold text-[#9898aa] transition-colors duration-200 cursor-pointer hover:text-[#f4f4f6] disabled:cursor-default"
             style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.07)",
+              background: "rgba(255,255,255,0.055)",
+              border: "1px solid rgba(255,255,255,0.1)",
             }}
           >
             {isFetchingNextPage ? (
@@ -390,10 +392,10 @@ function TopicPicker({
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl transition-colors duration-200 cursor-pointer"
         style={{
-          background: "rgba(255,255,255,0.04)",
+          background: "rgba(255,255,255,0.055)",
           border: open
-            ? "1px solid rgba(124,58,237,0.45)"
-            : "1px solid rgba(255,255,255,0.07)",
+            ? "1px solid rgba(196,181,253,0.38)"
+            : "1px solid rgba(255,255,255,0.1)",
         }}
       >
         <span className="flex items-center gap-2.5 min-w-0">
@@ -418,8 +420,8 @@ function TopicPicker({
         <div
           className="absolute left-0 right-0 top-full mt-2 z-30 rounded-xl overflow-hidden flex flex-col"
           style={{
-            background: "#100f1a",
-            border: "1px solid rgba(255,255,255,0.1)",
+            background: "rgba(15,23,42,0.96)",
+            border: "1px solid rgba(255,255,255,0.13)",
             boxShadow: "0 16px 48px rgba(0,0,0,0.55)",
             maxHeight: "min(60vh, 420px)",
           }}
