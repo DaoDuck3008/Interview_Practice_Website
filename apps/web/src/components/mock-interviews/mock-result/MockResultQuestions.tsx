@@ -2,7 +2,7 @@ import { BarChart3, FileText, Loader2 } from "lucide-react";
 import type { MockInterviewQuestion } from "@/lib/api/mockInterviews";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
 import { mockQuestionStatusBadge } from "@/lib/utils/mockInterview";
-import { ResultGlassPanel, SkeletonBlock } from "./MockResultShell";
+import { SkeletonBlock } from "./MockResultShell";
 import { averageScore, ScoreBar } from "./MockResultScore";
 import { RESULT_FILTERS, type QuestionFilter } from "./types";
 
@@ -17,7 +17,7 @@ export function QuestionResultsSection({
   visibleQuestions: MockInterviewQuestion[];
 }) {
   return (
-    <ResultGlassPanel className="p-4 md:p-5">
+    <section>
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-violet-200/80">
@@ -56,7 +56,7 @@ export function QuestionResultsSection({
           ))
         )}
       </div>
-    </ResultGlassPanel>
+    </section>
   );
 }
 
@@ -131,7 +131,7 @@ function QuestionResultCard({ item }: { item: MockInterviewQuestion }) {
             )}
           </div>
 
-          <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl">
+          <div className="border-t border-white/10 pt-4 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
             {score ? (
               <div className="space-y-3">
                 <ScoreBar label="Kỹ thuật" value={score.technicalScore} compact />

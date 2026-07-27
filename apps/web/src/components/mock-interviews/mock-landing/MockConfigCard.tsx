@@ -47,22 +47,22 @@ export default function MockConfigCard({
   onStart: () => void;
 }) {
   return (
-    <div className="animate-[cardPushIn_650ms_120ms_cubic-bezier(.2,.8,.2,1)_both] rounded-[1.75rem] border border-white/14 bg-[#0f172a]/48 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.16)] backdrop-blur-2xl md:p-5">
-      <div className="mb-5 flex items-center justify-between gap-4">
+    <div className="animate-[cardPushIn_650ms_120ms_cubic-bezier(.2,.8,.2,1)_both] rounded-[1.5rem] border border-white/14 bg-[#0f172a]/48 p-3 shadow-[0_24px_80px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.16)] backdrop-blur-2xl sm:rounded-[1.75rem] sm:p-4 md:p-5">
+      <div className="mb-4 flex items-center justify-between gap-4 sm:mb-5">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c4b5fd]">
             Tạo phiên mới
           </p>
-          <h2 className="mt-1 text-2xl font-black text-white">
+          <h2 className="mt-1 text-xl font-black text-white sm:text-2xl">
             Cấu hình buổi mock
           </h2>
         </div>
-        <span className="grid size-12 place-items-center rounded-full border border-white/12 bg-white/[0.08] text-[#c4b5fd] shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]">
-          <CalendarClock size={21} />
+        <span className="grid size-10 place-items-center rounded-full border border-white/12 bg-white/[0.08] text-[#c4b5fd] shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] sm:size-12">
+          <CalendarClock size={20} />
         </span>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         <TopicMultiDropdown
           topics={topics}
           selectedTopicIds={selectedTopicIds}
@@ -81,7 +81,7 @@ export default function MockConfigCard({
                 <button
                   key={option.value}
                   onClick={() => setLevel(option.value)}
-                  className="rounded-2xl border px-3 py-3 text-left transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/[0.1]"
+                  className="rounded-2xl border px-2.5 py-2.5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/[0.1] sm:px-3 sm:py-3"
                   style={{
                     borderColor: active
                       ? "rgba(196,181,253,0.58)"

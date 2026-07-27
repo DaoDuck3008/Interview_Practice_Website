@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 // Shell nền riêng cho trang /mock-interviews/[id]/result, đồng bộ với phòng mock.
 export function MockResultShell({ children }: { children: ReactNode }) {
   return (
-    <main className="relative min-h-[calc(100dvh-3.5rem)] border rounded-3xl border-white/15  px-3 py-4 text-white md:px-6 md:py-6 lg:px-8">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-10%,rgba(248,250,252,0.3),transparent_22%),radial-gradient(circle_at_14%_14%,rgba(124,58,237,0.24),transparent_34%),radial-gradient(circle_at_86%_18%,rgba(59,130,246,0.13),transparent_32%)]" />
+    <main className="relative min-h-[calc(100dvh-3.5rem)] px-3 py-4 text-white md:px-6 md:py-6 lg:px-8">
+      <div className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(circle_at_50%_-10%,rgba(248,250,252,0.3),transparent_22%),radial-gradient(circle_at_14%_14%,rgba(124,58,237,0.24),transparent_34%),radial-gradient(circle_at_86%_18%,rgba(59,130,246,0.13),transparent_32%)]" />
       <div className="relative z-10">{children}</div>
     </main>
   );
