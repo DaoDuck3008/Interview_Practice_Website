@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowRight, RefreshCw, Sparkles } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, RefreshCw, Sparkles } from "lucide-react";
+import type { ReactNode } from "react";
 import type { MockInterview } from "@/lib/api/mockInterviews";
 import {
   mockInterviewScoreBand,
@@ -18,11 +19,19 @@ export default function MockHistorySection({
   loadingHistory,
   userReady,
   onRefresh,
+  page,
+  total,
+  totalPages,
+  onPageChange,
 }: {
   history: MockInterview[];
   loadingHistory: boolean;
   userReady: boolean;
   onRefresh: () => void;
+  page: number;
+  total: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
 }) {
   const router = useRouter();
 
@@ -71,6 +80,7 @@ export default function MockHistorySection({
           text="Tạo phiên đầu tiên để luyện trả lời dưới áp lực thời gian và nhận báo cáo sau khi nộp bài."
         />
       ) : (
+        <>
         <div className="flex flex-wrap items-stretch justify-center gap-3 sm:justify-start">
           {history.map((mock, index) => {
             const targetPath = mockInterviewTargetPath(mock);
@@ -145,9 +155,130 @@ export default function MockHistorySection({
             );
           })}
         </div>
+        {totalPages > 1 && (
+          <HistoryPagination
+            page={page}
+            total={total}
+            totalPages={totalPages}
+            disabled={loadingHistory}
+            onPageChange={onPageChange}
+          />
+        )}
+        </>
       )}
     </section>
   );
+}
+
+function HistoryPagination({
+  page,
+  total,
+  totalPages,
+  disabled,
+  onPageChange,
+}: {
+  page: number;
+  total: number;
+  totalPages: number;
+  disabled: boolean;
+  onPageChange: (page: number) => void;
+}) {
+  const pages = buildPageNumbers(page, totalPages);
+
+  return (
+    <nav
+      aria-label="Phân trang lịch sử mock interview"
+      className="mt-5 flex flex-col gap-3 border-t border-white/8 pt-4 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <p className="text-sm text-[#a7a3bd]">
+        Trang {page}/{totalPages} · {total} buổi mock
+      </p>
+      <div className="flex items-center gap-1.5">
+        <PaginationButton
+          label="Trang trước"
+          disabled={disabled || page <= 1}
+          onClick={() => onPageChange(page - 1)}
+        >
+          <ChevronLeft size={16} />
+        </PaginationButton>
+        {pages.map((item, index) =>
+          item === "…" ? (
+            <span
+              key={`ellipsis-${index}`}
+              className="grid size-9 place-items-center text-sm font-bold text-[#a7a3bd]"
+            >
+              …
+            </span>
+          ) : (
+            <button
+              key={item}
+              onClick={() => onPageChange(item)}
+              disabled={disabled || item === page}
+              aria-current={item === page ? "page" : undefined}
+              className={`grid size-9 place-items-center rounded-full border text-sm font-bold transition-all duration-200 ${
+                item === page
+                  ? "border-[#c4b5fd]/40 bg-[#7c3aed]/70 text-white shadow-[0_0_18px_rgba(124,58,237,0.28)]"
+                  : "border-white/10 bg-white/[0.045] text-[#d8d6ea] hover:border-[#c4b5fd]/35 hover:bg-white/[0.1] disabled:cursor-default"
+              }`}
+            >
+              {item}
+            </button>
+          ),
+        )}
+        <PaginationButton
+          label="Trang sau"
+          disabled={disabled || page >= totalPages}
+          onClick={() => onPageChange(page + 1)}
+        >
+          <ChevronRight size={16} />
+        </PaginationButton>
+      </div>
+    </nav>
+  );
+}
+
+function PaginationButton({
+  children,
+  disabled,
+  label,
+  onClick,
+}: {
+  children: ReactNode;
+  disabled: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      className="grid size-9 place-items-center rounded-full border border-white/10 bg-white/[0.045] text-[#d8d6ea] transition-all duration-200 hover:border-[#c4b5fd]/35 hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      {children}
+    </button>
+  );
+}
+
+// Rút gọn dãy trang dài để thanh điều hướng luôn gọn trên màn hình nhỏ.
+function buildPageNumbers(page: number, totalPages: number): (number | "…")[] {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const pages: (number | "…")[] = [1];
+  if (page > 3) pages.push("…");
+  for (
+    let current = Math.max(2, page - 1);
+    current <= Math.min(totalPages - 1, page + 1);
+    current += 1
+  ) {
+    pages.push(current);
+  }
+  if (page < totalPages - 2) pages.push("…");
+  pages.push(totalPages);
+  return pages;
 }
 
 function ScoreBadge({ score }: { score: number | null }) {

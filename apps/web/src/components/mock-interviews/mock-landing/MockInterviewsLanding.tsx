@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { Mic2 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
@@ -31,6 +31,9 @@ export default function MockInterviewsLanding() {
   const [totalQuestions, setTotalQuestions] = useState(6);
   const [durationSeconds, setDurationSeconds] = useState(900);
   const [history, setHistory] = useState<MockInterview[]>([]);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [historyTotalPages, setHistoryTotalPages] = useState(1);
   const [loadingTopics, setLoadingTopics] = useState(true);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -54,25 +57,28 @@ export default function MockInterviewsLanding() {
     };
   }, []);
 
+  // Tải riêng lịch sử theo trang để việc chuyển trang không làm lại form cấu hình mock.
+  const loadHistory = useCallback(async (page: number) => {
+    setLoadingHistory(true);
+    try {
+      const data = await getMockInterviews({ page, limit: 6 });
+      setHistory(data.items);
+      setHistoryPage(data.page);
+      setHistoryTotal(data.total);
+      setHistoryTotalPages(data.totalPages);
+    } catch {
+      setHistory([]);
+      setHistoryTotal(0);
+      setHistoryTotalPages(1);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!hydrated || !user) return;
-    let alive = true;
-    queueMicrotask(() => {
-      if (!alive) return;
-      setLoadingHistory(true);
-      getMockInterviews({ page: 1, limit: 6 })
-        .then((data) => {
-          if (alive) setHistory(data.items);
-        })
-        .catch(() => {
-          if (alive) setHistory([]);
-        })
-        .finally(() => alive && setLoadingHistory(false));
-    });
-    return () => {
-      alive = false;
-    };
-  }, [hydrated, user]);
+    queueMicrotask(() => void loadHistory(1));
+  }, [hydrated, loadHistory, user]);
 
   async function handleStart() {
     setError("");
@@ -107,11 +113,7 @@ export default function MockInterviewsLanding() {
   }
 
   function refreshHistory() {
-    setLoadingHistory(true);
-    getMockInterviews({ page: 1, limit: 6 })
-      .then((data) => setHistory(data.items))
-      .catch(() => setHistory([]))
-      .finally(() => setLoadingHistory(false));
+    void loadHistory(historyPage);
   }
 
   return (
@@ -195,6 +197,10 @@ export default function MockInterviewsLanding() {
         loadingHistory={loadingHistory}
         userReady={Boolean(user)}
         onRefresh={refreshHistory}
+        page={historyPage}
+        total={historyTotal}
+        totalPages={historyTotalPages}
+        onPageChange={loadHistory}
       />
     </main>
   );
