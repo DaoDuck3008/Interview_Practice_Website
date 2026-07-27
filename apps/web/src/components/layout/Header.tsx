@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   Menu,
-  X,
   LogOut,
   ChevronDown,
   LayoutDashboard,
@@ -19,6 +18,7 @@ import { useFavoritesStore } from "@/stores/favorites.store";
 import { logoutApi } from "@/lib/api/auth";
 import { usePathname, useRouter } from "next/navigation";
 import FavoritesDrawer from "./FavoritesDrawer";
+import HeaderMenuModal from "./HeaderMenuModal";
 import Avatar from "@/components/ui/Avatar";
 
 // Mốc số câu đã luyện hôm nay -> màu + lời động viên (min giảm dần, khớp mốc đầu tiên đạt được).
@@ -184,8 +184,6 @@ export default function Header() {
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const resetFavorites = useFavoritesStore((s) => s.reset);
 
-  const headerRef = useRef<HTMLElement>(null);
-
   async function mobileLogout() {
     setMenuOpen(false);
     try {
@@ -201,28 +199,8 @@ export default function Header() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Đóng menu mobile khi bấm ra ngoài header hoặc nhấn Escape
-  useEffect(() => {
-    if (!menuOpen) return;
-    function onPointer(e: MouseEvent) {
-      if (headerRef.current && !headerRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setMenuOpen(false);
-    }
-    document.addEventListener("mousedown", onPointer);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onPointer);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [menuOpen]);
-
   return (
     <header
-      ref={headerRef}
       className="sticky left-0 right-0 top-3 z-50 px-3 transition-all duration-300 sm:px-5"
     >
       <nav
@@ -246,7 +224,7 @@ export default function Header() {
         </Link>
 
         {/* Desktop links */}
-        <ul className="hidden items-center gap-1 rounded-full border border-white/[0.08] bg-white/[0.035] p-1 md:flex">
+        <ul className="hidden items-center gap-1 rounded-full border border-white/[0.08] bg-white/[0.035] p-1 lg:flex">
           {NAV_LINKS.map((link) => {
             const active = isNavActive(pathname, link.href);
 
@@ -269,7 +247,7 @@ export default function Header() {
         </ul>
 
         {/* Desktop CTAs */}
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden items-center gap-3 lg:flex">
           {hydrated &&
             (user ? (
               <>
@@ -310,18 +288,20 @@ export default function Header() {
 
         {/* Mobile menu button */}
         <button
-          className="cursor-pointer rounded-full border border-white/[0.08] bg-white/[0.04] p-2 text-[#cbd5e1] transition-all duration-300 hover:bg-white/[0.1] hover:text-white md:hidden"
+          className="cursor-pointer rounded-full border border-white/[0.08] bg-white/[0.04] p-2 text-[#cbd5e1] transition-all duration-300 hover:bg-white/[0.1] hover:text-white lg:hidden"
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label={menuOpen ? "Đóng menu" : "Mở menu"}
         >
-          {menuOpen ? <X size={20} /> : <Menu size={20} />}
+          <Menu size={20} />
         </button>
       </nav>
 
-      {/* Mobile menu */}
-      {menuOpen && (
-        <div className="mx-auto mt-2 max-w-7xl overflow-hidden rounded-3xl border border-white/[0.1] bg-[#0f172a]/82 px-4 pb-5 shadow-[0_22px_70px_rgba(2,6,23,0.42)] backdrop-blur-2xl md:hidden">
-          <ul className="flex flex-col gap-2 pt-4">
+      <HeaderMenuModal
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+      >
+        <nav aria-label="Điều hướng trên thiết bị nhỏ">
+          <ul className="flex flex-col gap-2">
             {NAV_LINKS.map((link) => {
               const active = isNavActive(pathname, link.href);
 
@@ -344,7 +324,7 @@ export default function Header() {
             })}
 
             {hydrated && (
-              <li className="flex flex-col gap-3 pt-2">
+              <li className="flex flex-col gap-3 border-t border-white/[0.08] pt-4">
                 {user ? (
                   <>
                     <div className="flex items-center gap-3 py-1">
@@ -416,8 +396,8 @@ export default function Header() {
               </li>
             )}
           </ul>
-        </div>
-      )}
+        </nav>
+      </HeaderMenuModal>
 
       <FavoritesDrawer
         open={favDrawerOpen}
