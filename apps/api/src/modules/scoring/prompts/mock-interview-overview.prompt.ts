@@ -14,6 +14,7 @@ export interface MockInterviewOverviewScoreInput {
 
 export interface MockInterviewOverviewInput {
   title: string;
+  topics: string[];
   durationSeconds: number;
   answeredQuestions: number;
   totalQuestions: number;

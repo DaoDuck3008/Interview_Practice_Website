@@ -349,6 +349,10 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
     const mock = await this.prisma.mockInterview.findUnique({
       where: { id: mockInterviewId },
       include: {
+        topicLinks: {
+          orderBy: { order: 'asc' },
+          include: { topic: { select: { name: true } } },
+        },
         questions: {
           orderBy: { order: 'asc' },
           include: {
@@ -403,6 +407,7 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
     // Viết input cho prompt tổng hợp overview
     const overviewInput: MockInterviewOverviewInput = {
       title: mock.title,
+      topics: mock.topicLinks.map((link) => link.topic.name),
       durationSeconds: mock.durationSeconds,
       answeredQuestions: scored.length,
       totalQuestions: mock.totalQuestions,

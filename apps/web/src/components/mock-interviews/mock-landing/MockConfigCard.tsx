@@ -10,14 +10,13 @@ import {
   LEVEL_OPTIONS,
   QUESTION_OPTIONS,
 } from "./mockInterviewOptions";
-import PillSelect from "./PillSelect";
-import TopicDropdown from "./TopicDropdown";
+import PillSelect from "@/components/ui/PillSelect";
+import TopicMultiDropdown from "./TopicMultiDropdown";
 
 export default function MockConfigCard({
   topics,
-  selectedTopic,
-  topicId,
-  setTopicId,
+  selectedTopicIds,
+  setSelectedTopicIds,
   level,
   setLevel,
   totalQuestions,
@@ -32,9 +31,8 @@ export default function MockConfigCard({
   onStart,
 }: {
   topics: TopicWithCount[];
-  selectedTopic: TopicWithCount | undefined;
-  topicId: string;
-  setTopicId: (value: string) => void;
+  selectedTopicIds: string[];
+  setSelectedTopicIds: (value: string[]) => void;
   level: MockInterviewLevelOption;
   setLevel: (value: MockInterviewLevelOption) => void;
   totalQuestions: number;
@@ -65,11 +63,10 @@ export default function MockConfigCard({
       </div>
 
       <div className="space-y-4">
-        <TopicDropdown
+        <TopicMultiDropdown
           topics={topics}
-          selectedTopic={selectedTopic}
-          value={topicId}
-          onChange={setTopicId}
+          selectedTopicIds={selectedTopicIds}
+          onChange={setSelectedTopicIds}
           loading={loadingTopics}
         />
 
@@ -127,12 +124,10 @@ export default function MockConfigCard({
           />
         </div>
 
-        {selectedTopic && (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm text-[#d8d6ea]">
-            Đang chọn{" "}
-            <span className="font-bold text-white">{selectedTopic.name}</span>,
-            có {selectedTopic.questionCount} câu khả dụng.
-          </div>
+        {selectedTopicIds.length > 0 && (
+          <p className="text-xs leading-5 text-[#a7a3bd]">
+            Câu hỏi được chia gần đều giữa các chủ đề; hệ thống sẽ tự bù từ chủ đề còn đủ câu khi cần.
+          </p>
         )}
 
         {error && (
@@ -143,7 +138,7 @@ export default function MockConfigCard({
 
         <button
           onClick={onStart}
-          disabled={creating || loadingTopics || !topicId || !hydrated}
+          disabled={creating || loadingTopics || selectedTopicIds.length < 2 || !hydrated}
           className="group flex w-full items-center justify-center gap-2 rounded-full bg-white px-5 py-3.5 text-sm font-black text-[#0f172a] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#ede9fe] disabled:cursor-not-allowed disabled:opacity-60"
           style={{ boxShadow: "0 18px 48px rgba(196,181,253,0.28)" }}
         >

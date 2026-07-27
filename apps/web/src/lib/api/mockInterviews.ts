@@ -71,11 +71,12 @@ export interface MockInterview {
   overviewError: string | null;
   createdAt: string;
   topic: Topic | null;
+  topics: Topic[];
   questions?: MockInterviewQuestion[];
 }
 
 export interface CreateMockInterviewInput {
-  topicId: string;
+  topicIds: string[];
   level?: MockInterviewLevelOption;
   totalQuestions: number;
   durationSeconds: number;

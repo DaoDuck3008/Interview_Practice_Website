@@ -9,6 +9,7 @@ import { formatDateTime, formatTime } from "@/lib/utils/format";
 import {
   mockInterviewScoreBand,
   mockInterviewStatusBadge,
+  mockInterviewTopicLabel,
 } from "@/lib/utils/mockInterview";
 import { AnimatedScoreNumber, ScoreBar } from "./MockResultScore";
 import { ResultGlassPanel } from "./MockResultShell";
@@ -57,7 +58,7 @@ export function ResultHero({
             {mock.title}
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-white/62">
-            {mock.topic?.name ?? "Mock interview"} · {mock.totalQuestions} câu ·{" "}
+            {mockInterviewTopicLabel(mock)} · {mock.totalQuestions} câu ·{" "}
             {formatTime(mock.durationSeconds)}
           </p>
         </div>

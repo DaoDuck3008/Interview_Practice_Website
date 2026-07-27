@@ -1,13 +1,28 @@
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  ArrayUnique,
+  IsArray,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsUUID,
+  Max,
+  Min,
+} from 'class-validator';
 import { Level } from '@prisma/client';
 
 export type MockInterviewLevelOption = Level | 'MIX';
 export const MOCK_INTERVIEW_LEVEL_OPTIONS = [...Object.values(Level), 'MIX'];
 
 export class CreateMockInterviewDto {
-  @IsUUID(undefined, { message: 'Topic không hợp lệ.' })
-  topicId: string;
+  @IsArray({ message: 'Danh sách chủ đề không hợp lệ.' })
+  @ArrayMinSize(2, { message: 'Hãy chọn ít nhất 2 chủ đề.' })
+  @ArrayMaxSize(6, { message: 'Mỗi buổi mock tối đa 6 chủ đề.' })
+  @ArrayUnique({ message: 'Danh sách chủ đề không được trùng lặp.' })
+  @IsUUID(undefined, { each: true, message: 'Topic không hợp lệ.' })
+  topicIds: string[];
 
   @IsOptional()
   @IsIn(MOCK_INTERVIEW_LEVEL_OPTIONS, { message: 'Độ khó không hợp lệ.' })

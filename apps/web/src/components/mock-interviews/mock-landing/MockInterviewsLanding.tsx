@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { Mic2 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
@@ -14,6 +14,7 @@ import {
   type MockInterviewLevelOption,
 } from "@/lib/api/mockInterviews";
 import TextType from "@/components/ui/TextType";
+import CvQuestionCta from "./CvQuestionCta";
 import MockConfigCard from "./MockConfigCard";
 import MockHistorySection from "./MockHistorySection";
 
@@ -25,7 +26,7 @@ export default function MockInterviewsLanding() {
   const hydrated = useAuthStore((state) => state.hydrated);
 
   const [topics, setTopics] = useState<TopicWithCount[]>([]);
-  const [topicId, setTopicId] = useState("");
+  const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
   const [level, setLevel] = useState<MockInterviewLevelOption>("MIX");
   const [totalQuestions, setTotalQuestions] = useState(6);
   const [durationSeconds, setDurationSeconds] = useState(900);
@@ -45,7 +46,6 @@ export default function MockInterviewsLanding() {
           if (!alive) return;
           const available = items.filter((topic) => topic.questionCount > 0);
           setTopics(available);
-          setTopicId((current) => current || available[0]?.id || "");
         })
         .finally(() => alive && setLoadingTopics(false));
     });
@@ -74,11 +74,6 @@ export default function MockInterviewsLanding() {
     };
   }, [hydrated, user]);
 
-  const selectedTopic = useMemo(
-    () => topics.find((topic) => topic.id === topicId),
-    [topics, topicId],
-  );
-
   async function handleStart() {
     setError("");
     if (!hydrated) return;
@@ -87,15 +82,15 @@ export default function MockInterviewsLanding() {
       router.push(`/login?redirect=${encodeURIComponent("/mock-interviews")}`);
       return;
     }
-    if (!topicId) {
-      setError("Vui lòng chọn một chủ đề có câu hỏi.");
+    if (selectedTopicIds.length < 2) {
+      setError("Vui lòng chọn ít nhất 2 chủ đề có câu hỏi.");
       return;
     }
 
     setCreating(true);
     try {
       const mock = await createMockInterview({
-        topicId,
+        topicIds: selectedTopicIds,
         level,
         totalQuestions,
         durationSeconds,
@@ -175,9 +170,8 @@ export default function MockInterviewsLanding() {
 
           <MockConfigCard
             topics={topics}
-            selectedTopic={selectedTopic}
-            topicId={topicId}
-            setTopicId={setTopicId}
+            selectedTopicIds={selectedTopicIds}
+            setSelectedTopicIds={setSelectedTopicIds}
             level={level}
             setLevel={setLevel}
             totalQuestions={totalQuestions}
@@ -193,6 +187,8 @@ export default function MockInterviewsLanding() {
           />
         </div>
       </section>
+
+      <CvQuestionCta />
 
       <MockHistorySection
         history={history}

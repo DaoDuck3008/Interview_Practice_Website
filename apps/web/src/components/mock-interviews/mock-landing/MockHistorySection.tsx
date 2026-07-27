@@ -6,8 +6,8 @@ import type { MockInterview } from "@/lib/api/mockInterviews";
 import {
   mockInterviewScoreBand,
   mockInterviewScoreText,
-  mockInterviewStatusBadge,
   mockInterviewTargetPath,
+  mockInterviewTopics,
 } from "@/lib/utils/mockInterview";
 import { formatDay } from "@/lib/utils/format";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
@@ -71,80 +71,75 @@ export default function MockHistorySection({
           text="Tạo phiên đầu tiên để luyện trả lời dưới áp lực thời gian và nhận báo cáo sau khi nộp bài."
         />
       ) : (
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="flex flex-wrap items-stretch justify-center gap-3 sm:justify-start">
           {history.map((mock, index) => {
-            const badge = mockInterviewStatusBadge(mock.status);
             const targetPath = mockInterviewTargetPath(mock);
             const actionLabel = targetPath.endsWith("/result")
               ? "Xem kết quả"
               : "Xem tiếp";
             const levelStyle = LEVEL_STYLE[mock.level ?? "MIX"];
+            const topics = mockInterviewTopics(mock);
 
             return (
               <button
                 key={mock.id}
                 onClick={() => router.push(targetPath)}
-                className="group animate-[cardPushIn_520ms_cubic-bezier(.2,.8,.2,1)_both] rounded-3xl border border-white/10 bg-[#0f172a]/52 p-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#c4b5fd]/35 hover:bg-white/[0.08]"
+                className="group grid h-36 w-full max-w-[40rem] animate-[cardPushIn_520ms_cubic-bezier(.2,.8,.2,1)_both] gap-3 overflow-hidden rounded-[1.5rem] border border-white/12 bg-[#0f172a]/52 p-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#c4b5fd]/35 hover:bg-white/[0.08] md:grid-cols-[7.5rem_minmax(0,1fr)] md:items-center md:p-4"
                 style={{ animationDelay: `${index * 70}ms` }}
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex min-w-0 gap-3">
-                    <TopicIcon
-                      iconUrl={mock.topic?.iconUrl ?? null}
-                      size={42}
-                    />
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="truncate text-base font-black text-white">
-                          {mock.title}
-                        </h3>
-                        <span className={badge.className}>{badge.label}</span>
-                      </div>
-                      <p className="mt-1 text-sm text-[#a7a3bd]">
-                        {mock.topic?.name ?? "Chủ đề đã xóa"} ·{" "}
-                        {formatDay(mock.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-                  <ScoreBadge score={mock.overallScore} />
-                </div>
+                <ScoreBadge score={mock.overallScore} />
 
-                <div className="mt-4 grid grid-cols-3 gap-2">
-                  <HistoryStat
-                    label="Câu hỏi"
-                    value={`${mock.totalQuestions}`}
-                  />
-                  <HistoryStat
-                    label="Thời lượng"
-                    value={`${Math.round(mock.durationSeconds / 60)}p`}
-                  />
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-2">
-                    <p className="text-[11px] font-semibold text-[#77718f]">
-                      Độ khó
-                    </p>
+                <div className="min-w-0">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2 md:flex-nowrap">
+                    <h3 className="min-w-0 max-w-56 flex-1 truncate text-base font-black text-white md:max-w-64">
+                      {mock.title}
+                    </h3>
                     <span
-                      className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-bold ${levelStyle.className}`}
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${levelStyle.className}`}
                     >
                       {levelStyle.label}
                     </span>
+                    <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-1 text-xs font-bold text-[#d8d6ea]">
+                      {Math.round(mock.durationSeconds / 60)} phút
+                    </span>
+                    <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-1 text-xs font-bold text-[#d8d6ea]">
+                      {mock.totalQuestions} câu
+                    </span>
                   </div>
-                </div>
 
-                <div className="mt-4 flex items-center justify-between gap-3">
-                  <span className="text-xs text-[#77718f]">
-                    {mock.submittedAt
-                      ? `Đã nộp ${formatDay(mock.submittedAt)}`
-                      : mock.startedAt
-                        ? "Đang trong phiên luyện"
-                        : "Chưa bắt đầu"}
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.07] px-3 py-1.5 text-sm font-bold text-[#c4b5fd] transition-all duration-300 group-hover:bg-[#7c3aed] group-hover:text-white">
-                    {actionLabel}
-                    <ArrowRight
-                      size={14}
-                      className="transition-transform duration-300 group-hover:translate-x-0.5"
-                    />
-                  </span>
+                  <div className="mt-2 flex gap-2 overflow-hidden whitespace-nowrap">
+                    {topics.slice(0, 3).map((topic) => (
+                      <span
+                        key={topic.id}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.045] px-2.5 py-1 text-xs font-semibold text-[#d8d6ea]"
+                      >
+                        <TopicIcon iconUrl={topic.iconUrl} size={16} />
+                        {topic.name}
+                      </span>
+                    ))}
+                    {topics.length > 3 && (
+                      <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.045] px-2.5 py-1 text-xs font-bold text-[#d8d6ea]">
+                        +{topics.length - 3}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <p className="truncate text-sm text-[#a7a3bd]">
+                      {mock.submittedAt
+                        ? `Đã nộp lúc ${formatDay(mock.submittedAt)}`
+                        : mock.startedAt
+                          ? "Đang trong phiên luyện tập"
+                          : `Tạo lúc ${formatDay(mock.createdAt)}`}
+                    </p>
+                    <span className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-full border border-[#c4b5fd]/35 bg-[#7c3aed]/14 px-3.5 text-sm font-black text-[#ede9fe] transition-all duration-300 group-hover:bg-[#7c3aed] group-hover:text-white">
+                      {actionLabel}
+                      <ArrowRight
+                        size={16}
+                        className="transition-transform duration-300 group-hover:translate-x-0.5"
+                      />
+                    </span>
+                  </div>
                 </div>
               </button>
             );
@@ -161,12 +156,14 @@ function ScoreBadge({ score }: { score: number | null }) {
   return (
     <span
       className={[
-        "grid size-14 shrink-0 place-items-center rounded-2xl border text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]",
+        "grid min-h-24 w-full place-items-center rounded-[1.25rem] border text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] md:h-24 md:w-[7.5rem]",
         band.borderClassName,
         band.backgroundClassName,
       ].join(" ")}
     >
-      <span className={`text-lg font-black ${band.textClassName}`}>
+      <span
+        className={`text-3xl font-black leading-none ${band.textClassName}`}
+      >
         {mockInterviewScoreText(score)}
       </span>
       <span className="-mt-1 text-[10px] font-bold uppercase tracking-wide text-[#a7a3bd]">
@@ -176,22 +173,13 @@ function ScoreBadge({ score }: { score: number | null }) {
   );
 }
 
-function HistoryStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-2">
-      <p className="text-[11px] font-semibold text-[#77718f]">{label}</p>
-      <p className="mt-0.5 truncate text-sm font-black text-white">{value}</p>
-    </div>
-  );
-}
-
 function HistorySkeleton() {
   return (
-    <div className="grid gap-3 lg:grid-cols-2">
+    <div className="space-y-3">
       {Array.from({ length: 4 }).map((_, index) => (
         <div
           key={index}
-          className="h-44 animate-pulse rounded-3xl border border-white/10 bg-white/[0.045]"
+          className="h-40 animate-pulse rounded-3xl border border-white/10 bg-white/[0.045]"
         />
       ))}
     </div>

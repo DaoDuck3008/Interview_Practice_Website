@@ -4,6 +4,7 @@ import type {
   MockQuestionAnswerStatus,
   MockQuestionScoreStatus,
 } from "@/lib/api/mockInterviews";
+import type { Topic } from "@/lib/api/topics";
 
 export type MockStatusBadge = {
   label: string;
@@ -163,4 +164,20 @@ export function mockInterviewScoreBand(
 
 export function mockInterviewScoreText(score: number | null | undefined) {
   return score === null || score === undefined ? "--" : score.toFixed(1);
+}
+/** Trả về topics mới, hoặc topic cũ để các mock đã tạo trước khi nâng cấp vẫn hiển thị đúng. */
+export function mockInterviewTopics(mock: Pick<MockInterview, "topics" | "topic">): Topic[] {
+  return mock.topics?.length ? mock.topics : mock.topic ? [mock.topic] : [];
+}
+
+/** Gói tên nhiều topic thành nhãn ngắn cho header và khu vực lịch sử mock. */
+export function mockInterviewTopicLabel(
+  mock: Pick<MockInterview, "topics" | "topic">,
+  visibleCount = 2,
+): string {
+  const topics = mockInterviewTopics(mock);
+  if (topics.length === 0) return "Mock interview";
+  const visible = topics.slice(0, visibleCount).map((topic) => topic.name);
+  const remaining = topics.length - visible.length;
+  return `${visible.join(", ")}${remaining > 0 ? ` +${remaining}` : ""}`;
 }

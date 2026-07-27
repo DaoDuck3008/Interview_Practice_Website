@@ -2,16 +2,18 @@ import Image from "next/image";
 import { ChevronLeft, ChevronRight, Clock3, FileQuestion } from "lucide-react";
 import type { MockInterview } from "@/lib/api/mockInterviews";
 import { formatTime } from "@/lib/utils/format";
+import { mockInterviewTopicLabel, mockInterviewTopics } from "@/lib/utils/mockInterview";
 
 // Badge topic hiển thị logo/chủ đề ở header câu hỏi và sidebar của /mock-interviews/[id].
 export function TopicBadge({ mock }: { mock: MockInterview }) {
+  const primaryTopic = mockInterviewTopics(mock)[0];
   return (
     <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/15 bg-white/[0.075] px-2.5 py-1 text-xs font-bold text-white/85 shadow-lg shadow-violet-950/20 backdrop-blur-xl">
       <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/[0.07]">
-        {mock.topic?.iconUrl ? (
+        {primaryTopic?.iconUrl ? (
           <Image
-            src={mock.topic.iconUrl}
-            alt={mock.topic.name}
+            src={primaryTopic.iconUrl}
+            alt={primaryTopic.name}
             width={20}
             height={20}
             className="h-5 w-5 object-contain"
@@ -20,7 +22,7 @@ export function TopicBadge({ mock }: { mock: MockInterview }) {
           <FileQuestion size={15} className="text-violet-200" />
         )}
       </span>
-      <span className="truncate">{mock.topic?.name ?? "Mock interview"}</span>
+      <span className="truncate">{mockInterviewTopicLabel(mock)}</span>
     </span>
   );
 }

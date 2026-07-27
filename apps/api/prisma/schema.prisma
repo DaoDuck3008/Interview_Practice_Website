@@ -156,6 +156,7 @@ model Topic {
 
   questions Question[]
   mockInterviews MockInterview[]
+  mockInterviewTopics MockInterviewTopic[]
 }
 
 model Question {
@@ -240,6 +241,7 @@ model MockInterview {
   updatedAt DateTime @updatedAt
 
   questions MockInterviewQuestion[]
+  topicLinks MockInterviewTopic[]
 
   @@index([userId, createdAt])
   @@index([userId, status])
@@ -268,6 +270,22 @@ model MockInterviewQuestion {
   @@unique([mockInterviewId, questionId])
   @@unique([mockInterviewId, order])
   @@index([mockInterviewId, order])
+}
+
+model MockInterviewTopic {
+  id String @id @default(uuid())
+
+  mockInterviewId String
+  mockInterview   MockInterview @relation(fields: [mockInterviewId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  topicId String
+  topic   Topic @relation(fields: [topicId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  order Int
+
+  @@unique([mockInterviewId, topicId])
+  @@unique([mockInterviewId, order])
+  @@index([topicId])
 }
 
 model Score {

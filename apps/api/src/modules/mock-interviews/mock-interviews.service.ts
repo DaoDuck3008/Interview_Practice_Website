@@ -8,6 +8,7 @@ import {
 import { randomUUID } from 'crypto';
 import {
   MockInterviewStatus,
+  MockInterviewMode,
   MockOverviewStatus,
   MockQuestionAnswerStatus,
   MockQuestionScoreStatus,
@@ -33,7 +34,14 @@ const ANSWER_LOCK_TTL_SEC = 300;
 const ANSWER_GRACE_MS = 10_000;
 
 const DETAIL_INCLUDE = {
-  topic: { select: { id: true, name: true, slug: true } },
+  topic: { select: { id: true, name: true, slug: true, iconUrl: true } },
+  topicLinks: {
+    orderBy: { order: 'asc' as const },
+    select: {
+      order: true,
+      topic: { select: { id: true, name: true, slug: true, iconUrl: true } },
+    },
+  },
   questions: {
     orderBy: { order: 'asc' as const },
     include: {
@@ -71,48 +79,68 @@ export class MockInterviewsService {
     @Inject(REDIS_CLIENT) private redis: Redis,
   ) {}
 
-  // Tạo mock interview mới, chọn ngẫu nhiên câu hỏi từ topic và level.
+  // Tạo mock interview nhiều chủ đề, chia câu hỏi gần đều giữa các chủ đề đã chọn.
   async create(userId: string, dto: CreateMockInterviewDto) {
     // Kiểm tra quota trước khi tạo mock interview
     await this.quota.assertWithinLimitFor(userId, dto.totalQuestions);
 
-    const topic = await this.prisma.topic.findUnique({
-      where: { id: dto.topicId },
-      select: { id: true, name: true, slug: true },
+    const topics = await this.prisma.topic.findMany({
+      where: { id: { in: dto.topicIds } },
+      select: { id: true, name: true, slug: true, iconUrl: true },
     });
-    if (!topic) throw new NotFoundException('Topic không tồn tại.');
+    if (topics.length !== dto.topicIds.length) {
+      throw new NotFoundException('Có chủ đề không tồn tại.');
+    }
+    const topicsById = new Map(topics.map((topic) => [topic.id, topic]));
+    const orderedTopics = dto.topicIds.map(
+      (topicId) => topicsById.get(topicId)!,
+    );
 
     // Random ngay trong DB để không kéo toàn bộ id câu hỏi về memory Node.js.
     const selected = await this.findRandomQuestionsForLevelOption(
-      dto.topicId,
+      dto.topicIds,
       dto.level,
       dto.totalQuestions,
     );
     if (selected.length < dto.totalQuestions) {
       throw new BadRequestException(
-        `Chủ đề này chỉ có ${selected.length} câu hỏi phù hợp, chưa đủ ${dto.totalQuestions} câu.`,
+        `Các chủ đề đã chọn chỉ có ${selected.length} câu hỏi phù hợp, chưa đủ ${dto.totalQuestions} câu.`,
       );
     }
 
-    const title = `Mock interview ${topic.name}${dto.level ? ` - ${dto.level}` : ''}`;
+    const topicTitle = orderedTopics
+      .slice(0, 2)
+      .map((topic) => topic.name)
+      .join(', ');
+    const remainingTopicCount = orderedTopics.length - 2;
+    const title = `Mock interview ${topicTitle}${remainingTopicCount > 0 ? ` +${remainingTopicCount}` : ''}${dto.level ? ` - ${dto.level}` : ''}`;
 
-    return this.prisma.mockInterview.create({
+    const mock = await this.prisma.mockInterview.create({
       data: {
         userId,
         title,
-        topicId: dto.topicId,
+        mode: MockInterviewMode.MIXED,
+        // Giữ topic đầu làm fallback cho các phiên cũ và các màn hình chưa nâng cấp.
+        topicId: dto.topicIds[0],
         level: dto.level === 'MIX' ? null : dto.level,
         totalQuestions: dto.totalQuestions,
         durationSeconds: dto.durationSeconds,
+        topicLinks: {
+          create: dto.topicIds.map((topicId, index) => ({
+            topicId,
+            order: index + 1,
+          })),
+        },
         questions: {
-          create: selected.map((q, index) => ({
-            questionId: q.id,
+          create: shuffle(selected).map((questionId, index) => ({
+            questionId,
             order: index + 1,
           })),
         },
       },
       include: DETAIL_INCLUDE,
     });
+    return this.toMockResponse(mock);
   }
 
   async findAll(userId: string, query: QueryMockInterviewDto) {
@@ -136,7 +164,18 @@ export class MockInterviewsService {
           scoredAt: true,
           overallScore: true,
           createdAt: true,
-          topic: { select: { id: true, name: true, slug: true } },
+          topic: {
+            select: { id: true, name: true, slug: true, iconUrl: true },
+          },
+          topicLinks: {
+            orderBy: { order: 'asc' },
+            select: {
+              order: true,
+              topic: {
+                select: { id: true, name: true, slug: true, iconUrl: true },
+              },
+            },
+          },
           _count: { select: { questions: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -147,7 +186,7 @@ export class MockInterviewsService {
     ]);
 
     return {
-      items,
+      items: items.map((item) => this.toMockResponse(item)),
       total,
       page,
       limit,
@@ -163,7 +202,7 @@ export class MockInterviewsService {
       include: DETAIL_INCLUDE,
     });
     if (!mock) throw new NotFoundException('Mock interview không tồn tại.');
-    return mock;
+    return this.toMockResponse(mock);
   }
 
   // Bắt đầu mock interview, set status = IN_PROGRESS và tính expiresAt.
@@ -433,47 +472,122 @@ export class MockInterviewsService {
     }
   }
 
-  // Lấy danh sách câu hỏi ngẫu nhiên từ topic và level, giới hạn số lượng bằng `take`.
-  // Dùng trong hàm create().
+  // Chia số câu gần đều theo từng topic, sau đó bù từ toàn bộ các topic nếu có topic thiếu câu.
+  // Dùng khi tạo mock interview nhiều chủ đề.
   private async findRandomQuestionsForLevelOption(
-    topicId: string,
+    topicIds: string[],
     level: MockInterviewLevelOption | undefined,
     take: number,
   ) {
     if (level !== 'MIX') {
-      return this.findRandomQuestionIds(topicId, level, take);
+      return this.findDistributedRandomQuestionIds(topicIds, level, take);
     }
 
     const split = splitMixedLevelCounts(take);
-    const [easy, medium, hard] = await Promise.all([
-      this.findRandomQuestionIds(topicId, Level.EASY, split.easy),
-      this.findRandomQuestionIds(topicId, Level.MEDIUM, split.medium),
-      this.findRandomQuestionIds(topicId, Level.HARD, split.hard),
-    ]);
+    const easy = await this.findDistributedRandomQuestionIds(
+      topicIds,
+      Level.EASY,
+      split.easy,
+    );
+    const medium = await this.findDistributedRandomQuestionIds(
+      topicIds,
+      Level.MEDIUM,
+      split.medium,
+      easy,
+    );
+    const hard = await this.findDistributedRandomQuestionIds(
+      topicIds,
+      Level.HARD,
+      split.hard,
+      [...easy, ...medium],
+    );
+    const selected = [...easy, ...medium, ...hard];
 
-    return [...easy, ...medium, ...hard];
+    // Nếu một level thiếu dữ liệu, bù từ các level còn lại để phiên mock vẫn đủ số câu yêu cầu.
+    if (selected.length < take) {
+      const extra = await this.findRandomQuestionIds(
+        topicIds,
+        undefined,
+        take - selected.length,
+        selected,
+      );
+      selected.push(...extra);
+    }
+
+    return selected;
   }
 
-  // Hàm lấy danh sách câu hỏi ngẫu nhiên từ topic và level, giới hạn số lượng bằng `take`.
-  private findRandomQuestionIds(
-    topicId: string,
+  // Lấy id câu hỏi ngẫu nhiên, chia đều theo từng topic, có thể loại trừ câu đã chọn.
+  // Được sử dụng ở hàm findRandomQuestionsForLevelOption().
+  private async findDistributedRandomQuestionIds(
+    topicIds: string[],
     level: Level | undefined,
     take: number,
+    excludedIds: string[] = [],
   ) {
+    const perTopicCounts = splitEvenly(take, topicIds.length);
+    const selected = [...excludedIds];
+    const result: string[] = [];
+
+    for (const [index, topicId] of topicIds.entries()) {
+      const questions = await this.findRandomQuestionIds(
+        [topicId],
+        level,
+        perTopicCounts[index],
+        selected,
+      );
+      result.push(...questions);
+      selected.push(...questions);
+    }
+
+    if (result.length < take) {
+      const extra = await this.findRandomQuestionIds(
+        topicIds,
+        level,
+        take - result.length,
+        selected,
+      );
+      result.push(...extra);
+    }
+
+    return result;
+  }
+
+  // Hàm thực tế lấy id câu hỏi ngẫu nhiên từ DB, có thể loại trừ các câu đã chọn.
+  // Dùng trong hàm findDistributedRandomQuestionIds().
+  private async findRandomQuestionIds(
+    topicIds: string[],
+    level: Level | undefined,
+    take: number,
+    excludedIds: string[] = [],
+  ): Promise<string[]> {
     if (take <= 0) return Promise.resolve([]);
     const levelFilter = level
       ? Prisma.sql`AND "level" = ${level}::"Level"`
       : Prisma.empty;
+    const exclusionFilter = excludedIds.length
+      ? Prisma.sql`AND "id" NOT IN (${Prisma.join(excludedIds)})`
+      : Prisma.empty;
 
-    return this.prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+    const rows = await this.prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
       SELECT "id"
       FROM "Question"
       WHERE "isActive" = true
-        AND "topicId" = ${topicId}
+        AND "topicId" IN (${Prisma.join(topicIds)})
         ${levelFilter}
+        ${exclusionFilter}
       ORDER BY random()
       LIMIT ${take}
     `);
+    return rows.map((row) => row.id);
+  }
+
+  // Chuyển relation trung gian thành mảng topics phẳng cho frontend, đồng thời giữ topic cũ làm fallback.
+  private toMockResponse<T extends { topicLinks: Array<{ topic: unknown }> }>(
+    mock: T,
+  ) {
+    const { topicLinks, ...rest } = mock;
+    return { ...rest, topics: topicLinks.map((link) => link.topic) };
   }
 
   private async releaseLock(key: string, value: string) {
@@ -497,4 +611,25 @@ function splitMixedLevelCounts(totalQuestions: number) {
     medium: base + (remainder >= 2 ? 1 : 0),
     hard: base,
   };
+}
+
+// Util function để chia số lượng câu hỏi gần đều cho từng topic.
+function splitEvenly(total: number, parts: number): number[] {
+  const base = Math.floor(total / parts);
+  const remainder = total % parts;
+  return Array.from(
+    { length: parts },
+    (_, index) => base + (index < remainder ? 1 : 0),
+  );
+}
+
+// Util function để trộn mảng, dùng khi tạo mock interview nhiều chủ đề.
+// Giúp các câu hỏi trong 1 topic không bị xếp liền nhau, tăng tính đa dạng.
+function shuffle<T>(items: T[]): T[] {
+  const output = [...items];
+  for (let index = output.length - 1; index > 0; index -= 1) {
+    const nextIndex = Math.floor(Math.random() * (index + 1));
+    [output[index], output[nextIndex]] = [output[nextIndex], output[index]];
+  }
+  return output;
 }

@@ -4,6 +4,7 @@ import { formatTime } from "@/lib/utils/format";
 import { PrimaryPillButton } from "./MockRoomShell";
 import { TopicBadge } from "./MockRoomHeader";
 import type { MockRoomQuestionListProps } from "./types";
+import { mockInterviewTopicLabel } from "@/lib/utils/mockInterview";
 
 // Sidebar desktop của /mock-interviews/[id], giữ timer và điều hướng câu ở trạng thái cố định.
 export function ProgressSidebar({
@@ -99,7 +100,7 @@ export function MobileBottomDock({
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-xs font-semibold text-white/45">
-            {mock.topic?.name ?? "Mock interview"}
+            {mockInterviewTopicLabel(mock)}
           </p>
           <p className="mt-0.5 animate-pulse font-mono text-xl font-black tabular-nums text-white">
             {remaining === null ? "--:--" : formatTime(remaining)}
