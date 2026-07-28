@@ -8,6 +8,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../cache/cache.service';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
+import { isPrismaUniqueViolation } from '../../common/utils/prisma-error.util';
 
 const CACHE_KEY_ACTIVE = 'plans:active';
 const CACHE_TTL_ACTIVE = 300; // 5 phút — trang pricing công khai, đổi cực hiếm
@@ -51,9 +52,17 @@ export class PlansService {
     });
     if (existing) throw new ConflictException('Slug gói đã tồn tại');
 
-    const plan = await this.prisma.plan.create({
-      data: this.toData(dto) as Prisma.PlanUncheckedCreateInput,
-    });
+    let plan;
+    try {
+      plan = await this.prisma.plan.create({
+        data: this.toData(dto) as Prisma.PlanUncheckedCreateInput,
+      });
+    } catch (error) {
+      if (isPrismaUniqueViolation(error)) {
+        throw new ConflictException('Slug gói đã tồn tại');
+      }
+      throw error;
+    }
     await this.cache.del(CACHE_KEY_ACTIVE);
     return plan;
   }
@@ -69,10 +78,18 @@ export class PlansService {
       if (dup) throw new ConflictException('Slug gói đã tồn tại');
     }
 
-    const updated = await this.prisma.plan.update({
-      where: { id },
-      data: this.toData(dto),
-    });
+    let updated;
+    try {
+      updated = await this.prisma.plan.update({
+        where: { id },
+        data: this.toData(dto),
+      });
+    } catch (error) {
+      if (isPrismaUniqueViolation(error)) {
+        throw new ConflictException('Slug gói đã tồn tại');
+      }
+      throw error;
+    }
     await this.cache.del(CACHE_KEY_ACTIVE);
     return updated;
   }

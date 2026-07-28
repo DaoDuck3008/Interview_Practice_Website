@@ -12,6 +12,7 @@ import { CacheService } from '../../cache/cache.service';
 import { UpdateTopicDto } from './dto/update-topic.dto';
 import { CreateTopicDto } from './dto/create-topic.dto';
 import { QueryAdminTopicDto } from './dto/query-admin-topic.dto';
+import { isPrismaUniqueViolation } from '../../common/utils/prisma-error.util';
 
 const CACHE_KEY_ALL = 'topics:all';
 const CACHE_TTL_ALL = 300; // 5 phút — danh sách topic công khai, chỉ đổi khi admin CRUD
@@ -103,18 +104,37 @@ export class TopicsService {
   }
 
   async create(data: CreateTopicDto) {
-    const topic = await this.prisma.topic.create({ data });
+    let topic;
+    try {
+      topic = await this.prisma.topic.create({ data });
+    } catch (error) {
+      if (isPrismaUniqueViolation(error)) {
+        throw new ConflictException('Slug chủ đề đã tồn tại.');
+      }
+      throw error;
+    }
     await this.cache.del(CACHE_KEY_ALL);
     return topic;
   }
 
   async update(id: string, data: UpdateTopicDto) {
-    const topic = await this.prisma.topic.update({ where: { id }, data });
+    let topic;
+    try {
+      topic = await this.prisma.topic.update({ where: { id }, data });
+    } catch (error) {
+      if (isPrismaUniqueViolation(error)) {
+        throw new ConflictException('Slug chủ đề đã tồn tại.');
+      }
+      throw error;
+    }
     await this.cache.del(CACHE_KEY_ALL);
     return topic;
   }
 
-  async uploadIcon(id: string, file: Express.Multer.File): Promise<{ iconUrl: string }> {
+  async uploadIcon(
+    id: string,
+    file: Express.Multer.File,
+  ): Promise<{ iconUrl: string }> {
     const topic = await this.prisma.topic.findUnique({ where: { id } });
     if (!topic) throw new NotFoundException('Topic không tồn tại.');
 

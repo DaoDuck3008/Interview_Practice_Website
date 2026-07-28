@@ -15,6 +15,7 @@ import { RegisterDto } from './dto/register.dto';
 import { RefreshTokenStore } from './refresh-token.store';
 import { VerificationCodeStore } from './verification-code.store';
 import { MailService } from '../mail/mail.service';
+import { isPrismaUniqueViolation } from '../../common/utils/prisma-error.util';
 
 // Các field an toàn để trả về client
 const authUserSelect = {
@@ -225,16 +226,41 @@ export class AuthService {
       });
     } else {
       // Chưa có thì tạo tài khoản mới từ thông tin Google (không mật khẩu)
-      user = await this.prisma.user.create({
-        data: {
-          email,
-          name: payload.name ?? email,
-          googleId,
-          avatarUrl: picture,
-          emailVerified: true, // Google đã xác minh email
-        },
-        select: authUserSelect,
-      });
+      try {
+        user = await this.prisma.user.create({
+          data: {
+            email,
+            name: payload.name ?? email,
+            googleId,
+            avatarUrl: picture,
+            emailVerified: true, // Google đã xác minh email
+          },
+          select: authUserSelect,
+        });
+      } catch (error) {
+        if (!isPrismaUniqueViolation(error)) throw error;
+
+        // Request Google song song có thể đã tạo user trước; đọc lại để tiếp tục login thay vì trả P2002.
+        const racedUser = await this.usersService.findByEmail(email);
+        if (!racedUser) throw error;
+        if (racedUser.isLock) {
+          throw new ForbiddenException({
+            message: 'Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.',
+            errorCode: 'ACCOUNT_LOCKED',
+          });
+        }
+        user = racedUser.googleId
+          ? racedUser
+          : await this.prisma.user.update({
+              where: { id: racedUser.id },
+              data: {
+                googleId,
+                emailVerified: true,
+                ...(racedUser.avatarUrl ? {} : { avatarUrl: picture }),
+              },
+              select: authUserSelect,
+            });
+      }
     }
 
     const tokens = await this.issueTokens(user);

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../cache/cache.service';
 import { QueryFavoriteDto } from './dto/query-favorite.dto';
+import { isPrismaUniqueViolation } from '../../common/utils/prisma-error.util';
 
 const IDS_TTL = 30; // giây — tô trạng thái bookmark, đổi khi user bấm add/remove
 
@@ -72,7 +73,10 @@ export class FavoritesService {
     ]);
 
     return {
-      items: favorites.map((f) => ({ ...f.question, favoritedAt: f.createdAt })),
+      items: favorites.map((f) => ({
+        ...f.question,
+        favoritedAt: f.createdAt,
+      })),
       total,
       page,
       limit,
@@ -92,7 +96,12 @@ export class FavoritesService {
     });
     if (!question) throw new NotFoundException('Câu hỏi không tồn tại');
 
-    await this.prisma.favorite.create({ data: { userId, questionId } });
+    try {
+      await this.prisma.favorite.create({ data: { userId, questionId } });
+    } catch (error) {
+      // Unique constraint là lớp cuối cùng khi hai request add cùng chạy; favorite vẫn idempotent.
+      if (!isPrismaUniqueViolation(error)) throw error;
+    }
     await this.cache.del(this.idsCacheKey(userId));
     return { favorited: true };
   }

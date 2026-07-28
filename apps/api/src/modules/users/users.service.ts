@@ -19,6 +19,7 @@ import {
   vnDayKey,
   vnLastNDays,
 } from '../../common/utils/vn-time.util';
+import { isPrismaUniqueViolation } from '../../common/utils/prisma-error.util';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const STATS_TTL = 60; // 1 phút — thẻ thống kê admin, chấp nhận trễ vài chục giây
@@ -117,10 +118,18 @@ export class UsersService {
   async create(data: { name: string; email: string; passwordHash: string }) {
     const exists = await this.findByEmail(data.email);
     if (exists) throw new ConflictException('Email đã được sử dụng');
-    return this.prisma.user.create({
-      data,
-      select: publicSelect,
-    });
+    try {
+      return await this.prisma.user.create({
+        data,
+        select: publicSelect,
+      });
+    } catch (error) {
+      // Hai request cùng vượt qua findByEmail() vẫn được database chặn; trả 409 thay vì lỗi 500.
+      if (isPrismaUniqueViolation(error)) {
+        throw new ConflictException('Email đã được sử dụng');
+      }
+      throw error;
+    }
   }
 
   /** Danh sách user cho admin — phân trang, lọc & sắp xếp, kèm tóm tắt gói hiện tại. */
@@ -216,7 +225,9 @@ export class UsersService {
         await Promise.all([
           this.prisma.user.count(),
           this.prisma.user.count({ where: { createdAt: { gte: startOfDay } } }),
-          this.prisma.user.count({ where: { createdAt: { gte: startOfWeek } } }),
+          this.prisma.user.count({
+            where: { createdAt: { gte: startOfWeek } },
+          }),
           this.prisma.user.count({
             where: { createdAt: { gte: startOfMonth } },
           }),
