@@ -287,8 +287,10 @@ export class MockInterviewsService {
 
     // Upload audio lên storage.
     let audioUrl: string | undefined;
+    let reservation: Awaited<ReturnType<QuotaService['reserve']>> | undefined;
     try {
-      await this.quota.assertWithinLimit(userId);
+      // Redis lock bảo vệ một câu hỏi; reservation bảo vệ quota giữa nhiều câu hỏi/request cùng user.
+      reservation = await this.quota.reserve(userId);
 
       const { transcript, duration: measuredDuration } =
         await this.speech.transcribe(file);
@@ -341,14 +343,18 @@ export class MockInterviewsService {
           },
         });
 
+        await this.quota.consumeInTransaction(tx, reservation!.id, created.id);
+
         return created;
       });
 
-      await this.quota.record(userId, session.id);
-      await this.cache.del(
-        `sessions:me:stats:${userId}`,
-        `sessions:me:heatmap:${userId}`,
-      );
+      await Promise.all([
+        this.quota.invalidateStatus(userId),
+        this.cache.del(
+          `sessions:me:stats:${userId}`,
+          `sessions:me:heatmap:${userId}`,
+        ),
+      ]);
 
       return {
         id: session.id,
@@ -361,6 +367,7 @@ export class MockInterviewsService {
     } catch (err) {
       if (audioUrl)
         await this.storage.delete(this.storage.keyFromUrl(audioUrl));
+      if (reservation) await this.quota.cancel(reservation);
       throw err;
     } finally {
       // Xóa lock Redis để user có thể gửi request answer tiếp theo cho câu hỏi này.

@@ -117,6 +117,12 @@ enum MockOverviewStatus {
   FAILED
 }
 
+enum UsageStatus {
+  PENDING
+  CONSUMED
+  CANCELED
+}
+
 // ─── Models ──────────────────────────────────────────
 
 model User {
@@ -419,16 +425,20 @@ model Order {
   @@index([subscriptionId]) // admin: lịch sử đơn theo 1 subscription
 }
 
-// 1 dòng = 1 lượt luyện tập, ghi khi tạo session (ghi âm) thành công.
+// 1 dòng = 1 lượt luyện tập; PENDING được tạo trước Whisper, CONSUMED sau khi thao tác thành công.
 model UsageLog {
   id     String @id @default(uuid())
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   sessionId String? //  tham chiếu lỏng (không FK — session có thể bị xóa ở nhánh điểm 0)
+  // PENDING giữ chỗ quota trước khi gọi dịch vụ tốn phí; reservation hết hạn sẽ không còn được tính.
+  status    UsageStatus @default(CONSUMED)
+  expiresAt DateTime?
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt]) // COUNT lượt dùng theo kỳ (ngày/tháng)
+  @@index([userId, status, expiresAt])
 }
 
 // 1 thread liên tục / user (không có khái niệm "ticket" riêng) — gồm cả tin

@@ -17,7 +17,10 @@ import {
   SCORING_PROMPT_VERSION,
   type ScoreResult,
 } from '../scoring/prompts/scoring.prompt';
-import { deleteSessionAndAudio, transientZeroScore } from './session-score.utils';
+import {
+  deleteSessionAndAudio,
+  transientZeroScore,
+} from './session-score.utils';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { QueryHistoryDto } from './dto/query-history.dto';
 import { QueryAdminSessionDto } from './dto/query-admin-session.dto';
@@ -234,7 +237,10 @@ export class SessionsService {
           const day = vnDayKey(s.createdAt);
           map.set(day, (map.get(day) ?? 0) + 1);
         }
-        const days = [...map.entries()].map(([date, count]) => ({ date, count }));
+        const days = [...map.entries()].map(([date, count]) => ({
+          date,
+          count,
+        }));
 
         return {
           from: vnDayKey(startUtc),
@@ -259,48 +265,67 @@ export class SessionsService {
     });
     if (!question) throw new NotFoundException('Câu hỏi không tồn tại');
 
-    // Phiên âm trước: nếu lỗi (vd Groq 429) thì chưa tạo file thừa trên R2
-    const { transcript, duration: measuredDuration } =
-      await this.speech.transcribe(file);
+    // Guard chỉ chặn sớm; reservation này mới bảo đảm nhiều request song song không cùng vượt quota trước Whisper.
+    const reservation = await this.quota.reserve(userId);
+    let audioUrl: string | undefined;
 
-    // `dto.duration` là client tự khai báo — chỉ tin khi gọi qua audio recorder
-    // thật của frontend. Đối chiếu với độ dài Groq đo được từ chính file audio
-    // để chặn trường hợp gọi thẳng API và khai gian ngắn hơn thực tế.
-    if (measuredDuration !== null && measuredDuration > MAX_AUDIO_DURATION_SEC) {
-      throw new BadRequestException('Audio không được vượt quá 4 phút.');
+    try {
+      // Phiên âm trước: nếu lỗi (vd Groq 429) thì chưa tạo file thừa trên R2
+      const { transcript, duration: measuredDuration } =
+        await this.speech.transcribe(file);
+
+      // `dto.duration` là client tự khai báo — chỉ tin khi gọi qua audio recorder
+      // thật của frontend. Đối chiếu với độ dài Groq đo được từ chính file audio
+      // để chặn trường hợp gọi thẳng API và khai gian ngắn hơn thực tế.
+      if (
+        measuredDuration !== null &&
+        measuredDuration > MAX_AUDIO_DURATION_SEC
+      ) {
+        throw new BadRequestException('Audio không được vượt quá 4 phút.');
+      }
+
+      const key = `sessions/${userId}/${randomUUID()}.webm`;
+      audioUrl = await this.storage.uploadStream(
+        key,
+        file.buffer,
+        file.mimetype,
+      );
+
+      const session = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.session.create({
+          data: {
+            userId,
+            questionId: dto.questionId,
+            audioUrl: audioUrl!,
+            transcript,
+            duration: measuredDuration ?? dto.duration,
+          },
+        });
+        await this.quota.consumeInTransaction(tx, reservation.id, created.id);
+        return created;
+      });
+
+      await Promise.all([
+        this.quota.invalidateStatus(userId),
+        this.cache.del(
+          this.statsCacheKey(userId),
+          this.heatmapCacheKey(userId),
+        ),
+      ]);
+
+      return {
+        id: session.id,
+        questionId: session.questionId,
+        transcript: session.transcript,
+        duration: session.duration,
+        createdAt: session.createdAt,
+      };
+    } catch (err) {
+      if (audioUrl)
+        await this.storage.delete(this.storage.keyFromUrl(audioUrl));
+      await this.quota.cancel(reservation);
+      throw err;
     }
-
-    const key = `sessions/${userId}/${randomUUID()}.webm`;
-    const audioUrl = await this.storage.uploadStream(
-      key,
-      file.buffer,
-      file.mimetype,
-    );
-
-    const session = await this.prisma.session.create({
-      data: {
-        userId,
-        questionId: dto.questionId,
-        audioUrl,
-        transcript,
-        duration: measuredDuration ?? dto.duration,
-      },
-    });
-
-    // Đếm 1 lượt luyện tập (QuotaGuard đã chặn trước khi tới đây nếu hết lượt).
-    await this.quota.record(userId, session.id);
-    await this.cache.del(
-      this.statsCacheKey(userId),
-      this.heatmapCacheKey(userId),
-    );
-
-    return {
-      id: session.id,
-      questionId: session.questionId,
-      transcript: session.transcript,
-      duration: session.duration,
-      createdAt: session.createdAt,
-    };
   }
 
   /**

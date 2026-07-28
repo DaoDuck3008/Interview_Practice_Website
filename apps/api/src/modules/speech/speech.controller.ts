@@ -45,8 +45,15 @@ export class SpeechController {
   ) {
     if (!file)
       throw new BadRequestException('Không có file audio được gửi lên.');
-    const result = await this.speechService.transcribe(file);
-    await this.quota.record(user.id);
-    return result;
+    // Guard chỉ kiểm tra nhanh; reservation dưới đây mới chặn race trước khi gọi Whisper.
+    const reservation = await this.quota.reserve(user.id);
+    try {
+      const result = await this.speechService.transcribe(file);
+      await this.quota.consume(reservation);
+      return result;
+    } catch (err) {
+      await this.quota.cancel(reservation);
+      throw err;
+    }
   }
 }
