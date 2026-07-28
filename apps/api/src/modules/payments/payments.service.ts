@@ -49,33 +49,39 @@ export class PaymentsService {
 
   /** Tạo (hoặc tái dùng) đơn PENDING cho user + plan, trả về thông tin thanh toán + QR động. */
   async createCheckout(userId: string, planSlug: string) {
-    const plan = await this.prisma.plan.findFirst({
-      where: { slug: planSlug, isActive: true },
-    });
-    if (!plan) throw new NotFoundException('Không tìm thấy gói');
+    return this.prisma.$transaction(async (tx) => {
+      // Serialize checkout của cùng user: request đến sau sẽ thấy đơn PENDING vừa tạo thay vì tạo QR mới.
+      await lockBillingUser(tx, userId);
 
-    // Tái dùng đơn PENDING còn hạn để tránh tạo trùng khi user bấm lại.
-    const existing = await this.prisma.order.findFirst({
-      where: {
-        userId,
-        planId: plan.id,
-        status: 'PENDING',
-        expiresAt: { gt: new Date() },
-      },
-    });
-    if (existing) return this.toResponse(existing, plan);
+      const plan = await tx.plan.findFirst({
+        where: { slug: planSlug, isActive: true },
+      });
+      if (!plan) throw new NotFoundException('Không tìm thấy gói');
 
-    const order = await this.prisma.order.create({
-      data: {
-        userId,
-        planId: plan.id,
-        amountVnd: plan.priceVnd,
-        transferCode: this.generateCode(),
-        provider: 'sepay',
-        expiresAt: new Date(Date.now() + ORDER_TTL_MS),
-      },
+      // Tái dùng đơn PENDING còn hạn để tránh tạo trùng khi user bấm lại hoặc gửi request song song.
+      const existing = await tx.order.findFirst({
+        where: {
+          userId,
+          planId: plan.id,
+          status: 'PENDING',
+          expiresAt: { gt: new Date() },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (existing) return this.toResponse(existing, plan);
+
+      const order = await tx.order.create({
+        data: {
+          userId,
+          planId: plan.id,
+          amountVnd: plan.priceVnd,
+          transferCode: this.generateCode(),
+          provider: 'sepay',
+          expiresAt: new Date(Date.now() + ORDER_TTL_MS),
+        },
+      });
+      return this.toResponse(order, plan);
     });
-    return this.toResponse(order, plan);
   }
 
   /** Trạng thái đơn (để FE poll). Chỉ chủ đơn được xem. */
