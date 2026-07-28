@@ -43,45 +43,7 @@ export class AuthService {
     );
   }
 
-  // Verify ID token với thư viện chính chủ của Google; audience phải khớp CLIENT_ID
-  private async verifyGoogleToken(idToken: string) {
-    try {
-      const ticket = await this.googleClient.verifyIdToken({
-        idToken,
-        audience: this.config.getOrThrow<string>('google.clientId'),
-      });
-      const payload = ticket.getPayload();
-      if (!payload) throw new Error('Payload rỗng');
-      return payload;
-    } catch {
-      throw new UnauthorizedException('Token Google không hợp lệ');
-    }
-  }
-
-  // Ký cặp token mới + lưu jti của refresh token vào allowlist (Redis)
-  private async issueTokens(user: { id: string; email: string; role: string }) {
-    const jti = randomUUID();
-    const accessPayload = { sub: user.id, email: user.email, role: user.role };
-    const refreshPayload = { sub: user.id, jti };
-
-    const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(accessPayload, {
-        secret: this.config.get('jwt.accessSecret'),
-        expiresIn: this.config.get('jwt.accessExpiresIn'),
-      }),
-      this.jwtService.signAsync(refreshPayload, {
-        secret: this.config.get('jwt.refreshSecret'),
-        expiresIn: this.config.get('jwt.refreshExpiresIn'),
-      }),
-    ]);
-
-    // TTL của key Redis = thời gian sống còn lại của refresh token (theo claim exp)
-    const decoded = this.jwtService.decode(refreshToken) as { exp: number };
-    const ttlSeconds = decoded.exp - Math.floor(Date.now() / 1000);
-    await this.refreshStore.store(user.id, jti, ttlSeconds);
-
-    return { accessToken, refreshToken };
-  }
+  // ─── Đăng nhập bằng email và mật khẩu ──────────────────────────────
 
   async validateUser(email: string, password: string) {
     const user = await this.usersService.findByEmail(email);
@@ -109,6 +71,12 @@ export class AuthService {
     }
     return user;
   }
+
+  async login(user: { id: string; email: string; role: string }) {
+    return this.issueTokens(user);
+  }
+
+  // ─── Đăng ký và xác thực email ─────────────────────────────────────
 
   async register(dto: RegisterDto) {
     const passwordHash = await bcrypt.hash(dto.password, 10);
@@ -169,6 +137,8 @@ export class AuthService {
     return { message: 'Nếu tài khoản hợp lệ, mã xác thực đã được gửi lại.' };
   }
 
+  // ─── Khôi phục và đổi mật khẩu ──────────────────────────────────────
+
   /** Quên mật khẩu: gửi mã đặt lại. Luôn trả lời chung để tránh dò email. */
   async forgotPassword(email: string) {
     const user = await this.usersService.findByEmail(email);
@@ -211,21 +181,7 @@ export class AuthService {
     return { message: 'Đặt lại mật khẩu thành công, vui lòng đăng nhập' };
   }
 
-  // Chuyển kết quả đối chiếu mã của store thành lỗi 400 với thông điệp phù hợp.
-  private assertCodeResult(result: 'ok' | 'invalid' | 'expired' | 'locked') {
-    if (result === 'ok') return;
-    if (result === 'expired')
-      throw new BadRequestException('Mã đã hết hạn, vui lòng gửi lại mã mới');
-    if (result === 'locked')
-      throw new BadRequestException(
-        'Bạn đã nhập sai quá nhiều lần, vui lòng gửi lại mã mới',
-      );
-    throw new BadRequestException('Mã xác thực không đúng');
-  }
-
-  async login(user: { id: string; email: string; role: string }) {
-    return this.issueTokens(user);
-  }
+  // ─── Đăng nhập Google ──────────────────────────────────────────────
 
   // Đăng nhập/đăng ký bằng Google: verify ID token, tìm hoặc tạo user, rồi cấp token của hệ thống.
   async googleLogin(idToken: string) {
@@ -293,6 +249,8 @@ export class AuthService {
     };
   }
 
+  // ─── Hồ sơ và bảo mật tài khoản ─────────────────────────────────────
+
   /** Thông tin cá nhân an toàn của user hiện tại (không gồm passwordHash). */
   async getProfile(userId: string) {
     const u = await this.prisma.user.findUnique({
@@ -331,14 +289,12 @@ export class AuthService {
     if (!user) throw new UnauthorizedException('Người dùng không tồn tại');
     if (!user.passwordHash)
       throw new BadRequestException({
-        message:
-          'Tài khoản đăng nhập bằng Google không có mật khẩu để đổi.',
+        message: 'Tài khoản đăng nhập bằng Google không có mật khẩu để đổi.',
         errorCode: 'GOOGLE_ACCOUNT',
       });
 
     const isMatch = await bcrypt.compare(oldPassword, user.passwordHash);
-    if (!isMatch)
-      throw new BadRequestException('Mật khẩu hiện tại không đúng');
+    if (!isMatch) throw new BadRequestException('Mật khẩu hiện tại không đúng');
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
     await this.prisma.user.update({
@@ -348,6 +304,8 @@ export class AuthService {
     await this.refreshStore.removeAll(userId);
     return { message: 'Đổi mật khẩu thành công' };
   }
+
+  // ─── Quản lý phiên đăng nhập ────────────────────────────────────────
 
   // Refresh token đã được JwtRefreshStrategy verify chữ ký + hạn dùng ở guard.
   // Ở đây consume jti cũ bằng một thao tác Redis atomic, rồi xoay vòng token.
@@ -390,5 +348,60 @@ export class AuthService {
     if (decoded?.sub && decoded?.jti) {
       await this.refreshStore.remove(decoded.sub, decoded.jti);
     }
+  }
+
+  // ─── Private helpers ────────────────────────────────────────────────
+
+  // Verify ID token với thư viện chính chủ của Google; audience phải khớp CLIENT_ID
+  private async verifyGoogleToken(idToken: string) {
+    try {
+      const ticket = await this.googleClient.verifyIdToken({
+        idToken,
+        audience: this.config.getOrThrow<string>('google.clientId'),
+      });
+      const payload = ticket.getPayload();
+      if (!payload) throw new Error('Payload rỗng');
+      return payload;
+    } catch {
+      throw new UnauthorizedException('Token Google không hợp lệ');
+    }
+  }
+
+  // Ký cặp token mới + lưu jti của refresh token vào allowlist (Redis)
+  private async issueTokens(user: { id: string; email: string; role: string }) {
+    const jti = randomUUID();
+    const accessPayload = { sub: user.id, email: user.email, role: user.role };
+    const refreshPayload = { sub: user.id, jti };
+
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(accessPayload, {
+        secret: this.config.get('jwt.accessSecret'),
+        expiresIn: this.config.get('jwt.accessExpiresIn'),
+      }),
+      this.jwtService.signAsync(refreshPayload, {
+        secret: this.config.get('jwt.refreshSecret'),
+        expiresIn: this.config.get('jwt.refreshExpiresIn'),
+      }),
+    ]);
+
+    // TTL của key Redis = thời gian sống còn lại của refresh token (theo claim exp)
+    const decoded = this.jwtService.decode(refreshToken) as { exp: number };
+    const ttlSeconds = decoded.exp - Math.floor(Date.now() / 1000);
+    await this.refreshStore.store(user.id, jti, ttlSeconds);
+
+    return { accessToken, refreshToken };
+  }
+
+  // Chuyển kết quả đối chiếu mã của store thành lỗi 400 với thông điệp phù hợp.
+  // Dùng bởi resetPassword() và verifyEmail() khi check mã OTP lưu trong Redis
+  private assertCodeResult(result: 'ok' | 'invalid' | 'expired' | 'locked') {
+    if (result === 'ok') return;
+    if (result === 'expired')
+      throw new BadRequestException('Mã đã hết hạn, vui lòng gửi lại mã mới');
+    if (result === 'locked')
+      throw new BadRequestException(
+        'Bạn đã nhập sai quá nhiều lần, vui lòng gửi lại mã mới',
+      );
+    throw new BadRequestException('Mã xác thực không đúng');
   }
 }

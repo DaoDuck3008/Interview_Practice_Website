@@ -3,6 +3,39 @@ import { Redis } from 'ioredis';
 import { REDIS_CLIENT } from '../../redis/redis.module';
 
 export type OtpPurpose = 'verify' | 'reset';
+type OtpVerificationResult = 'ok' | 'invalid' | 'expired' | 'locked';
+
+const VERIFY_OTP_SCRIPT = `
+local codeKey = KEYS[1]
+local attemptsKey = KEYS[2]
+local inputCode = ARGV[1]
+local maxAttempts = tonumber(ARGV[2])
+
+local storedCode = redis.call('GET', codeKey)
+if not storedCode then
+  return 'expired'
+end
+
+if storedCode == inputCode then
+  redis.call('DEL', codeKey, attemptsKey)
+  return 'ok'
+end
+
+local attempts = redis.call('INCR', attemptsKey)
+if attempts == 1 then
+  local codeTtl = redis.call('PTTL', codeKey)
+  if codeTtl > 0 then
+    redis.call('PEXPIRE', attemptsKey, codeTtl)
+  end
+end
+
+if attempts >= maxAttempts then
+  redis.call('DEL', codeKey, attemptsKey)
+  return 'locked'
+end
+
+return 'invalid'
+`;
 
 /**
  * Lưu tạm mã OTP 6 số trên Redis cho 2 luồng: xác thực email & quên mật khẩu.
@@ -56,39 +89,21 @@ export class VerificationCodeStore {
   }
 
   /**
-   * Đối chiếu mã. Đúng -> xoá mã + bộ đếm, trả 'ok'.
-   * Sai -> tăng bộ đếm; vượt ngưỡng thì xoá mã, trả 'locked'.
+   * Đối chiếu, xoá OTP đúng hoặc tăng bộ đếm sai trong một Lua script Redis nguyên tử.
+   * Không tách GET/DEL thành nhiều lệnh vì hai request song song có thể cùng dùng một OTP.
    */
   async verify(
     purpose: OtpPurpose,
     email: string,
     code: string,
-  ): Promise<'ok' | 'invalid' | 'expired' | 'locked'> {
-    const stored = await this.redis.get(this.codeKey(purpose, email));
-    if (!stored) return 'expired';
-
-    if (stored === code) {
-      await this.redis.del(
-        this.codeKey(purpose, email),
-        this.attemptsKey(purpose, email),
-      );
-      return 'ok';
-    }
-
-    const attempts = await this.redis.incr(this.attemptsKey(purpose, email));
-    if (attempts === 1) {
-      await this.redis.expire(
-        this.attemptsKey(purpose, email),
-        VerificationCodeStore.CODE_TTL_SECONDS,
-      );
-    }
-    if (attempts >= VerificationCodeStore.MAX_ATTEMPTS) {
-      await this.redis.del(
-        this.codeKey(purpose, email),
-        this.attemptsKey(purpose, email),
-      );
-      return 'locked';
-    }
-    return 'invalid';
+  ): Promise<OtpVerificationResult> {
+    return (await this.redis.eval(
+      VERIFY_OTP_SCRIPT,
+      2,
+      this.codeKey(purpose, email),
+      this.attemptsKey(purpose, email),
+      code,
+      VerificationCodeStore.MAX_ATTEMPTS,
+    )) as OtpVerificationResult;
   }
 }
