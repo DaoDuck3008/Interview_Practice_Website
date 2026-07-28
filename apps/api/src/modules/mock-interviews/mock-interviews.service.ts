@@ -24,6 +24,7 @@ import { AiJobsService } from '../ai-jobs/ai-jobs.service';
 import { CacheService } from '../../cache/cache.service';
 import { REDIS_CLIENT } from '../../redis/redis.module';
 import { MAX_AUDIO_DURATION_SEC } from '../../common/upload/audio.constants';
+import { lockAdvisoryKey } from '../../common/utils/billing-lock.util';
 import {
   CreateMockInterviewDto,
   type MockInterviewLevelOption,
@@ -228,15 +229,20 @@ export class MockInterviewsService {
       startedAt.getTime() + mock.durationSeconds * 1000,
     );
 
-    // Cập nhật status thành IN_PROGRESS và thời gian bắt đầu/kết thúc
-    await this.prisma.mockInterview.update({
-      where: { id },
+    // Chỉ request đầu tiên đổi được DRAFT -> IN_PROGRESS, tránh ghi đè startedAt khi bấm song song.
+    const started = await this.prisma.mockInterview.updateMany({
+      where: { id, userId, status: MockInterviewStatus.DRAFT },
       data: {
         status: MockInterviewStatus.IN_PROGRESS,
         startedAt,
         expiresAt,
       },
     });
+    if (started.count === 0) {
+      const current = await this.getOwned(id, userId);
+      if (current.status === MockInterviewStatus.IN_PROGRESS) return current;
+      throw new ConflictException('Mock interview này không thể bắt đầu lại.');
+    }
 
     return this.getOwned(id, userId);
   }
@@ -309,6 +315,9 @@ export class MockInterviewsService {
       );
 
       const session = await this.prisma.$transaction(async (tx) => {
+        // Serialize phần ghi DB với submit(); không giữ lock trong lúc gọi Whisper.
+        await lockAdvisoryKey(tx, this.mockAdvisoryLockKey(id));
+
         const fresh = await tx.mockInterviewQuestion.findFirst({
           where: {
             id: questionItemId,
@@ -397,23 +406,46 @@ export class MockInterviewsService {
     }
 
     const now = new Date();
-    await this.prisma.$transaction([
-      this.prisma.mockInterviewQuestion.updateMany({
+    const submitted = await this.prisma.$transaction(async (tx) => {
+      // Cùng lock với transaction cuối của answer() để không skip nhầm câu vừa được ghi session.
+      await lockAdvisoryKey(tx, this.mockAdvisoryLockKey(id));
+
+      const claimed = await tx.mockInterview.updateMany({
+        where: {
+          id,
+          userId,
+          status: MockInterviewStatus.IN_PROGRESS,
+        },
+        data: {
+          status: MockInterviewStatus.SCORING,
+          submittedAt: now,
+        },
+      });
+      if (claimed.count === 0) return false;
+
+      await tx.mockInterviewQuestion.updateMany({
         where: { mockInterviewId: id, sessionId: null },
         data: {
           answerStatus: MockQuestionAnswerStatus.SKIPPED,
           scoreStatus: MockQuestionScoreStatus.SKIPPED,
           skippedAt: now,
         },
-      }),
-      this.prisma.mockInterview.update({
-        where: { id },
-        data: {
-          status: MockInterviewStatus.SCORING,
-          submittedAt: now,
-        },
-      }),
-    ]);
+      });
+      return true;
+    });
+    if (!submitted) {
+      const current = await this.getOwned(id, userId);
+      if (
+        current.status === MockInterviewStatus.SUBMITTED ||
+        current.status === MockInterviewStatus.SCORING ||
+        current.status === MockInterviewStatus.SCORED
+      ) {
+        return current;
+      }
+      throw new ConflictException(
+        'Mock interview này chưa ở trạng thái làm bài.',
+      );
+    }
 
     const answered = await this.prisma.mockInterviewQuestion.findMany({
       where: { mockInterviewId: id, sessionId: { not: null } },
@@ -604,6 +636,10 @@ export class MockInterviewsService {
       key,
       value,
     );
+  }
+
+  private mockAdvisoryLockKey(mockInterviewId: string) {
+    return `mock-interview:${mockInterviewId}`;
   }
 }
 

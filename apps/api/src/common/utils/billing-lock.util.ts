@@ -1,11 +1,16 @@
 import type { Prisma } from '@prisma/client';
 
-/**
- * Ghi log vào bảng usage_log để đánh dấu 1 lượt đã dùng.
- */
+/** Khóa transaction-level theo một khóa nghiệp vụ; tự nhả khi transaction commit hoặc rollback. */
+export async function lockAdvisoryKey(
+  tx: Prisma.TransactionClient,
+  key: string,
+) {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${key})::bigint)`;
+}
+
 export async function lockBillingUser(
   tx: Prisma.TransactionClient,
   userId: string,
 ) {
-  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId})::bigint)`;
+  await lockAdvisoryKey(tx, userId);
 }
