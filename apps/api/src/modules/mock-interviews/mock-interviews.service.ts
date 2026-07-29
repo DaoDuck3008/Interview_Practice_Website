@@ -82,9 +82,6 @@ export class MockInterviewsService {
 
   // Tạo mock interview nhiều chủ đề, chia câu hỏi gần đều giữa các chủ đề đã chọn.
   async create(userId: string, dto: CreateMockInterviewDto) {
-    // Kiểm tra quota trước khi tạo mock interview
-    await this.quota.assertWithinLimitFor(userId, dto.totalQuestions);
-
     const topics = await this.prisma.topic.findMany({
       where: { id: { in: dto.topicIds } },
       select: { id: true, name: true, slug: true, iconUrl: true },
@@ -220,9 +217,6 @@ export class MockInterviewsService {
     if (mock.status !== MockInterviewStatus.DRAFT) {
       throw new ConflictException('Mock interview này không thể bắt đầu lại.');
     }
-
-    // Kiểm tra quota trước khi bắt đầu mock interview
-    await this.quota.assertWithinLimitFor(userId, mock.totalQuestions);
 
     const startedAt = new Date();
     const expiresAt = new Date(
