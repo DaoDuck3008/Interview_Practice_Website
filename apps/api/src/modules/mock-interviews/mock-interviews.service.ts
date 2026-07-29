@@ -58,7 +58,9 @@ const DETAIL_INCLUDE = {
           id: true,
           content: true,
           level: true,
-          topic: { select: { id: true, name: true, slug: true, iconUrl: true } },
+          topic: {
+            select: { id: true, name: true, slug: true, iconUrl: true },
+          },
         },
       },
       session: {
@@ -308,6 +310,7 @@ export class MockInterviewsService {
     // Upload audio lên storage.
     let audioUrl: string | undefined;
     let reservation: Awaited<ReturnType<QuotaService['reserve']>> | undefined;
+    let committed = false;
     try {
       // Redis lock bảo vệ một câu hỏi; reservation bảo vệ quota giữa nhiều câu hỏi/request cùng user.
       reservation = await this.quota.reserve(userId);
@@ -370,14 +373,22 @@ export class MockInterviewsService {
 
         return created;
       });
+      // Từ đây Session, câu trả lời và quota đã commit; không được rollback tài nguyên nếu cache gặp lỗi.
+      committed = true;
 
-      await Promise.all([
-        this.quota.invalidateStatus(userId),
-        this.cache.del(
-          `sessions:me:stats:${userId}`,
-          `sessions:me:heatmap:${userId}`,
-        ),
-      ]);
+      try {
+        await Promise.all([
+          this.quota.invalidateStatus(userId),
+          this.cache.del(
+            `sessions:me:stats:${userId}`,
+            `sessions:me:heatmap:${userId}`,
+          ),
+        ]);
+      } catch (cacheError) {
+        this.logger.warn(
+          `Không thể xóa cache sau khi lưu câu trả lời mock ${questionItemId}: ${cacheError instanceof Error ? cacheError.message : String(cacheError)}`,
+        );
+      }
 
       return {
         id: session.id,
@@ -388,9 +399,22 @@ export class MockInterviewsService {
         createdAt: session.createdAt,
       };
     } catch (err) {
-      if (audioUrl)
-        await this.storage.delete(this.storage.keyFromUrl(audioUrl));
-      if (reservation) await this.quota.cancel(reservation);
+      if (!committed) {
+        // Chỉ dọn audio/reservation khi transaction chưa commit, tránh Session trỏ tới file đã bị xóa.
+        const cleanupResults = await Promise.allSettled([
+          audioUrl
+            ? this.storage.delete(this.storage.keyFromUrl(audioUrl))
+            : Promise.resolve(),
+          reservation ? this.quota.cancel(reservation) : Promise.resolve(),
+        ]);
+        for (const cleanup of cleanupResults) {
+          if (cleanup.status === 'rejected') {
+            this.logger.error(
+              `Cleanup câu trả lời mock ${questionItemId} thất bại: ${String(cleanup.reason)}`,
+            );
+          }
+        }
+      }
       throw err;
     } finally {
       // Xóa lock Redis để user có thể gửi request answer tiếp theo cho câu hỏi này.
@@ -532,7 +556,9 @@ export class MockInterviewsService {
         mock.status !== MockInterviewStatus.SCORING &&
         mock.status !== MockInterviewStatus.SCORED
       ) {
-        throw new ConflictException('Mock interview chưa sẵn sàng để chấm lại.');
+        throw new ConflictException(
+          'Mock interview chưa sẵn sàng để chấm lại.',
+        );
       }
 
       const candidates = await tx.mockInterviewQuestion.findMany({
@@ -637,7 +663,9 @@ export class MockInterviewsService {
       MOCK_AUTO_SUBMIT_BUFFER_MS;
     // Phòng thủ nếu delayed job bị chạy sớm; job hợp lệ chỉ được chốt sau grace window.
     if (Date.now() < autoSubmitAt) {
-      this.logger.debug(`Bỏ qua auto-submit mock ${id}: chưa hết grace window.`);
+      this.logger.debug(
+        `Bỏ qua auto-submit mock ${id}: chưa hết grace window.`,
+      );
       return;
     }
 
