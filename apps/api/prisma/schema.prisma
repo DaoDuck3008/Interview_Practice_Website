@@ -229,6 +229,7 @@ model MockInterview {
   expiresAt   DateTime?
   submittedAt DateTime?
   scoredAt    DateTime?
+  lastScoringRetryAt DateTime?
 
   averageTechnicalScore    Float?
   averageCompletenessScore Float?

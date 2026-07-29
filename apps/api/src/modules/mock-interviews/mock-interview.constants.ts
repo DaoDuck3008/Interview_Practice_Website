@@ -7,3 +7,5 @@ export const MOCK_EXPIRED_RECOVERY_INTERVAL_MS = 5 * 60 * 1000;
 export const MOCK_EXPIRED_RECOVERY_BATCH_SIZE = 100;
 // Sau mốc này kể từ lần cập nhật mock gần nhất, câu QUEUED chưa có điểm được xem là kẹt để user có thể chủ động chấm lại.
 export const MOCK_SCORING_STALE_MS = 2 * 60 * 1000;
+// Chặn double-click/spam retry nhưng vẫn cho user thử lại không giới hạn khi dịch vụ AI đã hồi phục.
+export const MOCK_SCORING_RETRY_COOLDOWN_MS = 60 * 1000;

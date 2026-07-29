@@ -36,6 +36,7 @@ import {
   MOCK_ANSWER_GRACE_MS,
   MOCK_AUTO_SUBMIT_BUFFER_MS,
   MOCK_EXPIRED_RECOVERY_BATCH_SIZE,
+  MOCK_SCORING_RETRY_COOLDOWN_MS,
   MOCK_SCORING_STALE_MS,
 } from './mock-interview.constants';
 
@@ -542,7 +543,12 @@ export class MockInterviewsService {
 
       const mock = await tx.mockInterview.findFirst({
         where: { id, userId },
-        select: { status: true, submittedAt: true, updatedAt: true },
+        select: {
+          status: true,
+          submittedAt: true,
+          updatedAt: true,
+          lastScoringRetryAt: true,
+        },
       });
       if (!mock) throw new NotFoundException('Mock interview không tồn tại.');
       if (!mock.submittedAt) {
@@ -592,6 +598,19 @@ export class MockInterviewsService {
         );
       }
 
+      const retryAvailableAt = mock.lastScoringRetryAt
+        ? mock.lastScoringRetryAt.getTime() +
+          MOCK_SCORING_RETRY_COOLDOWN_MS
+        : 0;
+      if (now.getTime() < retryAvailableAt) {
+        const waitSeconds = Math.ceil(
+          (retryAvailableAt - now.getTime()) / 1000,
+        );
+        throw new ConflictException(
+          `Vui lòng chờ ${waitSeconds} giây trước khi chấm lại.`,
+        );
+      }
+
       await tx.mockInterviewQuestion.updateMany({
         where: { id: { in: retryable.map((question) => question.id) } },
         data: { scoreStatus: MockQuestionScoreStatus.QUEUED, scoreError: null },
@@ -600,6 +619,7 @@ export class MockInterviewsService {
         where: { id },
         data: {
           status: MockInterviewStatus.SCORING,
+          lastScoringRetryAt: now,
           scoredAt: null,
           averageTechnicalScore: null,
           averageCompletenessScore: null,
