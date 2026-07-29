@@ -5,3 +5,5 @@ export const MOCK_AUTO_SUBMIT_BUFFER_MS = 2_000;
 // Lớp dự phòng khi delayed job không được tạo hoặc Redis gián đoạn tại thời điểm bắt đầu mock.
 export const MOCK_EXPIRED_RECOVERY_INTERVAL_MS = 5 * 60 * 1000;
 export const MOCK_EXPIRED_RECOVERY_BATCH_SIZE = 100;
+// Sau mốc này kể từ lần cập nhật mock gần nhất, câu QUEUED chưa có điểm được xem là kẹt để user có thể chủ động chấm lại.
+export const MOCK_SCORING_STALE_MS = 2 * 60 * 1000;

@@ -115,6 +115,10 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
       // Session có thể đã bị xóa (vd điểm 0 ở lần thử trước) — báo lỗi thay vì
       // im lặng, để frontend không phải đợi hết JOB_WAIT_TIMEOUT_MS mới biết.
       if (!session) {
+        await this.markMockScoreFailure(
+          sessionId,
+          new NotFoundException('Session không tồn tại (có thể đã bị xóa).'),
+        );
         this.emitFailure(
           job.id,
           userId,

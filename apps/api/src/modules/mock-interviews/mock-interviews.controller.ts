@@ -86,6 +86,13 @@ export class MockInterviewsController {
     return this.mockInterviews.submit(id, user.id);
   }
 
+  @Post(':id/retry-scoring')
+  @Throttle(THROTTLE_AI_ACTION)
+  @UseInterceptors(ConcurrencyInterceptor)
+  retryScoring(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.mockInterviews.retryScoring(id, user.id);
+  }
+
   @Get(':id/result')
   getResult(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.mockInterviews.getResult(id, user.id);

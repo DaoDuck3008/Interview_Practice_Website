@@ -70,6 +70,7 @@ export interface MockInterview {
   overviewStatus: MockOverviewStatus;
   overviewError: string | null;
   createdAt: string;
+  updatedAt?: string;
   topic: Topic | null;
   topics: Topic[];
   questions?: MockInterviewQuestion[];
@@ -150,6 +151,15 @@ export async function answerMockQuestion(
 export async function submitMockInterview(id: string): Promise<MockInterview> {
   const res = await api.post<ApiResponse<MockInterview>>(
     `/mock-interviews/${id}/submit`,
+  );
+  return res.data.data;
+}
+
+export async function retryMockInterviewScoring(
+  id: string,
+): Promise<MockInterview> {
+  const res = await api.post<ApiResponse<MockInterview>>(
+    `/mock-interviews/${id}/retry-scoring`,
   );
   return res.data.data;
 }

@@ -36,6 +36,7 @@ import {
   MOCK_ANSWER_GRACE_MS,
   MOCK_AUTO_SUBMIT_BUFFER_MS,
   MOCK_EXPIRED_RECOVERY_BATCH_SIZE,
+  MOCK_SCORING_STALE_MS,
 } from './mock-interview.constants';
 
 const ANSWER_LOCK_TTL_SEC = 300;
@@ -444,6 +445,7 @@ export class MockInterviewsService {
           skippedAt: now,
         },
       });
+
       return true;
     });
     if (!submitted) {
@@ -485,16 +487,19 @@ export class MockInterviewsService {
 
     await this.prisma.mockInterviewQuestion.updateMany({
       where: {
-        id: { in: answered.map((q) => q.id) },
+        id: { in: answered.map((question) => question.id) },
         scoreStatus: MockQuestionScoreStatus.PENDING,
       },
       data: { scoreStatus: MockQuestionScoreStatus.QUEUED, scoreError: null },
     });
 
-    await Promise.all(
-      answered
-        .filter((q): q is { id: string; sessionId: string } => !!q.sessionId)
-        .map((q) => this.aiJobs.enqueueScore(q.sessionId, userId)),
+    await this.enqueueScoreJobs(
+      answered.filter(
+        (question): question is { id: string; sessionId: string } =>
+          !!question.sessionId,
+      ),
+      userId,
+      id,
     );
 
     return this.getOwned(id, userId);
@@ -503,6 +508,110 @@ export class MockInterviewsService {
   // Hàm lấy kết quả mock interview, chỉ trả về mock interview chi tiết nếu user là owner.
   getResult(id: string, userId: string) {
     return this.getOwned(id, userId);
+  }
+
+  // Retry chỉ dành cho bài đã nộp nhưng chưa có kết quả do job lỗi hoặc bị kẹt; không chấm lại câu đã có điểm.
+  async retryScoring(id: string, userId: string) {
+    const now = new Date();
+    const targets = await this.prisma.$transaction(async (tx) => {
+      await lockAdvisoryKey(tx, this.mockAdvisoryLockKey(id));
+
+      const mock = await tx.mockInterview.findFirst({
+        where: { id, userId },
+        select: { status: true, submittedAt: true, updatedAt: true },
+      });
+      if (!mock) throw new NotFoundException('Mock interview không tồn tại.');
+      if (!mock.submittedAt) {
+        throw new ConflictException('Mock interview này chưa được nộp.');
+      }
+
+      const isStale =
+        mock.status === MockInterviewStatus.SCORING &&
+        now.getTime() - mock.updatedAt.getTime() >= MOCK_SCORING_STALE_MS;
+      if (
+        mock.status !== MockInterviewStatus.SCORING &&
+        mock.status !== MockInterviewStatus.SCORED
+      ) {
+        throw new ConflictException('Mock interview chưa sẵn sàng để chấm lại.');
+      }
+
+      const candidates = await tx.mockInterviewQuestion.findMany({
+        where: {
+          mockInterviewId: id,
+          sessionId: { not: null },
+          scoreStatus: {
+            in: [
+              MockQuestionScoreStatus.FAILED,
+              MockQuestionScoreStatus.QUEUED,
+            ],
+          },
+        },
+        select: {
+          id: true,
+          sessionId: true,
+          scoreStatus: true,
+          session: { select: { score: { select: { id: true } } } },
+        },
+      });
+      const retryable = candidates.flatMap((question) =>
+        question.sessionId &&
+        !question.session?.score &&
+        (question.scoreStatus === MockQuestionScoreStatus.FAILED || isStale)
+          ? [{ id: question.id, sessionId: question.sessionId }]
+          : [],
+      );
+      if (retryable.length === 0) {
+        throw new ConflictException(
+          'Chưa có câu chấm lỗi hoặc chấm quá lâu để thực hiện lại.',
+        );
+      }
+
+      await tx.mockInterviewQuestion.updateMany({
+        where: { id: { in: retryable.map((question) => question.id) } },
+        data: { scoreStatus: MockQuestionScoreStatus.QUEUED, scoreError: null },
+      });
+      await tx.mockInterview.update({
+        where: { id },
+        data: {
+          status: MockInterviewStatus.SCORING,
+          scoredAt: null,
+          averageTechnicalScore: null,
+          averageCompletenessScore: null,
+          averageClarityScore: null,
+          overallScore: null,
+          summary: null,
+          strengths: [],
+          weaknesses: [],
+          nextRecommendations: [],
+          overviewStatus: MockOverviewStatus.PENDING,
+          overviewError: null,
+        },
+      });
+
+      return retryable;
+    });
+
+    await this.enqueueScoreJobs(targets, userId, id);
+    return this.getOwned(id, userId);
+  }
+
+  private async enqueueScoreJobs(
+    questions: Array<{ sessionId: string }>,
+    userId: string,
+    mockInterviewId: string,
+  ) {
+    const results = await Promise.allSettled(
+      questions.map((question) =>
+        this.aiJobs.enqueueScore(question.sessionId, userId),
+      ),
+    );
+    const failed = results.filter((result) => result.status === 'rejected');
+    if (failed.length > 0) {
+      // Không rollback bài đã nộp: UI sẽ cho retry sau khi các câu QUEUED bị kẹt quá thời gian cho phép.
+      this.logger.error(
+        `Không thể enqueue ${failed.length}/${questions.length} job chấm điểm cho mock ${mockInterviewId}.`,
+      );
+    }
   }
 
   // Dùng bởi mock-interview-jobs. Service tìm mockInterview của user khi đã hết hạn để submit

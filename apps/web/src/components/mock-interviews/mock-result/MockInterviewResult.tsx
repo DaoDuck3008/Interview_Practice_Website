@@ -7,10 +7,15 @@ import axios from "axios";
 import { useAuthStore } from "@/stores/auth.store";
 import {
   getMockInterviewResult,
+  retryMockInterviewScoring,
   type MockInterview,
 } from "@/lib/api/mockInterviews";
 import { MOCK_INTERVIEW_STATUS_LABEL } from "@/lib/utils/mockInterview";
-import { MockResultShell, ResultGlassPanel, ResultSkeleton } from "./MockResultShell";
+import {
+  MockResultShell,
+  ResultGlassPanel,
+  ResultSkeleton,
+} from "./MockResultShell";
 import { QuestionResultsSection } from "./MockResultQuestions";
 import {
   OverviewPanel,
@@ -27,6 +32,8 @@ export default function MockInterviewResult({ id }: { id: string }) {
   const [mock, setMock] = useState<MockInterview | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [lastCheckedAt, setLastCheckedAt] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<QuestionFilter>("ALL");
 
@@ -39,6 +46,7 @@ export default function MockInterviewResult({ id }: { id: string }) {
       try {
         const data = await getMockInterviewResult(id);
         setMock(data);
+        setLastCheckedAt(Date.now());
       } catch (err) {
         const status = axios.isAxiosError(err)
           ? err.response?.status
@@ -137,6 +145,18 @@ export default function MockInterviewResult({ id }: { id: string }) {
   if (!mock) return null;
 
   const notSubmitted = mock.status === "DRAFT" || mock.status === "IN_PROGRESS";
+  const isScoringStale =
+    mock.status === "SCORING" &&
+    !!mock.updatedAt &&
+    lastCheckedAt !== null &&
+    lastCheckedAt - new Date(mock.updatedAt).getTime() >= 2 * 60 * 1000;
+  const canRetryScoring =
+    failedCount > 0 ||
+    (isScoringStale &&
+      questions.some(
+        (question) =>
+          question.scoreStatus === "QUEUED" && !question.session?.score,
+      ));
   const counts = {
     answeredCount,
     skippedCount,
@@ -144,6 +164,25 @@ export default function MockInterviewResult({ id }: { id: string }) {
     failedCount,
     pendingCount,
   };
+
+  async function handleRetryScoring() {
+    setRetrying(true);
+    setError("");
+    try {
+      const data = await retryMockInterviewScoring(mock!.id);
+      setMock(data);
+      setLastCheckedAt(Date.now());
+    } catch (err) {
+      const serverMsg = axios.isAxiosError(err)
+        ? (err.response?.data?.message as string | undefined)
+        : undefined;
+      setError(
+        serverMsg ?? "Không thể chấm lại lúc này. Vui lòng thử lại sau.",
+      );
+    } finally {
+      setRetrying(false);
+    }
+  }
 
   return (
     <MockResultShell>
@@ -167,12 +206,32 @@ export default function MockInterviewResult({ id }: { id: string }) {
             />
             Làm mới
           </button>
+          {canRetryScoring && (
+            <button
+              onClick={() => void handleRetryScoring()}
+              disabled={retrying}
+              title="Chấm lại khi có câu không được chấm"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-danger/30 bg-danger/10 px-3 text-sm font-bold text-danger backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:bg-danger/15 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <RefreshCw size={15} className={retrying ? "animate-spin" : ""} />
+              {retrying
+                ? "Đang gửi chấm lại..."
+                : failedCount > 0
+                  ? "Chấm lại câu lỗi"
+                  : "Thử chấm lại"}
+            </button>
+          )}
         </div>
 
         {notSubmitted ? (
           <NotSubmittedPanel mock={mock} />
         ) : (
           <section className="space-y-5">
+            {error && (
+              <div className="rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+                {error}
+              </div>
+            )}
             <ResultHero mock={mock} counts={counts} shouldPoll={shouldPoll} />
 
             <div className="space-y-5">
