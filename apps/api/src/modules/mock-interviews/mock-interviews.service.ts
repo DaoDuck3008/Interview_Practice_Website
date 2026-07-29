@@ -57,7 +57,7 @@ const DETAIL_INCLUDE = {
           id: true,
           content: true,
           level: true,
-          topic: { select: { id: true, name: true, slug: true } },
+          topic: { select: { id: true, name: true, slug: true, iconUrl: true } },
         },
       },
       session: {

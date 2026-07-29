@@ -369,7 +369,10 @@ export default function MockInterviewRoom({ id }: { id: string }) {
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(221,214,254,0.18),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(124,58,237,0.16),transparent_34%)]" />
               <div className="relative flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <TopicBadge mock={mock} />
+                  <TopicBadge
+                    mock={mock}
+                    questionTopic={activeQuestion.question.topic}
+                  />
                   <span className="rounded-full border border-white/15 bg-white/[0.055] px-3 py-1 text-xs font-bold text-white/75 backdrop-blur-xl">
                     Câu {activeQuestion.order}/{mock.totalQuestions}
                   </span>

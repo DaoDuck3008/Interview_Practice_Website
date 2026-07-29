@@ -36,7 +36,7 @@ export interface MockInterviewQuestion {
   answeredAt: string | null;
   skippedAt: string | null;
   question: Pick<Question, "id" | "content" | "level"> & {
-    topic?: { id: string; name: string; slug: string } | null;
+    topic?: { id: string; name: string; slug: string; iconUrl: string | null } | null;
   };
   session: {
     id: string;
