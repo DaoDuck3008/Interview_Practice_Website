@@ -161,7 +161,7 @@ export default function MockInterviewsLanding() {
                   className="min-h-[calc(2*1em)] bg-[linear-gradient(105deg,#ffffff_0%,#ddd6fe_24%,#a78bfa_56%,#c4b5fd_78%,#f5f3ff_100%)] bg-clip-text text-3xl font-black leading-tight tracking-tight text-transparent drop-shadow-[0_0_26px_rgba(124,58,237,0.28)] sm:text-4xl md:text-5xl lg:text-6xl"
                   cursorClassName="ml-1 text-[#c4b5fd]"
                 />
-                <p className="mt-4 max-w-lg text-sm leading-6 text-[#d8d6ea] sm:mt-5 sm:text-base sm:leading-7 md:text-lg">
+                <p className="mt-4 max-w-lg text-sm leading-6 text-[#d8d6ea] sm:mt-5 sm:text-white sm:leading-7 md:text-lg">
                   Chọn chủ đề, độ khó và thời lượng. Bạn trả lời từng câu bằng
                   giọng nói, sau đó nhận báo cáo tổng quan để biết nên luyện gì
                   tiếp theo.

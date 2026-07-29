@@ -1,7 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowRight, ChevronLeft, ChevronRight, RefreshCw, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+  Sparkles,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import type { MockInterview } from "@/lib/api/mockInterviews";
 import {
@@ -84,7 +90,7 @@ export default function MockHistorySection({
         />
       ) : (
         <>
-          <div className="flex flex-col items-stretch gap-3">
+          <div className="flex flex-col md:flex-row md:flex-wrap items-stretch gap-3">
             {history.map((mock, index) => {
               const targetPath = mockInterviewTargetPath(mock);
               const actionLabel = targetPath.endsWith("/result")
@@ -104,7 +110,7 @@ export default function MockHistorySection({
                   <ScoreBadge score={mock.overallScore} />
 
                   <div className="min-w-0 self-center">
-                    <h3 className="truncate text-sm font-black text-white sm:text-base">
+                    <h3 className="truncate text-sm font-black text-white">
                       {mock.title}
                     </h3>
                     <div className="mt-1.5 flex flex-wrap items-center gap-1.5 sm:gap-2">
@@ -300,7 +306,9 @@ function ScoreBadge({ score }: { score: number | null }) {
         band.backgroundClassName,
       ].join(" ")}
     >
-      <span className={`text-3xl font-black leading-none ${band.textClassName}`}>
+      <span
+        className={`text-3xl font-black leading-none ${band.textClassName}`}
+      >
         {mockInterviewScoreText(score)}
       </span>
       <span className="-mt-1 text-[10px] font-bold uppercase tracking-wide text-[#a7a3bd]">
