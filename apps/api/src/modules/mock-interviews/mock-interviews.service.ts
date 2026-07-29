@@ -3,6 +3,7 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
@@ -30,9 +31,14 @@ import {
   type MockInterviewLevelOption,
 } from './dto/create-mock-interview.dto';
 import { QueryMockInterviewDto } from './dto/query-mock-interview.dto';
+import { MockInterviewJobsService } from './mock-interview-jobs.service';
+import {
+  MOCK_ANSWER_GRACE_MS,
+  MOCK_AUTO_SUBMIT_BUFFER_MS,
+  MOCK_EXPIRED_RECOVERY_BATCH_SIZE,
+} from './mock-interview.constants';
 
 const ANSWER_LOCK_TTL_SEC = 300;
-const ANSWER_GRACE_MS = 10_000;
 
 const DETAIL_INCLUDE = {
   topic: { select: { id: true, name: true, slug: true, iconUrl: true } },
@@ -70,6 +76,8 @@ const DETAIL_INCLUDE = {
 
 @Injectable()
 export class MockInterviewsService {
+  private readonly logger = new Logger(MockInterviewsService.name);
+
   constructor(
     private prisma: PrismaService,
     private storage: StorageService,
@@ -78,6 +86,7 @@ export class MockInterviewsService {
     private aiJobs: AiJobsService,
     private cache: CacheService,
     @Inject(REDIS_CLIENT) private redis: Redis,
+    private mockInterviewJobs: MockInterviewJobsService,
   ) {}
 
   // Tạo mock interview nhiều chủ đề, chia câu hỏi gần đều giữa các chủ đề đã chọn.
@@ -238,7 +247,17 @@ export class MockInterviewsService {
       throw new ConflictException('Mock interview này không thể bắt đầu lại.');
     }
 
-    return this.getOwned(id, userId);
+    const startedMock = await this.getOwned(id, userId);
+    try {
+      // Tạo sau khi DRAFT -> IN_PROGRESS đã commit; recovery scheduler sẽ bù nếu Redis đang lỗi.
+      await this.mockInterviewJobs.enqueueAutoSubmit(id, userId, expiresAt);
+    } catch (err) {
+      this.logger.error(
+        `Không thể tạo delayed job tự nộp mock ${id}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
+    return startedMock;
   }
 
   // Trả lời 1 câu hỏi trong mock interview, chỉ upload  audio và transcript, chưa chấm điểm.
@@ -486,6 +505,60 @@ export class MockInterviewsService {
     return this.getOwned(id, userId);
   }
 
+  // Dùng bởi mock-interview-jobs. Service tìm mockInterview của user khi đã hết hạn để submit
+  async autoSubmitExpired(id: string, userId: string) {
+    const mock = await this.prisma.mockInterview.findFirst({
+      where: { id, userId },
+      select: { id: true, userId: true, status: true, expiresAt: true },
+    });
+    if (
+      !mock ||
+      mock.status !== MockInterviewStatus.IN_PROGRESS ||
+      !mock.expiresAt
+    ) {
+      this.logger.debug(
+        `Bỏ qua auto-submit mock ${id}: không còn ở trạng thái IN_PROGRESS.`,
+      );
+      return;
+    }
+
+    const autoSubmitAt =
+      mock.expiresAt.getTime() +
+      MOCK_ANSWER_GRACE_MS +
+      MOCK_AUTO_SUBMIT_BUFFER_MS;
+    // Phòng thủ nếu delayed job bị chạy sớm; job hợp lệ chỉ được chốt sau grace window.
+    if (Date.now() < autoSubmitAt) {
+      this.logger.debug(`Bỏ qua auto-submit mock ${id}: chưa hết grace window.`);
+      return;
+    }
+
+    this.logger.log(`Bắt đầu tự nộp mock interview ${id} đã hết thời gian.`);
+    await this.submit(mock.id, mock.userId);
+    this.logger.log(`Đã tự nộp mock interview ${id}.`);
+  }
+
+  //Dùng bởi mock-interview-jobs. Service tìm tất cả mockInterview đã hết hạn nhưng status vẫn là IN_PROGRESS để mocck-interview-job xử lý.
+  async findExpiredForAutoSubmit(): Promise<
+    Array<{ id: string; userId: string; expiresAt: Date }>
+  > {
+    // Chỉ lấy một batch để recovery không tạo tải đột biến khi hệ thống vừa hoạt động lại.
+    const mocks = await this.prisma.mockInterview.findMany({
+      where: {
+        status: MockInterviewStatus.IN_PROGRESS,
+        expiresAt: { not: null, lte: new Date() },
+      },
+      select: { id: true, userId: true, expiresAt: true },
+      orderBy: { expiresAt: 'asc' },
+      take: MOCK_EXPIRED_RECOVERY_BATCH_SIZE,
+    });
+
+    return mocks.flatMap((mock) =>
+      mock.expiresAt
+        ? [{ id: mock.id, userId: mock.userId, expiresAt: mock.expiresAt }]
+        : [],
+    );
+  }
+
   // Hàm kiểm tra quyền sở hữu và trạng thái mock interview trước khi trả lời câu hỏi.
   // Dùng trong hàm answer().
   private assertCanAnswer(mock: {
@@ -500,7 +573,7 @@ export class MockInterviewsService {
     if (!mock.expiresAt) {
       throw new ConflictException('Mock interview chưa có thời gian kết thúc.');
     }
-    if (Date.now() > mock.expiresAt.getTime() + ANSWER_GRACE_MS) {
+    if (Date.now() > mock.expiresAt.getTime() + MOCK_ANSWER_GRACE_MS) {
       throw new ConflictException('Đã hết thời gian, vui lòng nộp bài.');
     }
   }
