@@ -93,7 +93,12 @@ export class AuditInterceptor implements NestInterceptor {
       userAgent: request.headers['user-agent'] ?? null,
       before: this.audit.sanitize(context.before),
       // after chỉ lấy từ response khi handler thành công; request lỗi thì chỉ ghi errorCode.
-      after: success ? this.audit.sanitize(context.response) : undefined,
+      // Một số màn admin cần audit hành động xem dữ liệu nhạy cảm, nhưng không được copy
+      // transcript/audio vào AuditLog. Vẫn giữ actor, entity, URL và metadata để truy vết.
+      after:
+        success && !metadata.omitResponse
+          ? this.audit.sanitize(context.response)
+          : undefined,
       metadata: this.audit.sanitize(baseMetadata),
       success,
       errorCode: success ? null : this.errorCode(context.error),

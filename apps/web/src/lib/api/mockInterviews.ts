@@ -172,3 +172,87 @@ export async function getMockInterviewResult(
   );
   return res.data.data;
 }
+
+// ─── Admin: quản lý Mock test ───────────────────────────────────────────────
+
+export type AdminMockInterviewAttention = "all" | "failed" | "stale";
+
+export interface AdminMockInterviewQuery {
+  search?: string;
+  topicId?: string;
+  level?: Level;
+  status?: MockInterviewStatus;
+  attention?: AdminMockInterviewAttention;
+  order?: "asc" | "desc";
+  page?: number;
+  limit?: number;
+}
+
+export interface AdminMockInterviewListItem {
+  id: string;
+  title: string;
+  status: MockInterviewStatus;
+  level: Level | null;
+  totalQuestions: number;
+  durationSeconds: number;
+  submittedAt: string | null;
+  scoredAt: string | null;
+  overallScore: number | null;
+  createdAt: string;
+  updatedAt: string;
+  user: { id: string; name: string; email: string };
+  topics: Topic[];
+  answeredQuestions: number;
+  failedQuestions: number;
+  queuedQuestions: number;
+}
+
+export interface AdminMockInterviewStats {
+  total: number;
+  inProgress: number;
+  scoring: number;
+  attention: number;
+}
+
+export interface AdminMockInterviewDetail extends MockInterview {
+  userId: string;
+  user: { id: string; name: string; email: string };
+  updatedAt: string;
+  lastScoringRetryAt: string | null;
+  questions: MockInterviewQuestion[];
+}
+
+export async function getMockInterviewsAdmin(
+  query: AdminMockInterviewQuery = {},
+): Promise<Paginated<AdminMockInterviewListItem>> {
+  const res = await api.get<ApiResponse<Paginated<AdminMockInterviewListItem>>>(
+    "/mock-interviews/admin",
+    { params: query },
+  );
+  return res.data.data;
+}
+
+export async function getMockInterviewAdminStats(): Promise<AdminMockInterviewStats> {
+  const res = await api.get<ApiResponse<AdminMockInterviewStats>>(
+    "/mock-interviews/admin/stats",
+  );
+  return res.data.data;
+}
+
+export async function getMockInterviewAdminDetail(
+  id: string,
+): Promise<AdminMockInterviewDetail> {
+  const res = await api.get<ApiResponse<AdminMockInterviewDetail>>(
+    `/mock-interviews/admin/${id}`,
+  );
+  return res.data.data;
+}
+
+export async function retryMockInterviewScoringAdmin(
+  id: string,
+): Promise<AdminMockInterviewDetail> {
+  const res = await api.post<ApiResponse<AdminMockInterviewDetail>>(
+    `/mock-interviews/admin/${id}/retry-scoring`,
+  );
+  return res.data.data;
+}

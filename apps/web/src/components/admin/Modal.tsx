@@ -30,7 +30,7 @@ export default function Modal({ open, onClose, title, children }: Props) {
         onMouseDown={onClose}
       >
         <div
-          className="w-full max-w-xl rounded-2xl bg-[#0d0d14] border border-[#1c1c28] overflow-hidden"
+          className="w-full max-w-2xl rounded-2xl bg-[#0d0d14] border border-[#1c1c28] overflow-hidden"
           style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }}
           onMouseDown={(e) => e.stopPropagation()}
         >

@@ -26,6 +26,8 @@ export type AuditMetadata = {
   entityId?: AuditValueResolver<string>;
   targetUserId?: AuditValueResolver<string>;
   metadata?: AuditValueResolver<Record<string, unknown>>;
+  /** Không lưu body response khi response có dữ liệu nhạy cảm như transcript/audio. */
+  omitResponse?: boolean;
 };
 
 export type AuditLogInput = {

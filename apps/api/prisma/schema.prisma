@@ -79,6 +79,9 @@ enum AuditAction {
   SCORE_REVIEW
   SCORE_MANUAL_RESCORE
   SESSION_ADMIN_VIEW_DETAIL
+
+  MOCK_INTERVIEW_ADMIN_VIEW_DETAIL
+  MOCK_INTERVIEW_ADMIN_RETRY_SCORING
 }
 
 enum MockInterviewStatus {
@@ -252,6 +255,8 @@ model MockInterview {
 
   @@index([userId, createdAt])
   @@index([userId, status])
+  @@index([status, createdAt]) // admin: danh sách mock toàn hệ thống theo trạng thái và thời gian tạo
+  @@index([status, updatedAt]) // admin: phát hiện các bài SCORING bị kẹt theo thời điểm cập nhật
 }
 
 model MockInterviewQuestion {
@@ -277,6 +282,7 @@ model MockInterviewQuestion {
   @@unique([mockInterviewId, questionId])
   @@unique([mockInterviewId, order])
   @@index([mockInterviewId, order])
+  @@index([scoreStatus, mockInterviewId]) // admin: lọc nhanh các mock có câu chấm lỗi/chờ lâu
 }
 
 model MockInterviewTopic {

@@ -31,6 +31,10 @@ import {
   type MockInterviewLevelOption,
 } from './dto/create-mock-interview.dto';
 import { QueryMockInterviewDto } from './dto/query-mock-interview.dto';
+import {
+  QueryAdminMockInterviewDto,
+  type MockInterviewAttentionFilter,
+} from './dto/query-admin-mock-interview.dto';
 import { MockInterviewJobsService } from './mock-interview-jobs.service';
 import {
   MOCK_ANSWER_GRACE_MS,
@@ -203,6 +207,108 @@ export class MockInterviewsService {
       limit,
       totalPages: Math.ceil(total / limit) || 1,
     };
+  }
+
+  /** Admin: liệt kê mock interview của mọi user, ưu tiên tìm các bài chấm AI cần can thiệp. */
+  async findAllAdmin(query: QueryAdminMockInterviewDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const staleAt = new Date(Date.now() - MOCK_SCORING_STALE_MS);
+    const where = this.buildAdminWhere(query, staleAt);
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.mockInterview.findMany({
+        where,
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          level: true,
+          totalQuestions: true,
+          durationSeconds: true,
+          submittedAt: true,
+          scoredAt: true,
+          overallScore: true,
+          createdAt: true,
+          updatedAt: true,
+          user: { select: { id: true, name: true, email: true } },
+          topicLinks: {
+            orderBy: { order: 'asc' },
+            select: {
+              topic: { select: { id: true, name: true, slug: true, iconUrl: true } },
+            },
+          },
+          questions: {
+            select: { answerStatus: true, scoreStatus: true },
+          },
+        },
+        orderBy: { createdAt: query.order ?? 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.mockInterview.count({ where }),
+    ]);
+
+    return {
+      items: items.map(({ questions, topicLinks, ...mock }) => ({
+        ...mock,
+        topics: topicLinks.map((link) => link.topic),
+        answeredQuestions: questions.filter(
+          (question) => question.answerStatus === MockQuestionAnswerStatus.ANSWERED,
+        ).length,
+        failedQuestions: questions.filter(
+          (question) => question.scoreStatus === MockQuestionScoreStatus.FAILED,
+        ).length,
+        queuedQuestions: questions.filter(
+          (question) => question.scoreStatus === MockQuestionScoreStatus.QUEUED,
+        ).length,
+      })),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 1,
+    };
+  }
+
+  /** Bốn chỉ số gọn cho trang admin; “cần xử lý” gồm lỗi AI hoặc job SCORING quá lâu. */
+  async getAdminStats() {
+    const staleAt = new Date(Date.now() - MOCK_SCORING_STALE_MS);
+    const [total, inProgress, scoring, attention] = await Promise.all([
+      this.prisma.mockInterview.count(),
+      this.prisma.mockInterview.count({
+        where: { status: MockInterviewStatus.IN_PROGRESS },
+      }),
+      this.prisma.mockInterview.count({
+        where: {
+          status: { in: [MockInterviewStatus.SUBMITTED, MockInterviewStatus.SCORING] },
+        },
+      }),
+      this.prisma.mockInterview.count({
+        where: {
+          OR: [
+            { questions: { some: { scoreStatus: MockQuestionScoreStatus.FAILED } } },
+            {
+              status: MockInterviewStatus.SCORING,
+              updatedAt: { lte: staleAt },
+            },
+          ],
+        },
+      }),
+    ]);
+    return { total, inProgress, scoring, attention };
+  }
+
+  /** Admin: xem toàn bộ nội dung bài làm để đối chiếu lỗi chấm AI, gồm transcript và audio. */
+  async getAdminDetail(id: string) {
+    const mock = await this.prisma.mockInterview.findUnique({
+      where: { id },
+      include: {
+        ...DETAIL_INCLUDE,
+        user: { select: { id: true, name: true, email: true } },
+      },
+    });
+    if (!mock) throw new NotFoundException('Mock interview không tồn tại.');
+    return this.toMockResponse(mock);
   }
 
   // Hàm kiểm tra quyền sở hữu và trả về mock interview chi tiết
@@ -537,13 +643,27 @@ export class MockInterviewsService {
 
   // Retry chỉ dành cho bài đã nộp nhưng chưa có kết quả do job lỗi hoặc bị kẹt; không chấm lại câu đã có điểm.
   async retryScoring(id: string, userId: string) {
+    const ownerId = await this.retryScoringTargets(id, userId);
+    await this.enqueueScoreJobs(ownerId.targets, ownerId.userId, id);
+    return this.getOwned(id, userId);
+  }
+
+  /** Admin dùng cùng điều kiện retry với user, không bypass cooldown hay chấm lại câu đã có điểm. */
+  async retryScoringAdmin(id: string) {
+    const ownerId = await this.retryScoringTargets(id);
+    await this.enqueueScoreJobs(ownerId.targets, ownerId.userId, id);
+    return this.getAdminDetail(id);
+  }
+
+  private async retryScoringTargets(id: string, userId?: string) {
     const now = new Date();
-    const targets = await this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       await lockAdvisoryKey(tx, this.mockAdvisoryLockKey(id));
 
       const mock = await tx.mockInterview.findFirst({
-        where: { id, userId },
+        where: { id, ...(userId && { userId }) },
         select: {
+          userId: true,
           status: true,
           submittedAt: true,
           updatedAt: true,
@@ -634,11 +754,47 @@ export class MockInterviewsService {
         },
       });
 
-      return retryable;
+      return { targets: retryable, userId: mock.userId };
     });
+    return result;
+  }
 
-    await this.enqueueScoreJobs(targets, userId, id);
-    return this.getOwned(id, userId);
+  private buildAdminWhere(
+    query: QueryAdminMockInterviewDto,
+    staleAt: Date,
+  ): Prisma.MockInterviewWhereInput {
+    const attention: Record<
+      Exclude<MockInterviewAttentionFilter, 'all'>,
+      Prisma.MockInterviewWhereInput
+    > = {
+      failed: {
+        questions: {
+          some: { scoreStatus: MockQuestionScoreStatus.FAILED },
+        },
+      },
+      stale: {
+        status: MockInterviewStatus.SCORING,
+        updatedAt: { lte: staleAt },
+      },
+    };
+
+    return {
+      ...(query.search && {
+        user: {
+          OR: [
+            { name: { contains: query.search, mode: 'insensitive' } },
+            { email: { contains: query.search, mode: 'insensitive' } },
+          ],
+        },
+      }),
+      ...(query.topicId && {
+        topicLinks: { some: { topicId: query.topicId } },
+      }),
+      ...(query.level && { level: query.level }),
+      ...(query.status && { status: query.status }),
+      ...(query.attention &&
+        query.attention !== 'all' && attention[query.attention]),
+    };
   }
 
   private async enqueueScoreJobs(

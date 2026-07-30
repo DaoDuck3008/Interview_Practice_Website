@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  ClipboardCheck,
 } from "lucide-react";
 
 interface LinkNavItem {
@@ -66,6 +67,14 @@ const NAV: NavItem[] = [
     exact: false,
   },
   { href: "/admin/payments", label: "Giao dịch", icon: Wallet, exact: false },
+  {
+    label: "Mock test",
+    icon: ClipboardCheck,
+    children: [
+      { href: "/admin/mock-interviews", label: "Mock phỏng vấn" },
+      { href: "/admin/mock-cv", label: "Mock CV" },
+    ],
+  },
   {
     href: "/admin/audit-logs",
     label: "Audit log",
