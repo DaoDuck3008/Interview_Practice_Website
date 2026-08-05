@@ -110,7 +110,11 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
     try {
       const session = await this.prisma.session.findUnique({
         where: { id: sessionId },
-        include: { question: true, mockInterviewQuestion: true },
+        include: {
+          question: true,
+          mockInterviewQuestion: true,
+          mockCvInterviewQuestion: true,
+        },
       });
       // Session có thể đã bị xóa (vd điểm 0 ở lần thử trước) — báo lỗi thay vì
       // im lặng, để frontend không phải đợi hết JOB_WAIT_TIMEOUT_MS mới biết.
@@ -141,11 +145,20 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
         return;
       }
 
+      // Session luyện tập thường lấy đáp án từ Question; câu AI của Mock CV chỉ
+      // có snapshot trong MockCvInterviewQuestion để không làm bẩn question bank.
+      const question = session.question ?? session.mockCvInterviewQuestion;
+      if (!question) {
+        throw new NotFoundException(
+          'Không tìm thấy dữ liệu câu hỏi dùng để chấm Session.',
+        );
+      }
+
       const result = session.transcript.trim()
         ? await this.scoring.score(session.transcript, {
-            content: session.question.content,
-            answerKeySummary: session.question.answerKeySummary,
-            answerKeywords: session.question.answerKeywords,
+            content: question.content,
+            answerKeySummary: question.answerKeySummary,
+            answerKeywords: question.answerKeywords,
           })
         : {
             technicalScore: 0,
@@ -153,7 +166,7 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
             clarityScore: 0,
             overallScore: 0,
             matchedKeywords: [],
-            missedKeywords: session.question.answerKeywords,
+            missedKeywords: question.answerKeywords,
             feedback: {
               summary:
                 'Mình chưa nghe được câu trả lời nào. Bạn thử ghi âm lại và trả lời câu hỏi nhé!',
@@ -168,7 +181,8 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
           result.completenessScore +
           result.clarityScore ===
           0 &&
-        !session.mockInterviewQuestion
+        !session.mockInterviewQuestion &&
+        !session.mockCvInterviewQuestion
       ) {
         await deleteSessionAndAudio(
           this.prisma,
@@ -195,7 +209,11 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
     try {
       const session = await this.prisma.session.findUnique({
         where: { id: sessionId },
-        include: { question: true, score: true },
+        include: {
+          question: true,
+          score: true,
+          mockCvInterviewQuestion: true,
+        },
       });
       if (!session || !session.score) {
         this.emitFailure(
@@ -221,12 +239,20 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
         return;
       }
 
+      // Improvement phải dùng cùng snapshot câu hỏi đã dùng khi chấm điểm.
+      const question = session.question ?? session.mockCvInterviewQuestion;
+      if (!question) {
+        throw new NotFoundException(
+          'Không tìm thấy dữ liệu câu hỏi dùng để cải thiện câu trả lời.',
+        );
+      }
+
       const result = await this.improvement.improve(
         session.transcript,
         {
-          content: session.question.content,
-          answerKeySummary: session.question.answerKeySummary,
-          answerKeywords: session.question.answerKeywords,
+          content: question.content,
+          answerKeySummary: question.answerKeySummary,
+          answerKeywords: question.answerKeywords,
         },
         {
           technicalScore: session.score.technicalScore,

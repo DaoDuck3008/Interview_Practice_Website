@@ -18,6 +18,7 @@ export const validationSchema = Joi.object({
   R2_ACCESS_KEY_ID: Joi.string().required(),
   R2_SECRET_ACCESS_KEY: Joi.string().required(),
   R2_BUCKET_NAME: Joi.string().required(),
+  R2_PRIVATE_BUCKET_NAME: Joi.string().required(),
   R2_PUBLIC_URL: Joi.string().required(),
   GROQ_API_KEY: Joi.string().required(),
   GROQ_TRANSCRIPTION_MODEL: Joi.string().default('whisper-large-v3-turbo'),
@@ -53,6 +54,7 @@ export default () => ({
     accessKeyId: process.env.R2_ACCESS_KEY_ID,
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
     bucketName: process.env.R2_BUCKET_NAME,
+    privateBucketName: process.env.R2_PRIVATE_BUCKET_NAME,
     publicUrl: process.env.R2_PUBLIC_URL,
   },
   groq: {

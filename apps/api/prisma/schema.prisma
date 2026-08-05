@@ -129,6 +129,19 @@ enum MockCvAnalysisStatus {
   FAILED
 }
 
+enum MockCvQuestionGenerationStatus {
+  PENDING
+  GENERATING
+  READY
+  FAILED
+}
+
+enum MockCvReadiness {
+  NOT_READY
+  NEEDS_PRACTICE
+  READY
+}
+
 enum MockCvExtractionQuality {
   HIGH
   MEDIUM
@@ -166,34 +179,34 @@ enum UsageStatus {
 // ─── Models ──────────────────────────────────────────
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String? //  null nếu tài khoản đăng nhập bằng Google (không có mật khẩu)
-  name         String
-  role         Role     @default(USER)
-  emailVerified Boolean @default(false) // true sau khi xác thực email qua mã 6 số; Google = true sẵn
-  isLock       Boolean  @default(false) // true = admin khóa tài khoản, chặn đăng nhập
-  googleId     String?  @unique // Google "sub" — gắn khi đăng nhập bằng Google
-  avatarUrl    String? //         Ảnh đại diện (lấy từ Google "picture")
-  createdAt    DateTime @default(now())
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String? //  null nếu tài khoản đăng nhập bằng Google (không có mật khẩu)
+  name          String
+  role          Role     @default(USER)
+  emailVerified Boolean  @default(false) // true sau khi xác thực email qua mã 6 số; Google = true sẵn
+  isLock        Boolean  @default(false) // true = admin khóa tài khoản, chặn đăng nhập
+  googleId      String?  @unique // Google "sub" — gắn khi đăng nhập bằng Google
+  avatarUrl     String? //         Ảnh đại diện (lấy từ Google "picture")
+  createdAt     DateTime @default(now())
 
-  sessions        Session[]
-  subscription    Subscription? // 1–1: mỗi user tối đa 1 subscription
-  orders          Order[]
-  grantedOrders   Order[]          @relation("OrderGrantedBy") // các đơn admin này cấp thủ công
-  usageLogs       UsageLog[]
-  reviewedScores  Score[]          @relation("ScoreReviewedBy") // các Score admin này đã review/chấm lại thủ công
-  supportMessages SupportMessage[] // hội thoại hỗ trợ (1 thread liên tục / user, cả tin user gửi lẫn admin trả lời)
-  favorites       Favorite[]
-  mockInterviews  MockInterview[]
-  mockCvs         MockCv[]
+  sessions         Session[]
+  subscription     Subscription? // 1–1: mỗi user tối đa 1 subscription
+  orders           Order[]
+  grantedOrders    Order[]           @relation("OrderGrantedBy") // các đơn admin này cấp thủ công
+  usageLogs        UsageLog[]
+  reviewedScores   Score[]           @relation("ScoreReviewedBy") // các Score admin này đã review/chấm lại thủ công
+  supportMessages  SupportMessage[] // hội thoại hỗ trợ (1 thread liên tục / user, cả tin user gửi lẫn admin trả lời)
+  favorites        Favorite[]
+  mockInterviews   MockInterview[]
+  mockCvs          MockCv[]
   mockCvInterviews MockCvInterview[]
 }
 
 model Topic {
   id       String  @id @default(uuid())
   slug     String  @unique // vd: "javascript", "nodejs", "react"
-  name     String  //         vd: "JavaScript", "Node.js", "React"
+  name     String //         vd: "JavaScript", "Node.js", "React"
   iconUrl  String? // URL ảnh icon trên Cloudflare R2 (chỉ có ở child topic)
   parentId String? // null = parent topic (nhóm); non-null = child topic
 
@@ -202,8 +215,8 @@ model Topic {
   parent   Topic?  @relation("TopicHierarchy", fields: [parentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   children Topic[] @relation("TopicHierarchy")
 
-  questions Question[]
-  mockInterviews MockInterview[]
+  questions           Question[]
+  mockInterviews      MockInterview[]
   mockInterviewTopics MockInterviewTopic[]
 }
 
@@ -213,30 +226,31 @@ model Question {
   topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   content          String // Nội dung câu hỏi
-  detailAnswerKey  String @default("") // Đáp án chi tiết (markdown)
+  detailAnswerKey  String   @default("") // Đáp án chi tiết (markdown)
   answerKeySummary String // Đáp án chuẩn tóm tắt
   answerKeywords   String[] // Các từ khóa cần đề cập
 
   level      Level
-  isActive   Boolean @default(true)
-  isFeatured Boolean @default(false)
+  isActive   Boolean  @default(true)
+  isFeatured Boolean  @default(false)
   createdAt  DateTime @default(now())
 
-  sessions  Session[]
-  favorites Favorite[]
+  sessions               Session[]
+  favorites              Favorite[]
   mockInterviewQuestions MockInterviewQuestion[]
-  mockCvQuestions MockCvQuestion[] @relation("MockCvQuestionBank")
+  mockCvQuestions        MockCvQuestion[]        @relation("MockCvQuestionBank")
 
   @@index([isActive, topicId]) // browse/random/admin-list: luôn lọc isActive, thường kèm topicId
   @@index([isActive, createdAt]) // public latest questions
 }
 
 model Session {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  questionId String
-  question   Question @relation(fields: [questionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  // Null với câu do AI sinh trong Mock CV; dữ liệu chấm khi đó lấy từ snapshot MockCvInterviewQuestion.
+  questionId String?
+  question   Question? @relation(fields: [questionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   audioUrl   String // URL file audio trên Cloudflare R2
   transcript String // Transcript từ Groq Whisper
@@ -244,9 +258,9 @@ model Session {
 
   createdAt DateTime @default(now())
 
-  score       Score?
-  improvement Improvement?
-  mockInterviewQuestion MockInterviewQuestion?
+  score                   Score?
+  improvement             Improvement?
+  mockInterviewQuestion   MockInterviewQuestion?
   mockCvInterviewQuestion MockCvInterviewQuestion?
 
   @@index([userId, createdAt]) // dashboard: thống kê/lịch sử/heatmap theo user + thời gian
@@ -263,16 +277,16 @@ model MockInterview {
 
   title   String
   topicId String?
-  topic   Topic? @relation(fields: [topicId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  topic   Topic?  @relation(fields: [topicId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   level           Level?
   totalQuestions  Int
   durationSeconds Int
 
-  startedAt   DateTime?
-  expiresAt   DateTime?
-  submittedAt DateTime?
-  scoredAt    DateTime?
+  startedAt          DateTime?
+  expiresAt          DateTime?
+  submittedAt        DateTime?
+  scoredAt           DateTime?
   lastScoringRetryAt DateTime?
 
   averageTechnicalScore    Float?
@@ -291,7 +305,7 @@ model MockInterview {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  questions MockInterviewQuestion[]
+  questions  MockInterviewQuestion[]
   topicLinks MockInterviewTopic[]
 
   @@index([userId, createdAt])
@@ -301,7 +315,7 @@ model MockInterview {
 }
 
 model MockInterviewQuestion {
-  id              String @id @default(uuid())
+  id              String        @id @default(uuid())
   mockInterviewId String
   mockInterview   MockInterview @relation(fields: [mockInterviewId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
@@ -333,7 +347,7 @@ model MockInterviewTopic {
   mockInterview   MockInterview @relation(fields: [mockInterviewId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   topicId String
-  topic   Topic @relation(fields: [topicId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   order Int
 
@@ -374,12 +388,24 @@ model MockCvAnalysis {
   mockCvId String @unique
   mockCv   MockCv @relation(fields: [mockCvId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-  status            MockCvAnalysisStatus @default(PENDING)
+  status            MockCvAnalysisStatus     @default(PENDING)
   extractionQuality MockCvExtractionQuality?
-  detectedDomains   MockCvDomain[] @default([])
+  detectedDomains   MockCvDomain[]           @default([])
   eligibilityReason String?
   analysisError     String?
   lastRetryAt       DateTime?
+  analysisAttempt   Int                      @default(0)
+  analysisStartedAt DateTime?
+
+  questionGenerationStatus    MockCvQuestionGenerationStatus @default(PENDING)
+  questionGenerationAttempt   Int                            @default(0)
+  questionGenerationStartedAt DateTime?
+  questionGeneratedAt         DateTime?
+  questionGenerationError     String?
+  questionPromptVersion       String?
+  requestedQuestionCount      Int?
+  selectedBankQuestionCount   Int?
+  generatedQuestionCount      Int?
 
   // Chỉ có giá trị khi status = READY; mảng rỗng giúp lưu được row PENDING/FAILED an toàn.
   summary             String?
@@ -396,6 +422,7 @@ model MockCvAnalysis {
   updatedAt           DateTime @updatedAt
 
   @@index([status, updatedAt])
+  @@index([questionGenerationStatus, updatedAt])
 }
 
 // Bộ câu hỏi đã chuẩn bị cho một CV. Nội dung là snapshot để câu từ bank không đổi khi admin sửa Question.
@@ -437,23 +464,26 @@ model MockCvInterview {
   totalQuestions  Int
   durationSeconds Int
 
-  startedAt           DateTime?
-  expiresAt           DateTime?
-  submittedAt         DateTime?
-  scoredAt            DateTime?
-  lastScoringRetryAt  DateTime?
+  startedAt          DateTime?
+  expiresAt          DateTime?
+  submittedAt        DateTime?
+  scoredAt           DateTime?
+  lastScoringRetryAt DateTime?
 
   averageTechnicalScore    Float?
   averageCompletenessScore Float?
   averageClarityScore      Float?
   overallScore             Float?
 
-  summary             String?
-  strengths           String[] @default([])
-  weaknesses          String[] @default([])
-  nextRecommendations String[] @default([])
-  overviewStatus      MockOverviewStatus @default(PENDING)
-  overviewError       String?
+  summary                 String?
+  strengths               String[]           @default([])
+  weaknesses              String[]           @default([])
+  nextRecommendations     String[]           @default([])
+  overviewStatus          MockOverviewStatus @default(PENDING)
+  overviewError           String?
+  readiness               MockCvReadiness?
+  claimsToPrepareEvidence String[]           @default([])
+  overviewPromptVersion   String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -467,13 +497,13 @@ model MockCvInterview {
 
 // Snapshot câu hỏi cho từng lần phỏng vấn để việc tạo lại một interview không làm ghi đè lịch sử.
 model MockCvInterviewQuestion {
-  id                 String @id @default(uuid())
-  mockCvInterviewId  String
-  mockCvInterview    MockCvInterview @relation(fields: [mockCvInterviewId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  mockCvQuestionId   String?
-  mockCvQuestion     MockCvQuestion? @relation(fields: [mockCvQuestionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  sessionId          String? @unique
-  session            Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  id                String          @id @default(uuid())
+  mockCvInterviewId String
+  mockCvInterview   MockCvInterview @relation(fields: [mockCvInterviewId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  mockCvQuestionId  String?
+  mockCvQuestion    MockCvQuestion? @relation(fields: [mockCvQuestionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  sessionId         String?         @unique
+  session           Session?        @relation(fields: [sessionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   order     Int
   source    MockCvQuestionSource
@@ -483,7 +513,7 @@ model MockCvInterviewQuestion {
   answerKeySummary String
   answerKeywords   String[]
   answerStatus     MockQuestionAnswerStatus @default(PENDING)
-  scoreStatus      MockQuestionScoreStatus @default(PENDING)
+  scoreStatus      MockQuestionScoreStatus  @default(PENDING)
   scoreError       String?
   answeredAt       DateTime?
   skippedAt        DateTime?
@@ -508,18 +538,18 @@ model Score {
   matchedKeywords String[] // Keyword đã nhận diện (đã chuẩn hóa, tính cả fuzzy STT)
   missedKeywords  String[] // Keyword chưa đề cập
 
-  summary      String   // Nhận xét tóm tắt (1 câu) bằng tiếng Việt
+  summary      String // Nhận xét tóm tắt (1 câu) bằng tiếng Việt
   improvements String[] // Các gợi ý cải thiện cụ thể
 
   promptVersion String? // Version của SCORING_PROMPT tại thời điểm chấm — trace khi đổi prompt/model. Null = tạo trước khi có tính năng này.
 
   flaggedAt      DateTime? // User báo điểm chấm sai lúc nào — null = chưa bị báo cáo
-  flagReason     String?   // Lý do user ghi khi báo cáo (tùy chọn)
+  flagReason     String? // Lý do user ghi khi báo cáo (tùy chọn)
   flagResolvedAt DateTime? // Admin xử lý xong report lúc nào — null = đang chờ (chỉ có ý nghĩa khi flaggedAt khác null)
-  adminNote      String?   // Ghi chú nội bộ của admin khi xem xét report
+  adminNote      String? // Ghi chú nội bộ của admin khi xem xét report
 
   manuallyEditedAt DateTime? // Lúc admin ghi đè điểm/nhận xét thủ công — null = điểm gốc từ AI
-  reviewedById     String?   // Admin thao tác review/rescore gần nhất
+  reviewedById     String? // Admin thao tác review/rescore gần nhất
   reviewedBy       User?     @relation("ScoreReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   createdAt DateTime @default(now())
@@ -533,8 +563,8 @@ model Improvement {
   // Cascade: cùng lý do với Score — Improvement chỉ có ý nghĩa gắn liền với Session gốc.
   session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-  improvedAnswer String   // Bản câu trả lời đã được DeepSeek viết lại tốt hơn
-  annotations    Json     // Annotation[]: { originalSegment, issue, suggestion }
+  improvedAnswer String // Bản câu trả lời đã được DeepSeek viết lại tốt hơn
+  annotations    Json // Annotation[]: { originalSegment, issue, suggestion }
   keyChanges     String[] // Các thay đổi quan trọng, tóm tắt ngắn gọn
 
   promptVersion String? // Version của IMPROVEMENT_PROMPT tại thời điểm tạo — trace khi đổi prompt/model. Null = tạo trước khi có tính năng này.
@@ -543,18 +573,18 @@ model Improvement {
 }
 
 model Plan {
-  id             String  @id @default(uuid())
-  slug           String  @unique // "pro-1m", "pro-3m"
-  name           String
-  description    String?
+  id           String  @id @default(uuid())
+  slug         String  @unique // "pro-1m", "pro-3m"
+  name         String
+  description  String?
   priceVnd     Int //                VND, số nguyên
   durationDays Int //                kỳ hạn tính theo ngày: 7 / 30 / 90 (cộng vào expiresAt khi kích hoạt)
 
   // ── Limits/quota (cột có kiểu + JSON dự phòng) ──
-  isUnlimited       Boolean @default(false) // true = không giới hạn lượt
-  dailyScoreLimit   Int? //                    null = không giới hạn theo ngày
-  weeklyScoreLimit  Int? //                    null = không giới hạn theo tuần
-  limits            Json? //                   mở rộng các limit khác sau này
+  isUnlimited      Boolean @default(false) // true = không giới hạn lượt
+  dailyScoreLimit  Int? //                    null = không giới hạn theo ngày
+  weeklyScoreLimit Int? //                    null = không giới hạn theo tuần
+  limits           Json? //                   mở rộng các limit khác sau này
 
   isActive  Boolean  @default(true)
   sortOrder Int      @default(0) // thứ tự hiển thị ở trang Pricing
@@ -608,15 +638,15 @@ model Order {
   grantedById String? //          admin thực hiện cấp tay (null nếu đơn mua thường)
   grantedBy   User?   @relation("OrderGrantedBy", fields: [grantedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
-  transferCode  String  @unique // mã nhúng trong nội dung VietQR để khớp webhook (alphanumeric, ngắn)
-  providerTxnId String? @unique // id giao dịch Sepay — idempotency khi webhook lặp
+  transferCode  String    @unique // mã nhúng trong nội dung VietQR để khớp webhook (alphanumeric, ngắn)
+  providerTxnId String?   @unique // id giao dịch Sepay — idempotency khi webhook lặp
   paidAt        DateTime?
   rawPayload    Json? //           payload webhook để đối soát/tra cứu
 
   expiresAt DateTime //            hạn hiệu lực QR/đơn (vd now + 15–30 phút)
   periodEnd DateTime? //           ngày hết hạn subscription mà đơn này tạo ra (snapshot lúc kích hoạt)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@index([userId])
   @@index([status, expiresAt]) // cron dọn đơn PENDING hết hạn; cũng phục vụ lọc riêng theo status
@@ -634,7 +664,7 @@ model UsageLog {
   // PENDING giữ chỗ quota trước khi gọi dịch vụ tốn phí; reservation hết hạn sẽ không còn được tính.
   status    UsageStatus @default(CONSUMED)
   expiresAt DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime    @default(now())
 
   @@index([userId, createdAt]) // COUNT lượt dùng theo kỳ (ngày/tháng)
   @@index([userId, status, expiresAt])

@@ -240,14 +240,20 @@ export class QuestionsService {
       async () => {
         const groups = await this.prisma.session.groupBy({
           by: ['questionId'],
+          // Lọc bỏ các session không có questionId (ví dụ session của mock interview, mock cv, ...)
+          where: { questionId: { not: null } },
           _count: { questionId: true },
           orderBy: { _count: { questionId: 'desc' } },
           take: limit,
         });
-        if (groups.length === 0) return [];
+        const bankGroups = groups.filter(
+          (group): group is typeof group & { questionId: string } =>
+            group.questionId !== null,
+        );
+        if (bankGroups.length === 0) return [];
 
         const questions = await this.prisma.question.findMany({
-          where: { id: { in: groups.map((g) => g.questionId) } },
+          where: { id: { in: bankGroups.map((g) => g.questionId) } },
           select: {
             id: true,
             content: true,
@@ -257,7 +263,7 @@ export class QuestionsService {
         });
         const byId = new Map(questions.map((q) => [q.id, q]));
 
-        return groups
+        return bankGroups
           .map((g) => {
             const q = byId.get(g.questionId);
             return q ? { ...q, sessionCount: g._count.questionId } : null;

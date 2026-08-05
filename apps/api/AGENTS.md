@@ -56,6 +56,7 @@ R2_ACCOUNT_ID         (required)
 R2_ACCESS_KEY_ID      (required)
 R2_SECRET_ACCESS_KEY  (required)
 R2_BUCKET_NAME        (required)
+R2_PRIVATE_BUCKET_NAME (required)  # Bucket private dành cho CV, không bật public URL
 R2_PUBLIC_URL         (required)
 
 PORT                  default 3001

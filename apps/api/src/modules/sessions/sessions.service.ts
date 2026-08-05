@@ -361,23 +361,35 @@ export class SessionsService {
   async enqueueScore(sessionId: string, userId: string) {
     const session = await this.prisma.session.findFirst({
       where: { id: sessionId, userId },
-      include: { question: true, score: true },
+      include: {
+        question: true,
+        score: true,
+        mockCvInterviewQuestion: true,
+      },
     });
     if (!session) throw new NotFoundException('Session không tồn tại');
     if (session.score) {
       return { status: 'ready' as const, data: session.score };
     }
 
+    // Câu AI của Mock CV không có questionId; dùng snapshot gắn trực tiếp với Session.
+    const question = session.question ?? session.mockCvInterviewQuestion;
+    if (!question) {
+      throw new NotFoundException(
+        'Không tìm thấy dữ liệu câu hỏi dùng để chấm Session.',
+      );
+    }
+
     // Transcript rỗng (im lặng / Whisper không nhận được gì): chấm 0 ngay tại
     // chỗ, không tốn 1 lượt gọi DeepSeek/hàng đợi vì kết quả chắc chắn là 0 điểm.
-    if (!session.transcript.trim()) {
+    if (!session.transcript.trim() && !session.mockCvInterviewQuestion) {
       const result: ScoreResult = {
         technicalScore: 0,
         completenessScore: 0,
         clarityScore: 0,
         overallScore: 0,
         matchedKeywords: [],
-        missedKeywords: session.question.answerKeywords,
+        missedKeywords: question.answerKeywords,
         feedback: {
           summary:
             'Mình chưa nghe được câu trả lời nào. Bạn thử ghi âm lại và trả lời câu hỏi nhé!',
