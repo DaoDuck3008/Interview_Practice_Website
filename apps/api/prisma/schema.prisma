@@ -120,6 +120,43 @@ enum MockOverviewStatus {
   FAILED
 }
 
+enum MockCvAnalysisStatus {
+  PENDING
+  ANALYZING
+  READY
+  UNSUPPORTED
+  NEEDS_REUPLOAD
+  FAILED
+}
+
+enum MockCvExtractionQuality {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum MockCvDomain {
+  SOFTWARE_ENGINEERING
+  QUALITY_ASSURANCE
+  DEVOPS
+  DATA
+  BUSINESS_ANALYSIS
+  PRODUCT_MANAGEMENT
+  UX_UI_DESIGN
+}
+
+enum MockCvQuestionSource {
+  QUESTION_BANK
+  AI_GENERATED
+}
+
+enum MockCvQuestionFocusArea {
+  PROJECT
+  EXPERIENCE
+  TECHNICAL_DEPTH
+  CLAIM_VERIFICATION
+}
+
 enum UsageStatus {
   PENDING
   CONSUMED
@@ -149,6 +186,8 @@ model User {
   supportMessages SupportMessage[] // hội thoại hỗ trợ (1 thread liên tục / user, cả tin user gửi lẫn admin trả lời)
   favorites       Favorite[]
   mockInterviews  MockInterview[]
+  mockCvs         MockCv[]
+  mockCvInterviews MockCvInterview[]
 }
 
 model Topic {
@@ -186,6 +225,7 @@ model Question {
   sessions  Session[]
   favorites Favorite[]
   mockInterviewQuestions MockInterviewQuestion[]
+  mockCvQuestions MockCvQuestion[] @relation("MockCvQuestionBank")
 
   @@index([isActive, topicId]) // browse/random/admin-list: luôn lọc isActive, thường kèm topicId
   @@index([isActive, createdAt]) // public latest questions
@@ -207,6 +247,7 @@ model Session {
   score       Score?
   improvement Improvement?
   mockInterviewQuestion MockInterviewQuestion?
+  mockCvInterviewQuestion MockCvInterviewQuestion?
 
   @@index([userId, createdAt]) // dashboard: thống kê/lịch sử/heatmap theo user + thời gian
   @@index([questionId]) // findByQuestion + admin filter theo topic (join qua questionId)
@@ -299,6 +340,157 @@ model MockInterviewTopic {
   @@unique([mockInterviewId, topicId])
   @@unique([mockInterviewId, order])
   @@index([topicId])
+}
+
+// CV gốc do user tải lên. fileKey luôn là khóa private trên R2, không lưu URL public.
+model MockCv {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  // Vị trí user muốn phỏng vấn, ví dụ: "Backend Developer". Không suy luận hay lưu cấp độ.
+  targetRole String
+  fileKey    String @unique
+  fileName   String
+  mimeType   String
+  fileSize   Int
+
+  // Nội dung trích xuất chỉ phục vụ AI nội bộ; tuyệt đối không trả về client, log hoặc audit.
+  extractedText String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  analysis   MockCvAnalysis?
+  questions  MockCvQuestion[]
+  interviews MockCvInterview[]
+
+  @@index([userId, createdAt])
+}
+
+// Vòng đời và hồ sơ được AI rút ra từ CV. Row này được tạo PENDING trước khi enqueue job phân tích.
+model MockCvAnalysis {
+  id       String @id @default(uuid())
+  mockCvId String @unique
+  mockCv   MockCv @relation(fields: [mockCvId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  status            MockCvAnalysisStatus @default(PENDING)
+  extractionQuality MockCvExtractionQuality?
+  detectedDomains   MockCvDomain[] @default([])
+  eligibilityReason String?
+  analysisError     String?
+  lastRetryAt       DateTime?
+
+  // Chỉ có giá trị khi status = READY; mảng rỗng giúp lưu được row PENDING/FAILED an toàn.
+  summary             String?
+  topicSlugs          String[] @default([])
+  technicalSkills     String[] @default([])
+  experienceSignals   String[] @default([])
+  strengths           String[] @default([])
+  gapsForTargetRole   String[] @default([])
+  interviewFocusAreas String[] @default([])
+  claimsToVerify      String[] @default([])
+  projects            Json?
+  promptVersion       String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([status, updatedAt])
+}
+
+// Bộ câu hỏi đã chuẩn bị cho một CV. Nội dung là snapshot để câu từ bank không đổi khi admin sửa Question.
+model MockCvQuestion {
+  id       String @id @default(uuid())
+  mockCvId String
+  mockCv   MockCv @relation(fields: [mockCvId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  bankQuestionId String?
+  bankQuestion   Question? @relation("MockCvQuestionBank", fields: [bankQuestionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  source    MockCvQuestionSource
+  focusArea MockCvQuestionFocusArea?
+  order     Int
+
+  content          String
+  answerKeySummary String
+  answerKeywords   String[]
+  rationale        String?
+  createdAt        DateTime @default(now())
+
+  interviews MockCvInterviewQuestion[]
+
+  @@unique([mockCvId, order])
+  @@index([mockCvId, source])
+  @@index([bankQuestionId])
+}
+
+// Một lần trả lời bộ câu hỏi từ CV. Tách khỏi MockInterview vì cách tạo câu hỏi và dữ liệu nguồn khác nhau.
+model MockCvInterview {
+  id       String @id @default(uuid())
+  mockCvId String
+  mockCv   MockCv @relation(fields: [mockCvId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  title           String
+  status          MockInterviewStatus @default(DRAFT)
+  totalQuestions  Int
+  durationSeconds Int
+
+  startedAt           DateTime?
+  expiresAt           DateTime?
+  submittedAt         DateTime?
+  scoredAt            DateTime?
+  lastScoringRetryAt  DateTime?
+
+  averageTechnicalScore    Float?
+  averageCompletenessScore Float?
+  averageClarityScore      Float?
+  overallScore             Float?
+
+  summary             String?
+  strengths           String[] @default([])
+  weaknesses          String[] @default([])
+  nextRecommendations String[] @default([])
+  overviewStatus      MockOverviewStatus @default(PENDING)
+  overviewError       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  questions MockCvInterviewQuestion[]
+
+  @@index([userId, createdAt])
+  @@index([userId, status])
+  @@index([mockCvId, createdAt])
+}
+
+// Snapshot câu hỏi cho từng lần phỏng vấn để việc tạo lại một interview không làm ghi đè lịch sử.
+model MockCvInterviewQuestion {
+  id                 String @id @default(uuid())
+  mockCvInterviewId  String
+  mockCvInterview    MockCvInterview @relation(fields: [mockCvInterviewId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  mockCvQuestionId   String?
+  mockCvQuestion     MockCvQuestion? @relation(fields: [mockCvQuestionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  sessionId          String? @unique
+  session            Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  order     Int
+  source    MockCvQuestionSource
+  focusArea MockCvQuestionFocusArea?
+
+  content          String
+  answerKeySummary String
+  answerKeywords   String[]
+  answerStatus     MockQuestionAnswerStatus @default(PENDING)
+  scoreStatus      MockQuestionScoreStatus @default(PENDING)
+  scoreError       String?
+  answeredAt       DateTime?
+  skippedAt        DateTime?
+
+  @@unique([mockCvInterviewId, order])
+  @@index([mockCvInterviewId, order])
+  @@index([scoreStatus, mockCvInterviewId])
 }
 
 model Score {
