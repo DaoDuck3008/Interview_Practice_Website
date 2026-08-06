@@ -126,7 +126,7 @@ export class PaymentsController {
 
   // Public — Sepay gọi tới. URL: /api/v1/payments/hooks/sepay-payment
   @Post('hooks/sepay-payment')
-  @SkipThrottle()
+  @SkipThrottle({ burst: true, sustained: true })
   sepayWebhook(
     @Req() req: RawBodyRequest<Request>,
     @Body() payload: any,

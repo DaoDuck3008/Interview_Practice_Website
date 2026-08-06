@@ -43,11 +43,15 @@ import { AuditInterceptor } from './modules/audit/audit.interceptor';
       inject: [RedisThrottlerStorage],
       useFactory: (storage: RedisThrottlerStorage) => ({
         storage,
-        errorMessage:
-          'Bạn thao tác quá nhanh. Vui lòng chờ một chút rồi thử lại.',
         throttlers: [
           {
-            name: 'default',
+            name: 'burst',
+            ttl: 10_000,
+            limit: 30,
+            blockDuration: 10_000,
+          },
+          {
+            name: 'sustained',
             ttl: 60_000,
             limit: 120,
             blockDuration: 60_000,

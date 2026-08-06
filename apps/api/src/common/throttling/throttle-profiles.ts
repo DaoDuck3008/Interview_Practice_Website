@@ -6,6 +6,12 @@ const MINUTE_MS = 60 * SECOND_MS;
 
 type IdentityResolver = (context: ExecutionContext) => string | undefined;
 
+interface ThrottleWindow {
+  limit: number;
+  ttl: number;
+  blockDuration: number;
+}
+
 function shortHash(value: string) {
   return createHash('sha256').update(value).digest('hex').slice(0, 16);
 }
@@ -31,17 +37,19 @@ function makeProfileKey(profile: string, resolveIdentity?: IdentityResolver) {
 
 function throttleProfile(
   profile: string,
-  limit: number,
-  ttl: number,
-  blockDuration: number,
+  burst: ThrottleWindow,
+  sustained: ThrottleWindow,
   resolveIdentity?: IdentityResolver,
 ) {
   return {
-    default: {
-      limit,
-      ttl,
-      blockDuration,
-      generateKey: makeProfileKey(profile, resolveIdentity),
+    // Hai key có thêm tên cửa sổ để counter burst và sustained không cộng lẫn nhau.
+    burst: {
+      ...burst,
+      generateKey: makeProfileKey(`${profile}:burst`, resolveIdentity),
+    },
+    sustained: {
+      ...sustained,
+      generateKey: makeProfileKey(`${profile}:sustained`, resolveIdentity),
     },
   };
 }
@@ -50,19 +58,17 @@ function throttleProfile(
 // luồng auth public khác.
 export const THROTTLE_AUTH_LOGIN = throttleProfile(
   'auth-login',
-  30,
-  5 * MINUTE_MS,
-  5 * MINUTE_MS,
+  { limit: 5, ttl: MINUTE_MS, blockDuration: 5 * MINUTE_MS },
+  { limit: 15, ttl: 10 * MINUTE_MS, blockDuration: 5 * MINUTE_MS },
   emailFromBody,
 );
 
 // Register/resend/forgot-password có gửi email nhưng service đã có các lớp
-// chống spam theo email/cooldown. Limit này chủ yếu chặn burst theo IP.
+// chống spam theo email/cooldown. Hai cửa sổ này chặn cả burst IP lẫn spam kéo dài.
 export const THROTTLE_AUTH_EMAIL = throttleProfile(
   'auth-email',
-  10,
-  10 * MINUTE_MS,
-  5 * MINUTE_MS,
+  { limit: 2, ttl: MINUTE_MS, blockDuration: MINUTE_MS },
+  { limit: 5, ttl: 15 * MINUTE_MS, blockDuration: 5 * MINUTE_MS },
   emailFromBody,
 );
 
@@ -70,9 +76,8 @@ export const THROTTLE_AUTH_EMAIL = throttleProfile(
 // login để tránh chặn oan khi user nhập nhầm mã hoặc retry do lỗi mạng.
 export const THROTTLE_AUTH_CODE = throttleProfile(
   'auth-code',
-  15,
-  10 * MINUTE_MS,
-  5 * MINUTE_MS,
+  { limit: 3, ttl: 30 * SECOND_MS, blockDuration: 30 * SECOND_MS },
+  { limit: 10, ttl: 15 * MINUTE_MS, blockDuration: 5 * MINUTE_MS },
   emailFromBody,
 );
 
@@ -80,37 +85,33 @@ export const THROTTLE_AUTH_CODE = throttleProfile(
 // vài lần khi popup/callback OAuth bị gián đoạn.
 export const THROTTLE_AUTH_MODERATE = throttleProfile(
   'auth-google',
-  20,
-  5 * MINUTE_MS,
-  60 * SECOND_MS,
+  { limit: 5, ttl: MINUTE_MS, blockDuration: MINUTE_MS },
+  { limit: 15, ttl: 10 * MINUTE_MS, blockDuration: 2 * MINUTE_MS },
 );
 
 // Refresh/logout có thể chạy nền ở nhiều tab, nên nới hơn login nhưng vẫn
 // chặn được vòng lặp xoay token bất thường.
 export const THROTTLE_REFRESH = throttleProfile(
   'auth-refresh',
-  30,
-  3 * MINUTE_MS,
-  60 * SECOND_MS,
+  { limit: 10, ttl: MINUTE_MS, blockDuration: MINUTE_MS },
+  { limit: 30, ttl: 10 * MINUTE_MS, blockDuration: 2 * MINUTE_MS },
 );
 
 // Upload/audio tốn bandwidth/storage và có thể kéo theo Groq/R2. QuotaGuard và
-// ConcurrencyInterceptor đã chặn theo user, nên ở đây chỉ cần chống burst IP.
+// ConcurrencyInterceptor bảo vệ nghiệp vụ theo user; hai cửa sổ này bảo vệ hạ tầng theo IP.
 export const THROTTLE_HEAVY_UPLOAD = throttleProfile(
   'heavy-upload',
-  30,
-  10 * MINUTE_MS,
-  2 * MINUTE_MS,
+  { limit: 3, ttl: 30 * SECOND_MS, blockDuration: 30 * SECOND_MS },
+  { limit: 15, ttl: 10 * MINUTE_MS, blockDuration: 2 * MINUTE_MS },
 );
 
-// Score/improve/ mockInterview đưa job AI vào queue. QuotaGuard kiểm soát hạn mức nghiệp vụ,
+// Score/improve/mockInterview đưa job AI vào queue. QuotaGuard kiểm soát hạn mức nghiệp vụ,
 // AiJobsService dedup job theo session và service trả cache khi đã có kết quả.
-// Limit này vì vậy chỉ cần chặn spam click/script quá mức.
+// Hai cửa sổ còn lại chặn spam click/script theo IP.
 export const THROTTLE_AI_ACTION = throttleProfile(
   'ai-action',
-  60,
-  10 * MINUTE_MS,
-  2 * MINUTE_MS,
+  { limit: 3, ttl: 30 * SECOND_MS, blockDuration: 30 * SECOND_MS },
+  { limit: 10, ttl: 10 * MINUTE_MS, blockDuration: 2 * MINUTE_MS },
 );
 
 // Checkout là endpoint "tạo hoặc tái dùng" đơn PENDING. Người dùng có thể
@@ -118,26 +119,23 @@ export const THROTTLE_AI_ACTION = throttleProfile(
 // thuần túy; service vẫn tái dùng đơn cũ để tránh tạo trùng.
 export const THROTTLE_CHECKOUT = throttleProfile(
   'checkout',
-  30,
-  10 * MINUTE_MS,
-  60 * SECOND_MS,
+  { limit: 3, ttl: MINUTE_MS, blockDuration: MINUTE_MS },
+  { limit: 10, ttl: 10 * MINUTE_MS, blockDuration: 2 * MINUTE_MS },
 );
 
 // Admin mutation đã có auth, nhưng vẫn cần lớp chắn vừa phải cho click nhầm liên tục hoặc phiên admin bị lạm dụng.
 export const THROTTLE_ADMIN_MUTATION = throttleProfile(
   'admin-mutation',
-  60,
-  5 * MINUTE_MS,
-  60 * SECOND_MS,
+  { limit: 10, ttl: MINUTE_MS, blockDuration: MINUTE_MS },
+  { limit: 40, ttl: 10 * MINUTE_MS, blockDuration: 2 * MINUTE_MS },
 );
 
 // Các thao tác admin nhạy cảm hơn CRUD thường: cấp gói, reset mật khẩu hộ user,
 // chấm điểm tay. Siết riêng để giảm rủi ro khi phiên admin bị lạm dụng.
 export const THROTTLE_ADMIN_SENSITIVE = throttleProfile(
   'admin-sensitive',
-  10,
-  10 * MINUTE_MS,
-  5 * MINUTE_MS,
+  { limit: 3, ttl: 5 * MINUTE_MS, blockDuration: 5 * MINUTE_MS },
+  { limit: 10, ttl: 60 * MINUTE_MS, blockDuration: 10 * MINUTE_MS },
 );
 
 // Tin nhắn WebSocket không đi qua HTTP throttler guard, nên gateway dùng
