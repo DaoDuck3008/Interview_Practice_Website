@@ -7,6 +7,9 @@ export const MAX_CV_PAGES = 20;
 export const MIN_CV_TEXT_LENGTH = 120;
 export const MAX_CV_TEXT_LENGTH = 40_000;
 
+// Prompt hồ sơ phải đọc toàn bộ CV nên cần nhiều thời gian hơn các lời gọi AI ngắn.
+export const MOCK_CV_PROFILE_AI_TIMEOUT_MS = 60 * 1000;
+
 // Tối thiểu 4 câu hỏi, tối đa 20 câu hỏi, mỗi câu hỏi tối thiểu 5 phút, tối đa 2 giờ
 export const MIN_MOCK_CV_QUESTIONS = 4;
 export const MAX_MOCK_CV_QUESTIONS = 20;

@@ -6,6 +6,7 @@ import { WebsocketModule } from '../../websocket/websocket.module';
 import { AiJobsService } from './ai-jobs.service';
 import { AiJobsProcessor } from './ai-jobs.processor';
 import { AI_JOBS_QUEUE } from './ai-jobs.types';
+import { MockCvProfileService } from '../mock-cv-analysis/mock-cv-profile.service';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { AI_JOBS_QUEUE } from './ai-jobs.types';
     StorageModule,
     WebsocketModule,
   ],
-  providers: [AiJobsService, AiJobsProcessor],
+  providers: [AiJobsService, AiJobsProcessor, MockCvProfileService],
   exports: [AiJobsService],
 })
 export class AiJobsModule {}

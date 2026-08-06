@@ -4,8 +4,11 @@ import type { Queue } from 'bullmq';
 import {
   AI_JOBS_QUEUE,
   JOB_IMPROVE,
+  JOB_MOCK_CV_PROFILE,
   JOB_SCORE,
+  type AiJobData,
   type ImproveJobData,
+  type MockCvProfileJobData,
   type ScoreJobData,
 } from './ai-jobs.types';
 import { ConfigService } from '@nestjs/config';
@@ -39,6 +42,20 @@ export class AiJobsService {
     return this.enqueue(JOB_IMPROVE, `improve_${sessionId}`, data);
   }
 
+  enqueueMockCvProfile(
+    analysisId: string,
+    userId: string,
+    attempt: number,
+  ): Promise<void> {
+    const data: MockCvProfileJobData = { analysisId, userId, attempt };
+    // Mỗi attempt có jobId riêng để lần retry mới không bị job cũ đang chạy dedup nhầm.
+    return this.enqueue(
+      JOB_MOCK_CV_PROFILE,
+      `mock_cv_profile_${analysisId}_${attempt}`,
+      data,
+    );
+  }
+
   /**
    * `jobId` cố định theo session là cơ chế dedup chính: 2 request cùng lúc chỉ
    * tạo được 1 job thật. Nhưng nếu job trước đó đã FAIL (hết attempts), nó vẫn
@@ -50,7 +67,7 @@ export class AiJobsService {
   private async enqueue(
     jobName: string,
     jobId: string,
-    data: ScoreJobData | ImproveJobData,
+    data: AiJobData,
   ): Promise<void> {
     const existing = await this.queue.getJob(jobId);
     if (existing) {

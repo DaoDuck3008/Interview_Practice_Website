@@ -6,7 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 
 const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
-const TIMEOUT_MS = 15_000;
+const DEFAULT_TIMEOUT_MS = 15_000;
 
 // Lỗi mạng/timeout/quá tải thường chỉ tạm thời -> thử lại 1 lần. Lỗi cấu hình
 // (401 sai key, 402 hết hạn mức) sẽ KHÔNG được retry vì thử lại cũng không giải quyết được.
@@ -18,6 +18,7 @@ interface CallParams {
   systemPrompt: string;
   userPrompt: string;
   temperature: number;
+  timeoutMs?: number;
 }
 
 /** Đánh dấu lỗi có thể thử lại — bọc sẵn exception cuối cùng sẽ ném ra nếu hết lượt retry. */
@@ -67,9 +68,10 @@ export class DeepSeekClient {
     systemPrompt,
     userPrompt,
     temperature,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
   }: CallParams): Promise<string> {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       const res = await fetch(DEEPSEEK_URL, {

@@ -5,6 +5,6 @@ import { ImprovementService } from './improvement.service';
 
 @Module({
   providers: [DeepSeekClient, ScoringService, ImprovementService],
-  exports: [ScoringService, ImprovementService],
+  exports: [DeepSeekClient, ScoringService, ImprovementService],
 })
 export class ScoreModule {}

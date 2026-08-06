@@ -8,10 +8,12 @@ import { ConfigService } from '@nestjs/config';
 import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import type { Job } from 'bullmq';
 import {
+  MockCvAnalysisStatus,
+  MockCvExtractionQuality,
   MockInterviewStatus,
   MockOverviewStatus,
   MockQuestionScoreStatus,
-  type Prisma,
+  Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
@@ -21,14 +23,21 @@ import { WebsocketGateway } from '../../websocket/websocket.gateway';
 import { SCORING_PROMPT_VERSION } from '../scoring/prompts/scoring.prompt';
 import type { MockInterviewOverviewInput } from '../scoring/prompts/mock-interview-overview.prompt';
 import {
+  MockCvNeedsReuploadError,
+  MockCvProfileService,
+} from '../mock-cv-analysis/mock-cv-profile.service';
+import {
   deleteSessionAndAudio,
   transientZeroScore,
 } from '../sessions/session-score.utils';
 import {
   AI_JOBS_QUEUE,
   JOB_IMPROVE,
+  JOB_MOCK_CV_PROFILE,
   JOB_SCORE,
+  type AiJobData,
   type ImproveJobData,
+  type MockCvProfileJobData,
   type ScoreJobData,
 } from './ai-jobs.types';
 
@@ -58,6 +67,7 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
     private storage: StorageService,
     private scoring: ScoringService,
     private improvement: ImprovementService,
+    private mockCvProfile: MockCvProfileService,
     private websocket: WebsocketGateway,
     private config: ConfigService,
   ) {
@@ -77,13 +87,13 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
 
   /** Chỉ log dev — theo dõi job bắt đầu/xong để biết queue có tồn đọng không. */
   @OnWorkerEvent('active')
-  onActive(job: Job<ScoreJobData | ImproveJobData>) {
+  onActive(job: Job<AiJobData>) {
     if (!this.isDev) return;
     this.logger.debug(`Bắt đầu xử lý job ${job.name} (${job.id})`);
   }
 
   @OnWorkerEvent('completed')
-  onCompleted(job: Job<ScoreJobData | ImproveJobData>) {
+  onCompleted(job: Job<AiJobData>) {
     if (!this.isDev) return;
     const durationMs =
       job.finishedOn && job.processedOn
@@ -94,14 +104,201 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
     );
   }
 
-  async process(job: Job<ScoreJobData | ImproveJobData>): Promise<void> {
+  async process(job: Job<AiJobData>): Promise<void> {
     switch (job.name) {
       case JOB_SCORE:
         return this.processScore(job as Job<ScoreJobData>);
       case JOB_IMPROVE:
         return this.processImprove(job as Job<ImproveJobData>);
+      case JOB_MOCK_CV_PROFILE:
+        return this.processMockCvProfile(job as Job<MockCvProfileJobData>);
       default:
         this.logger.warn(`Job name lạ, bỏ qua: ${job.name}`);
+    }
+  }
+
+  private async processMockCvProfile(
+    job: Job<MockCvProfileJobData>,
+  ): Promise<void> {
+    const { analysisId, userId, attempt } = job.data;
+    const analysis = await this.prisma.mockCvAnalysis.findUnique({
+      where: { id: analysisId },
+      select: {
+        status: true,
+        analysisAttempt: true,
+        mockCv: {
+          select: {
+            id: true,
+            userId: true,
+            fileKey: true,
+            targetRole: true,
+            extractedText: true,
+          },
+        },
+      },
+    });
+
+    // Job có thể hoàn thành sau một lần retry mới; lúc đó tuyệt đối không xử lý/ghi đè.
+    if (
+      !analysis ||
+      analysis.mockCv.userId !== userId ||
+      analysis.status !== MockCvAnalysisStatus.ANALYZING ||
+      analysis.analysisAttempt !== attempt
+    ) {
+      if (this.isDev) {
+        this.logger.debug(
+          `Bỏ qua job profile Mock CV cũ hoặc không còn hợp lệ: ${analysisId}/${attempt}.`,
+        );
+      }
+      return;
+    }
+
+    try {
+      const availableTopics = await this.prisma.topic.findMany({
+        where: { parentId: { not: null }, children: { none: {} } },
+        select: { slug: true, name: true },
+        orderBy: { name: 'asc' },
+      });
+
+      // Nếu chưa có extractedText (chưa extract), tải PDF từ storage và extract. Nếu đã có, dùng lại text này để tránh tải PDF nhiều lần.
+      let extractedText = analysis.mockCv.extractedText;
+      if (!extractedText) {
+        extractedText = await this.mockCvProfile.extractFromPrivateFile(
+          analysis.mockCv.fileKey,
+        );
+
+        // Lưu text đã che PII ngay sau khi extract. Nếu AI lỗi hoặc server dừng ở
+        // bước sau, lần retry sẽ dùng lại text này thay vì tải lại PDF từ R2.
+        const stored = await this.prisma.mockCv.updateMany({
+          where: {
+            id: analysis.mockCv.id,
+            analysis: {
+              is: {
+                id: analysisId,
+                status: MockCvAnalysisStatus.ANALYZING,
+                analysisAttempt: attempt,
+              },
+            },
+          },
+          data: { extractedText },
+        });
+        if (stored.count === 0) return;
+      }
+
+      // Nếu có rồi thì gọi AI để phân tích CV luôn, lưu kết quả vào DB và emit websocket cho user.
+      const profile = await this.mockCvProfile.analyzeText({
+        targetRole: analysis.mockCv.targetRole,
+        cvText: extractedText,
+        availableTopics,
+      });
+
+      const updated = await this.prisma.mockCvAnalysis.updateMany({
+        where: {
+          id: analysisId,
+          status: MockCvAnalysisStatus.ANALYZING,
+          analysisAttempt: attempt,
+        },
+        data: {
+          status: profile.status,
+          extractionQuality: profile.extractionQuality,
+          detectedDomains: profile.detectedDomains,
+          eligibilityReason: profile.eligibilityReason,
+          summary: profile.summary,
+          topicSlugs: profile.topicSlugs,
+          technicalSkills: profile.technicalSkills,
+          experienceSignals: profile.experienceSignals,
+          strengths: profile.strengths,
+          gapsForTargetRole: profile.gapsForTargetRole,
+          interviewFocusAreas: profile.interviewFocusAreas,
+          claimsToVerify: profile.claimsToVerify,
+          projects:
+            profile.projects === null
+              ? Prisma.DbNull
+              : (profile.projects as unknown as Prisma.InputJsonValue),
+          promptVersion: profile.promptVersion,
+          analysisError: null,
+        },
+      });
+      if (updated.count === 0) return;
+
+      this.websocket.emitToUser(userId, 'mock-cv:analysis-updated', {
+        mockCvId: analysis.mockCv.id,
+        analysisId,
+        status: profile.status,
+      });
+    } catch (error) {
+      if (error instanceof MockCvNeedsReuploadError) {
+        const updated = await this.prisma.$transaction(async (tx) => {
+          const claim = await tx.mockCvAnalysis.updateMany({
+            where: {
+              id: analysisId,
+              status: MockCvAnalysisStatus.ANALYZING,
+              analysisAttempt: attempt,
+            },
+            data: {
+              status: MockCvAnalysisStatus.NEEDS_REUPLOAD,
+              extractionQuality: MockCvExtractionQuality.LOW,
+              detectedDomains: [],
+              eligibilityReason: error.userMessage,
+              analysisError: null,
+              summary: null,
+              topicSlugs: [],
+              technicalSkills: [],
+              experienceSignals: [],
+              strengths: [],
+              gapsForTargetRole: [],
+              interviewFocusAreas: [],
+              claimsToVerify: [],
+              projects: Prisma.DbNull,
+              promptVersion: null,
+            },
+          });
+          if (claim.count === 0) return false;
+          if (error.extractedText) {
+            await tx.mockCv.update({
+              where: { id: analysis.mockCv.id },
+              data: { extractedText: error.extractedText },
+            });
+          }
+          return true;
+        });
+        if (updated) {
+          this.websocket.emitToUser(userId, 'mock-cv:analysis-updated', {
+            mockCvId: analysis.mockCv.id,
+            analysisId,
+            status: MockCvAnalysisStatus.NEEDS_REUPLOAD,
+          });
+        }
+        return;
+      }
+
+      const failed = await this.prisma.mockCvAnalysis.updateMany({
+        where: {
+          id: analysisId,
+          status: MockCvAnalysisStatus.ANALYZING,
+          analysisAttempt: attempt,
+        },
+        data: {
+          status: MockCvAnalysisStatus.FAILED,
+          // Không lưu raw AI response hoặc CV text vào cột lỗi.
+          analysisError: this.mockCvErrorCode(error),
+        },
+      });
+      if (failed.count > 0) {
+        if (job.id) this.notifiedFailures.add(job.id);
+        this.logger.error(
+          `Job phân tích Mock CV thất bại — analysis ${analysisId}, attempt ${attempt}.`,
+          error instanceof Error ? error.stack : undefined,
+        );
+        this.websocket.emitToUser(userId, 'mock-cv:analysis-updated', {
+          mockCvId: analysis.mockCv.id,
+          analysisId,
+          status: MockCvAnalysisStatus.FAILED,
+          message: 'Không thể phân tích CV lúc này. Bạn có thể thử lại sau.',
+        });
+      }
+      if (failed.count === 0) return;
+      throw error;
     }
   }
 
@@ -564,6 +761,13 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
       : GENERIC_FAILURE_MESSAGE;
   }
 
+  private mockCvErrorCode(error: unknown): string {
+    if (error instanceof HttpException) {
+      return `HTTP_${error.getStatus()}`;
+    }
+    return error instanceof Error ? error.name.slice(0, 100) : 'UNKNOWN_ERROR';
+  }
+
   private emitFailure(
     jobId: string | undefined,
     userId: string,
@@ -589,16 +793,39 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
    * tự emit rồi (tránh báo lỗi trùng, đè mất message cụ thể).
    */
   @OnWorkerEvent('failed')
-  onFailed(job: Job<ScoreJobData | ImproveJobData> | undefined) {
+  async onFailed(job: Job<AiJobData> | undefined) {
     if (!job?.id) return;
     if (this.notifiedFailures.delete(job.id)) return;
 
-    const event = job.name === JOB_SCORE ? 'score:failed' : 'improve:failed';
     this.logger.error(
       `Job ${job.name} (${job.id}) thất bại: ${job.failedReason}`,
     );
-    this.websocket.emitToUser(job.data.userId, event, {
-      sessionId: job.data.sessionId,
+    if (job.name === JOB_MOCK_CV_PROFILE) {
+      const data = job.data as MockCvProfileJobData;
+      const failed = await this.prisma.mockCvAnalysis.updateMany({
+        where: {
+          id: data.analysisId,
+          status: MockCvAnalysisStatus.ANALYZING,
+          analysisAttempt: data.attempt,
+        },
+        data: {
+          status: MockCvAnalysisStatus.FAILED,
+          analysisError: 'WORKER_JOB_FAILED',
+        },
+      });
+      if (failed.count === 0) return;
+      this.websocket.emitToUser(data.userId, 'mock-cv:analysis-updated', {
+        analysisId: data.analysisId,
+        status: MockCvAnalysisStatus.FAILED,
+        message: 'Không thể phân tích CV lúc này. Bạn có thể thử lại sau.',
+      });
+      return;
+    }
+
+    const data = job.data as ScoreJobData | ImproveJobData;
+    const event = job.name === JOB_SCORE ? 'score:failed' : 'improve:failed';
+    this.websocket.emitToUser(data.userId, event, {
+      sessionId: data.sessionId,
       message: GENERIC_FAILURE_MESSAGE,
     });
   }
