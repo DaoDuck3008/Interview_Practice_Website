@@ -24,6 +24,7 @@ import { FavoritesModule } from './modules/favorites/favorites.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { MockInterviewsModule } from './modules/mock-interviews/mock-interviews.module';
 import { MockCvAnalysisModule } from './modules/mock-cv-analysis/mock-cv-analysis.module';
+import { MockCvsModule } from './modules/mock-cvs/mock-cvs.module';
 import { WebsocketModule } from './websocket/websocket.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { AppThrottlerGuard } from './common/throttling/app-throttler.guard';
@@ -81,6 +82,7 @@ import { AuditInterceptor } from './modules/audit/audit.interceptor';
     AuditModule,
     MockInterviewsModule,
     MockCvAnalysisModule,
+    MockCvsModule,
   ],
   providers: [
     {

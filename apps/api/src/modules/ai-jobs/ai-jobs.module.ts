@@ -8,6 +8,13 @@ import { AiJobsService } from './ai-jobs.service';
 import { AiJobsProcessor } from './ai-jobs.processor';
 import { AI_JOBS_QUEUE } from './ai-jobs.types';
 import { MockCvProfileService } from '../mock-cv-analysis/mock-cv-profile.service';
+import { MockCvQuestionGenerationService } from '../mock-cv-analysis/mock-cv-question-generation.service';
+import { ImproveJobHandler } from './handlers/improve-job.handler';
+import { MockCvProfileJobHandler } from './handlers/mock-cv-profile-job.handler';
+import { MockCvQuestionGenerationJobHandler } from './handlers/mock-cv-question-generation-job.handler';
+import { MockInterviewScoringService } from './services/mock-interview-scoring.service';
+import { ScoreJobHandler } from './handlers/score-job.handler';
+import { MockCvQuestionBankService } from './services/mock-cv-question-bank.service';
 
 @Module({
   imports: [
@@ -17,7 +24,18 @@ import { MockCvProfileService } from '../mock-cv-analysis/mock-cv-profile.servic
     StorageModule,
     WebsocketModule,
   ],
-  providers: [AiJobsService, AiJobsProcessor, MockCvProfileService],
+  providers: [
+    AiJobsService,
+    AiJobsProcessor,
+    MockCvProfileService,
+    MockCvQuestionGenerationService,
+    ScoreJobHandler,
+    ImproveJobHandler,
+    MockCvProfileJobHandler,
+    MockCvQuestionGenerationJobHandler,
+    MockInterviewScoringService,
+    MockCvQuestionBankService,
+  ],
   exports: [AiJobsService],
 })
 export class AiJobsModule {}

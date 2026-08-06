@@ -9,6 +9,7 @@ import { basename } from 'path';
 import { randomUUID } from 'crypto';
 import {
   MockCvAnalysisStatus,
+  MockCvQuestionGenerationStatus,
   MockInterviewStatus,
   type Prisma,
 } from '@prisma/client';
@@ -42,6 +43,11 @@ const PUBLIC_ANALYSIS_SELECT = {
   projects: true,
   promptVersion: true,
   questionGenerationStatus: true,
+  questionGenerationStartedAt: true,
+  requestedQuestionCount: true,
+  selectedBankQuestionCount: true,
+  generatedQuestionCount: true,
+  questionGeneratedAt: true,
   updatedAt: true,
 } satisfies Prisma.MockCvAnalysisSelect;
 
@@ -352,6 +358,8 @@ export class MockCvAnalysisService {
         status: MockCvAnalysisStatus;
         analysisStartedAt: Date | null;
         lastRetryAt: Date | null;
+        questionGenerationStatus: MockCvQuestionGenerationStatus;
+        questionGenerationStartedAt: Date | null;
       } | null;
     },
   >(mockCv: T) {
@@ -361,6 +369,11 @@ export class MockCvAnalysisService {
       analysis?.status === MockCvAnalysisStatus.ANALYZING &&
       !!analysis.analysisStartedAt &&
       now - analysis.analysisStartedAt.getTime() >= MOCK_CV_JOB_STALE_MS;
+    const isQuestionGenerationStale =
+      analysis?.questionGenerationStatus === 'GENERATING' &&
+      !!analysis.questionGenerationStartedAt &&
+      now - analysis.questionGenerationStartedAt.getTime() >=
+        MOCK_CV_JOB_STALE_MS;
     const retryAvailableAt = analysis?.lastRetryAt
       ? new Date(analysis.lastRetryAt.getTime() + MOCK_CV_RETRY_COOLDOWN_MS)
       : null;
@@ -377,11 +390,16 @@ export class MockCvAnalysisService {
         ? {
             ...analysis,
             isStale,
+            isQuestionGenerationStale,
             canRetry,
             retryAvailableAt,
             failureMessage:
               analysis.status === MockCvAnalysisStatus.FAILED
                 ? 'Không thể phân tích CV lúc này. Bạn có thể thử lại sau.'
+                : null,
+            questionGenerationFailureMessage:
+              analysis.questionGenerationStatus === 'FAILED'
+                ? 'Không thể chuẩn bị câu hỏi lúc này. Bạn có thể thử lại sau.'
                 : null,
           }
         : null,

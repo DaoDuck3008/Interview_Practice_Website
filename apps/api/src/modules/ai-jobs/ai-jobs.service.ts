@@ -5,10 +5,12 @@ import {
   AI_JOBS_QUEUE,
   JOB_IMPROVE,
   JOB_MOCK_CV_PROFILE,
+  JOB_MOCK_CV_QUESTION_GENERATION,
   JOB_SCORE,
   type AiJobData,
   type ImproveJobData,
   type MockCvProfileJobData,
+  type MockCvQuestionGenerationJobData,
   type ScoreJobData,
 } from './ai-jobs.types';
 import { ConfigService } from '@nestjs/config';
@@ -52,6 +54,24 @@ export class AiJobsService {
     return this.enqueue(
       JOB_MOCK_CV_PROFILE,
       `mock_cv_profile_${analysisId}_${attempt}`,
+      data,
+    );
+  }
+
+  enqueueMockCvQuestionGeneration(
+    analysisId: string,
+    userId: string,
+    attempt: number,
+  ): Promise<void> {
+    const data: MockCvQuestionGenerationJobData = {
+      analysisId,
+      userId,
+      attempt,
+    };
+    // Attempt nằm trong jobId để retry mới không bị dedup nhầm với job cũ.
+    return this.enqueue(
+      JOB_MOCK_CV_QUESTION_GENERATION,
+      `mock_cv_questions_${analysisId}_${attempt}`,
       data,
     );
   }

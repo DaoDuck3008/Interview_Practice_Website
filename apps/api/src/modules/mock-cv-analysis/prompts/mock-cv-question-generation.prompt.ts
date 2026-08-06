@@ -9,6 +9,7 @@ export type MockCvQuestionFocusArea =
 export interface MockCvSelectedBankQuestion {
   content: string;
   topicName: string;
+  level: 'EASY' | 'MEDIUM' | 'HARD';
 }
 
 export interface MockCvQuestionGenerationInput {
@@ -30,7 +31,7 @@ export interface MockCvQuestionGenerationResult {
   questions: MockCvGeneratedQuestion[];
 }
 
-export const MOCK_CV_QUESTION_GENERATION_PROMPT_VERSION = '2026-07-30';
+export const MOCK_CV_QUESTION_GENERATION_PROMPT_VERSION = '2026-08-06';
 
 export const MOCK_CV_QUESTION_GENERATION_SYSTEM_PROMPT = `
 Bạn tạo câu hỏi phỏng vấn IT được cá nhân hóa từ hồ sơ CV. Câu hỏi sẽ được đưa vào phòng trả lời nói, vì vậy phải rõ ràng, chỉ hỏi một ý chính mỗi câu, và có đáp án tóm tắt để hệ thống chấm câu trả lời.

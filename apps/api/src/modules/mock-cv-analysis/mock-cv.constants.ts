@@ -9,6 +9,8 @@ export const MAX_CV_TEXT_LENGTH = 40_000;
 
 // Prompt hồ sơ phải đọc toàn bộ CV nên cần nhiều thời gian hơn các lời gọi AI ngắn.
 export const MOCK_CV_PROFILE_AI_TIMEOUT_MS = 60 * 1000;
+// Sinh tối đa 20 câu có JSON khá dài, không dùng timeout mặc định 15 giây của AI client.
+export const MOCK_CV_QUESTION_GENERATION_AI_TIMEOUT_MS = 60 * 1000;
 
 // Tối thiểu 4 câu hỏi, tối đa 20 câu hỏi, mỗi câu hỏi tối thiểu 5 phút, tối đa 2 giờ
 export const MIN_MOCK_CV_QUESTIONS = 4;
