@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
+import { AiModule } from '../ai/ai.module';
 import { ScoreModule } from '../scoring/score.module';
 import { StorageModule } from '../storage/storage.module';
 import { WebsocketModule } from '../../websocket/websocket.module';
@@ -11,6 +12,7 @@ import { MockCvProfileService } from '../mock-cv-analysis/mock-cv-profile.servic
 @Module({
   imports: [
     BullModule.registerQueue({ name: AI_JOBS_QUEUE }),
+    AiModule,
     ScoreModule,
     StorageModule,
     WebsocketModule,

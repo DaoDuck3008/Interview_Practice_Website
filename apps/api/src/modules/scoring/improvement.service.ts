@@ -1,5 +1,5 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
-import { DeepSeekClient } from './deepseek.client';
+import { DeepSeekClient } from '../ai/clients/deepseek.client';
 import {
   IMPROVEMENT_SYSTEM_PROMPT,
   IMPROVEMENT_PROMPT_VERSION,

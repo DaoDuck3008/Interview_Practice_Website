@@ -3,7 +3,7 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { DeepSeekClient } from './deepseek.client';
+import { DeepSeekClient } from '../ai/clients/deepseek.client';
 import {
   SCORING_SYSTEM_PROMPT,
   SCORING_PROMPT_VERSION,

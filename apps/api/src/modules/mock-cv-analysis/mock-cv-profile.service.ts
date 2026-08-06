@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PDFParse } from 'pdf-parse';
-import { DeepSeekClient } from '../scoring/deepseek.client';
+import { DeepSeekClient } from '../ai/clients/deepseek.client';
 import { StorageService } from '../storage/storage.service';
 import {
   MAX_CV_PAGES,

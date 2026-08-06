@@ -28,7 +28,7 @@ class TransientDeepSeekError extends Error {
   }
 }
 
-/** Client dùng chung cho mọi service gọi DeepSeek (scoring, improvement...). */
+/** Client dùng chung cho mọi service gọi DeepSeek (scoring, improvement, Mock CV...). */
 @Injectable()
 export class DeepSeekClient {
   private readonly apiKey: string;
