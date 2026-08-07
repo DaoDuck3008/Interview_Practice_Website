@@ -1,12 +1,10 @@
 import {
   BadRequestException,
   ConflictException,
-  Inject,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { randomUUID } from 'crypto';
 import {
   MockInterviewStatus,
   MockInterviewMode,
@@ -16,17 +14,21 @@ import {
   Level,
   Prisma,
 } from '@prisma/client';
-import { Redis } from 'ioredis';
 import { PrismaService } from '../../prisma/prisma.service';
-import { StorageService } from '../storage/storage.service';
-import { SpeechService } from '../speech/speech.service';
-import { QuotaService } from '../quota/quota.service';
 import { AiJobsService } from '../ai-jobs/ai-jobs.service';
 import { CacheService } from '../../cache/cache.service';
-import { REDIS_CLIENT } from '../../redis/redis.module';
-import { MAX_AUDIO_DURATION_SEC } from '../../common/upload/audio.constants';
 import { lockAdvisoryKey } from '../../common/utils/billing-lock.util';
 import { selectDistributedQuestionIds } from '../../common/utils/question-selection.util';
+import { MockAnswerLockService } from '../mock-core/services/mock-answer-lock.service';
+import {
+  MockAnswerMediaService,
+  type PreparedMockAnswerMedia,
+} from '../mock-core/services/mock-answer-media.service';
+import { assertMockCanAnswer } from '../mock-core/utils/mock-deadline.util';
+import {
+  isMockScoringStale,
+  mockScoringRetryWaitSeconds,
+} from '../mock-core/utils/mock-retry.util';
 import {
   CreateMockInterviewDto,
   type MockInterviewLevelOption,
@@ -41,11 +43,8 @@ import {
   MOCK_ANSWER_GRACE_MS,
   MOCK_AUTO_SUBMIT_BUFFER_MS,
   MOCK_EXPIRED_RECOVERY_BATCH_SIZE,
-  MOCK_SCORING_RETRY_COOLDOWN_MS,
   MOCK_SCORING_STALE_MS,
-} from './mock-interview.constants';
-
-const ANSWER_LOCK_TTL_SEC = 300;
+} from '../mock-core/mock-core.constants';
 
 const DETAIL_INCLUDE = {
   topic: { select: { id: true, name: true, slug: true, iconUrl: true } },
@@ -83,18 +82,21 @@ const DETAIL_INCLUDE = {
   },
 };
 
+/**
+ * Service domain của Mock Interview thường: sở hữu query/transaction Prisma, submit và response.
+ * Dùng MockAnswerMediaService/MockAnswerLockService cùng các rule trong mock-core;
+ * được MockInterviewsController và MockInterviewJobsProcessor gọi.
+ */
 @Injectable()
 export class MockInterviewsService {
   private readonly logger = new Logger(MockInterviewsService.name);
 
   constructor(
     private prisma: PrismaService,
-    private storage: StorageService,
-    private speech: SpeechService,
-    private quota: QuotaService,
+    private answerMedia: MockAnswerMediaService,
+    private answerLock: MockAnswerLockService,
     private aiJobs: AiJobsService,
     private cache: CacheService,
-    @Inject(REDIS_CLIENT) private redis: Redis,
     private mockInterviewJobs: MockInterviewJobsService,
   ) {}
 
@@ -393,7 +395,7 @@ export class MockInterviewsService {
     if (!item) throw new NotFoundException('Câu hỏi trong mock không tồn tại.');
 
     // Kiểm tra quyền sở hữu và trạng thái mock interview trước khi trả lời
-    this.assertCanAnswer(item.mockInterview);
+    assertMockCanAnswer(item.mockInterview);
     if (
       item.sessionId ||
       item.answerStatus === MockQuestionAnswerStatus.ANSWERED
@@ -402,42 +404,22 @@ export class MockInterviewsService {
     }
 
     // Dùng Redis lock để tránh user gửi nhiều request answer cùng lúc cho 1 câu hỏi.
-    const lockKey = `lock:mock-answer:${questionItemId}`;
-    const lockValue = randomUUID();
-    const locked = await this.redis.set(
-      lockKey,
-      lockValue,
-      'EX',
-      ANSWER_LOCK_TTL_SEC,
-      'NX',
+    const lock = await this.answerLock.acquire(
+      `lock:mock-answer:${questionItemId}`,
     );
-    if (locked !== 'OK') {
-      throw new ConflictException('Câu này đang được xử lý, vui lòng chờ.');
-    }
 
-    // Upload audio lên storage.
-    let audioUrl: string | undefined;
-    let reservation: Awaited<ReturnType<QuotaService['reserve']>> | undefined;
+    let prepared: PreparedMockAnswerMedia | undefined;
     let committed = false;
     try {
-      // Redis lock bảo vệ một câu hỏi; reservation bảo vệ quota giữa nhiều câu hỏi/request cùng user.
-      reservation = await this.quota.reserve(userId);
-
-      const { transcript, duration: measuredDuration } =
-        await this.speech.transcribe(file);
-      if (
-        measuredDuration !== null &&
-        measuredDuration > MAX_AUDIO_DURATION_SEC
-      ) {
-        throw new BadRequestException('Audio không được vượt quá 4 phút.');
-      }
-
-      const key = `sessions/${userId}/${randomUUID()}.webm`;
-      audioUrl = await this.storage.uploadStream(
-        key,
-        file.buffer,
-        file.mimetype,
-      );
+      // mock-core giữ pipeline quota/Whisper/R2; service này chỉ quản lý transaction của MockInterview.
+      prepared = await this.answerMedia.prepare({
+        userId,
+        file,
+        reportedDuration: duration,
+        logContext: `câu trả lời mock ${questionItemId}`,
+      });
+      // Const cục bộ giúp transaction luôn giữ đúng media đã chuẩn bị của request này.
+      const preparedMedia = prepared;
 
       const session = await this.prisma.$transaction(async (tx) => {
         // Serialize phần ghi DB với submit(); không giữ lock trong lúc gọi Whisper.
@@ -453,7 +435,7 @@ export class MockInterviewsService {
         if (!fresh) {
           throw new NotFoundException('Câu hỏi trong mock không tồn tại.');
         }
-        this.assertCanAnswer(fresh.mockInterview);
+        assertMockCanAnswer(fresh.mockInterview);
         if (fresh.sessionId) {
           throw new ConflictException('Câu này đã được trả lời.');
         }
@@ -462,9 +444,9 @@ export class MockInterviewsService {
           data: {
             userId,
             questionId: item.questionId,
-            audioUrl: audioUrl!,
-            transcript,
-            duration: measuredDuration ?? duration,
+            audioUrl: preparedMedia.audioUrl,
+            transcript: preparedMedia.transcript,
+            duration: preparedMedia.duration,
           },
         });
 
@@ -477,7 +459,11 @@ export class MockInterviewsService {
           },
         });
 
-        await this.quota.consumeInTransaction(tx, reservation!.id, created.id);
+        await this.answerMedia.consumeInTransaction(
+          tx,
+          preparedMedia,
+          created.id,
+        );
 
         return created;
       });
@@ -486,7 +472,7 @@ export class MockInterviewsService {
 
       try {
         await Promise.all([
-          this.quota.invalidateStatus(userId),
+          this.answerMedia.invalidateQuota(userId),
           this.cache.del(
             `sessions:me:stats:${userId}`,
             `sessions:me:heatmap:${userId}`,
@@ -509,24 +495,17 @@ export class MockInterviewsService {
     } catch (err) {
       if (!committed) {
         // Chỉ dọn audio/reservation khi transaction chưa commit, tránh Session trỏ tới file đã bị xóa.
-        const cleanupResults = await Promise.allSettled([
-          audioUrl
-            ? this.storage.delete(this.storage.keyFromUrl(audioUrl))
-            : Promise.resolve(),
-          reservation ? this.quota.cancel(reservation) : Promise.resolve(),
-        ]);
-        for (const cleanup of cleanupResults) {
-          if (cleanup.status === 'rejected') {
-            this.logger.error(
-              `Cleanup câu trả lời mock ${questionItemId} thất bại: ${String(cleanup.reason)}`,
-            );
-          }
+        if (prepared) {
+          await this.answerMedia.discard(
+            prepared,
+            `câu trả lời mock ${questionItemId}`,
+          );
         }
       }
       throw err;
     } finally {
       // Xóa lock Redis để user có thể gửi request answer tiếp theo cho câu hỏi này.
-      await this.releaseLock(lockKey, lockValue);
+      await this.answerLock.release(lock);
     }
   }
 
@@ -676,9 +655,7 @@ export class MockInterviewsService {
         throw new ConflictException('Mock interview này chưa được nộp.');
       }
 
-      const isStale =
-        mock.status === MockInterviewStatus.SCORING &&
-        now.getTime() - mock.updatedAt.getTime() >= MOCK_SCORING_STALE_MS;
+      const isStale = isMockScoringStale(mock, now);
       if (
         mock.status !== MockInterviewStatus.SCORING &&
         mock.status !== MockInterviewStatus.SCORED
@@ -719,14 +696,11 @@ export class MockInterviewsService {
         );
       }
 
-      const retryAvailableAt = mock.lastScoringRetryAt
-        ? mock.lastScoringRetryAt.getTime() +
-          MOCK_SCORING_RETRY_COOLDOWN_MS
-        : 0;
-      if (now.getTime() < retryAvailableAt) {
-        const waitSeconds = Math.ceil(
-          (retryAvailableAt - now.getTime()) / 1000,
-        );
+      const waitSeconds = mockScoringRetryWaitSeconds(
+        mock.lastScoringRetryAt,
+        now,
+      );
+      if (waitSeconds > 0) {
         throw new ConflictException(
           `Vui lòng chờ ${waitSeconds} giây trước khi chấm lại.`,
         );
@@ -873,25 +847,6 @@ export class MockInterviewsService {
     );
   }
 
-  // Hàm kiểm tra quyền sở hữu và trạng thái mock interview trước khi trả lời câu hỏi.
-  // Dùng trong hàm answer().
-  private assertCanAnswer(mock: {
-    status: MockInterviewStatus;
-    expiresAt: Date | null;
-  }) {
-    if (mock.status !== MockInterviewStatus.IN_PROGRESS) {
-      throw new ConflictException(
-        'Mock interview chưa bắt đầu hoặc đã kết thúc.',
-      );
-    }
-    if (!mock.expiresAt) {
-      throw new ConflictException('Mock interview chưa có thời gian kết thúc.');
-    }
-    if (Date.now() > mock.expiresAt.getTime() + MOCK_ANSWER_GRACE_MS) {
-      throw new ConflictException('Đã hết thời gian, vui lòng nộp bài.');
-    }
-  }
-
   // Chia số câu gần đều theo từng topic, sau đó bù từ toàn bộ các topic nếu có topic thiếu câu.
   // Dùng khi tạo mock interview nhiều chủ đề.
   private async findRandomQuestionsForLevelOption(
@@ -968,15 +923,6 @@ export class MockInterviewsService {
   ) {
     const { topicLinks, ...rest } = mock;
     return { ...rest, topics: topicLinks.map((link) => link.topic) };
-  }
-
-  private async releaseLock(key: string, value: string) {
-    await this.redis.eval(
-      "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) else return 0 end",
-      1,
-      key,
-      value,
-    );
   }
 
   private mockAdvisoryLockKey(mockInterviewId: string) {

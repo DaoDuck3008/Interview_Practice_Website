@@ -1,4 +1,4 @@
-import { HttpException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
   MockInterviewStatus,
   MockOverviewStatus,
@@ -7,9 +7,19 @@ import {
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ScoringService } from '../../scoring/scoring.service';
 import type { MockInterviewOverviewInput } from '../../scoring/prompts/mock-interview-overview.prompt';
+import {
+  calculateMockScoreAverages,
+  isTerminalMockScoreStatus,
+  mockScoreErrorMessage,
+  topMockKeywords,
+} from '../../mock-core/utils/mock-score.util';
 import { GENERIC_AI_JOB_FAILURE_MESSAGE } from '../ai-jobs.constants';
 
-/** Quản lý trạng thái chấm từng câu và tổng hợp overview của Mock Interview thường. */
+/**
+ * Quản lý trạng thái chấm từng câu và tổng hợp overview của Mock Interview thường.
+ * Được ScoreJobHandler gọi sau mỗi job score; dùng phép tính/trạng thái chung từ mock-core
+ * nhưng vẫn giữ query Prisma và prompt overview đặc thù của Mock Interview thường.
+ */
 @Injectable()
 export class MockInterviewScoringService {
   constructor(
@@ -42,7 +52,10 @@ export class MockInterviewScoringService {
       where: { sessionId },
       data: {
         scoreStatus: MockQuestionScoreStatus.FAILED,
-        scoreError: messageFromError(error),
+        scoreError: mockScoreErrorMessage(
+          error,
+          GENERIC_AI_JOB_FAILURE_MESSAGE,
+        ),
       },
     });
     await this.completeIfReady(item.mockInterviewId);
@@ -67,12 +80,11 @@ export class MockInterviewScoringService {
     });
     if (!mock || mock.status !== MockInterviewStatus.SCORING) return;
 
-    const terminalStatuses = new Set<MockQuestionScoreStatus>([
-      MockQuestionScoreStatus.SCORED,
-      MockQuestionScoreStatus.FAILED,
-      MockQuestionScoreStatus.SKIPPED,
-    ]);
-    if (mock.questions.some((item) => !terminalStatuses.has(item.scoreStatus))) {
+    if (
+      mock.questions.some(
+        (item) => !isTerminalMockScoreStatus(item.scoreStatus),
+      )
+    ) {
       return;
     }
 
@@ -102,7 +114,9 @@ export class MockInterviewScoringService {
       return;
     }
 
-    const averages = averageScores(scored.map((item) => item.session!.score!));
+    const averages = calculateMockScoreAverages(
+      scored.map((item) => item.session!.score!),
+    );
     const overviewInput: MockInterviewOverviewInput = {
       title: mock.title,
       topics: mock.topicLinks.map((link) => link.topic.name),
@@ -148,46 +162,20 @@ export class MockInterviewScoringService {
           ...averages,
           ...buildFallbackOverview(overviewInput),
           overviewStatus: MockOverviewStatus.FALLBACK,
-          overviewError: messageFromError(error),
+          overviewError: mockScoreErrorMessage(
+            error,
+            GENERIC_AI_JOB_FAILURE_MESSAGE,
+          ),
         },
       });
     }
   }
 }
 
-function averageScores(
-  scores: Array<{
-    technicalScore: number;
-    completenessScore: number;
-    clarityScore: number;
-  }>,
-) {
-  const count = scores.length;
-  const averageTechnicalScore = round1(
-    scores.reduce((sum, score) => sum + score.technicalScore, 0) / count,
-  );
-  const averageCompletenessScore = round1(
-    scores.reduce((sum, score) => sum + score.completenessScore, 0) / count,
-  );
-  const averageClarityScore = round1(
-    scores.reduce((sum, score) => sum + score.clarityScore, 0) / count,
-  );
-  const overallScore = round1(
-    (averageTechnicalScore +
-      averageCompletenessScore +
-      averageClarityScore) /
-      3,
-  );
-  return {
-    averageTechnicalScore,
-    averageCompletenessScore,
-    averageClarityScore,
-    overallScore,
-  };
-}
-
 function buildFallbackOverview(input: MockInterviewOverviewInput) {
-  const missed = topKeywords(input.scores.flatMap((score) => score.missedKeywords));
+  const missed = topMockKeywords(
+    input.scores.flatMap((score) => score.missedKeywords),
+  );
   const weakQuestions = input.scores
     .map((score) => ({
       label: `Câu ${score.order}`,
@@ -216,27 +204,4 @@ function buildFallbackOverview(input: MockInterviewOverviewInput) {
           ]
         : ['Tiếp tục luyện thêm một mock interview cùng chủ đề.'],
   };
-}
-
-function messageFromError(error: unknown): string {
-  return error instanceof HttpException || error instanceof Error
-    ? error.message
-    : GENERIC_AI_JOB_FAILURE_MESSAGE;
-}
-
-function round1(value: number): number {
-  return Math.round(value * 10) / 10;
-}
-
-function topKeywords(values: string[]): string[] {
-  const counts = new Map<string, number>();
-  for (const value of values) {
-    const key = value.trim();
-    if (!key) continue;
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-  return [...counts.entries()]
-    .sort((left, right) => right[1] - left[1])
-    .slice(0, 4)
-    .map(([key]) => key);
 }

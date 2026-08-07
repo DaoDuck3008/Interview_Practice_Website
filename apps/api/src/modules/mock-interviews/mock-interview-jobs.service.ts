@@ -12,10 +12,15 @@ import {
   MOCK_ANSWER_GRACE_MS,
   MOCK_AUTO_SUBMIT_BUFFER_MS,
   MOCK_EXPIRED_RECOVERY_INTERVAL_MS,
-} from './mock-interview.constants';
+} from '../mock-core/mock-core.constants';
 
 const REMOVE_ON_FAIL_AGE_SEC = 24 * 3600;
 
+/**
+ * Producer/scheduler của timer queue: tạo delayed auto-submit và lịch recovery.
+ * Dùng constants từ mock-core; được MockInterviewsService và
+ * MockInterviewJobsProcessor gọi, sau này sẽ mở rộng cho Mock CV Interview.
+ */
 @Injectable()
 export class MockInterviewJobsService implements OnModuleInit {
   private readonly logger = new Logger(MockInterviewJobsService.name);
