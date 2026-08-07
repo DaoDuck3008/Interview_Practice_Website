@@ -60,7 +60,10 @@
 ## Lưu ý frontend
 
 - Hiển thị riêng trạng thái profile và question generation; dùng WebSocket kèm polling fallback.
-- `PREPARING` chưa chạy timer; khi `questions-ready` gọi lại start nếu user vẫn ở màn chờ.
+- Sau khi user bấm bắt đầu và API trả `PREPARING`, khóa nút để tránh gửi lặp và hiển thị thông báo: “Đang chuẩn bị bộ câu hỏi từ CV, quá trình này thường mất khoảng 20–40 giây.”
+- `PREPARING` chưa chạy timer; lắng nghe event `mock-cv:questions-updated`, đồng thời polling `GET /mock-cvs/:id` mỗi 2–3 giây làm fallback.
+- Khi `questionGenerationStatus = READY`, tự gọi lại `POST /mock-cvs/:id/start` nếu user vẫn ở màn chờ; khi `FAILED` mới hiển thị nút thử lại theo trạng thái backend cho phép.
+- Không hiển thị phần trăm tiến độ giả; nếu chờ lâu hơn dự kiến thì đổi nội dung thông báo nhưng vẫn bám trạng thái thật từ backend.
 - Khóa selector số câu sau khi question set đã tạo, nhưng cho chọn lại thời lượng.
 - Phòng trả lời không được giả định câu luôn có topic, level hoặc question-bank ID.
 - Không tạo URL trực tiếp tới file CV private; admin UI Mock CV để giai đoạn sau.

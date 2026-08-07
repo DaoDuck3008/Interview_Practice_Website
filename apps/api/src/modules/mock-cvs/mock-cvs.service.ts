@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   MockCvAnalysisStatus,
   MockCvQuestionGenerationStatus,
@@ -75,6 +79,8 @@ export class MockCvsService {
       );
     }
 
+    // Nếu như bộ câu hỏi chưa được chuẩn bị, hoặc đang được chuẩn bị nhưng đã stale, thì claim quyền để chuẩn bị bộ câu hỏi. Nếu claim thành công, enqueue job tạo bộ câu hỏi.
+    // Nếu không, kiểm tra lại trạng thái để trả về cho user.
     if (
       analysis.questionGenerationStatus !== MockCvQuestionGenerationStatus.READY
     ) {
@@ -151,6 +157,7 @@ export class MockCvsService {
       };
     }
 
+    // Nếu đã có bộ câu hỏi sẵn sàng, tạo hoặc lấy phòng phỏng vấn đang làm.
     return this.createOrGetActiveInterview(id, userId, dto.durationSeconds);
   }
 
@@ -169,8 +176,7 @@ export class MockCvsService {
           { questionGenerationStatus: MockCvQuestionGenerationStatus.PENDING },
           { questionGenerationStatus: MockCvQuestionGenerationStatus.FAILED },
           {
-            questionGenerationStatus:
-              MockCvQuestionGenerationStatus.GENERATING,
+            questionGenerationStatus: MockCvQuestionGenerationStatus.GENERATING,
             questionGenerationStartedAt: { lte: staleAt },
           },
         ],
@@ -248,13 +254,13 @@ export class MockCvsService {
         throw new ConflictException('Bộ câu hỏi chưa sẵn sàng.');
       }
       if (mockCv.questions.length !== mockCv.analysis.requestedQuestionCount) {
-        throw new ConflictException('Bộ câu hỏi chưa đầy đủ. Vui lòng thử lại sau.');
+        throw new ConflictException(
+          'Bộ câu hỏi chưa đầy đủ. Vui lòng thử lại sau.',
+        );
       }
 
       const startedAt = new Date();
-      const expiresAt = new Date(
-        startedAt.getTime() + durationSeconds * 1_000,
-      );
+      const expiresAt = new Date(startedAt.getTime() + durationSeconds * 1_000);
       const interview = await tx.mockCvInterview.create({
         data: {
           mockCvId,

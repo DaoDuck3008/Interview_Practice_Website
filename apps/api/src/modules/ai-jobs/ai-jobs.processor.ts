@@ -41,7 +41,7 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
 
   onModuleInit() {
     // ConfigService chỉ sẵn sàng sau khi module khởi tạo, nên set concurrency tại đây.
-    this.worker.concurrency = this.config.get<number>('aiQueue.concurrency', 3);
+    this.worker.concurrency = this.config.get<number>('aiQueue.concurrency', 5);
   }
 
   async process(job: Job<AiJobData>): Promise<void> {

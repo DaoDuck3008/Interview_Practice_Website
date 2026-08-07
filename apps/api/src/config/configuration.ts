@@ -30,7 +30,7 @@ export const validationSchema = Joi.object({
   SEPAY_API_KEY: Joi.string().allow('').default(''), // Userapi token để đối soát
   RESEND_API_KEY: Joi.string().allow('').default(''),
   MAIL_FROM: Joi.string().default('Phỏng vấn IT <onboarding@resend.dev>'),
-  AI_QUEUE_CONCURRENCY: Joi.number().default(3),
+  AI_QUEUE_CONCURRENCY: Joi.number().default(5),
 });
 
 export default () => ({
@@ -77,9 +77,9 @@ export default () => ({
     mailFrom: process.env.MAIL_FROM ?? 'Phỏng vấn IT <onboarding@resend.dev>',
   },
   aiQueue: {
-    // Số job score/improve tối đa xử lý song song trên toàn hệ thống — nút
+    // Số AI job tối đa xử lý song song trên toàn hệ thống — nút
     // kiểm soát tải/chi phí AI ở cấp hệ thống, khác ConcurrencyInterceptor
     // (chỉ giới hạn theo từng user riêng lẻ).
-    concurrency: parseInt(process.env.AI_QUEUE_CONCURRENCY ?? '3', 10),
+    concurrency: parseInt(process.env.AI_QUEUE_CONCURRENCY ?? '5', 10),
   },
 });
