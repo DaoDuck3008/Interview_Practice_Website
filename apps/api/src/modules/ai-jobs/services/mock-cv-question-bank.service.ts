@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { Level, Prisma } from '@prisma/client';
+import { Level } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
-import {
-  splitBalancedLevelCounts,
-  splitEvenly,
-} from '../../mock-cv-analysis/mock-cv-bank-question.utils';
+import { selectDistributedQuestionIds } from '../../../common/utils/question-selection.util';
+import { splitBalancedLevelCounts } from '../../mock-cv-analysis/mock-cv-bank-question.utils';
+
+const LEVEL_ORDER: Record<Level, number> = {
+  [Level.EASY]: 0,
+  [Level.MEDIUM]: 1,
+  [Level.HARD]: 2,
+};
 
 /** Chọn câu bank cân bằng theo level và topic; AI sẽ bù nếu bank không đủ. */
 @Injectable()
@@ -34,7 +38,7 @@ export class MockCvQuestionBankService {
     // Nếu một level thiếu dữ liệu, bù từ level còn lại trong đúng các topic của CV.
     if (selectedIds.length < bankTarget) {
       selectedIds.push(
-        ...(await this.findRandomQuestionIds(
+        ...(await this.findDistributedQuestionIds(
           topicIds,
           undefined,
           bankTarget - selectedIds.length,
@@ -55,68 +59,35 @@ export class MockCvQuestionBankService {
       },
     });
     const byId = new Map(rows.map((question) => [question.id, question]));
-    return selectedIds.flatMap((id) => {
+    const selected = selectedIds.flatMap((id) => {
       const question = byId.get(id);
       return question ? [question] : [];
     });
+    // Cả câu fallback cũng phải về đúng vị trí để phần lý thuyết luôn tăng dần độ khó.
+    return selected.sort(
+      (left, right) => LEVEL_ORDER[left.level] - LEVEL_ORDER[right.level],
+    );
   }
 
   private async findDistributedQuestionIds(
-    topicIds: string[],
-    level: Level,
-    take: number,
-    excludedIds: string[],
-  ): Promise<string[]> {
-    if (take <= 0 || topicIds.length === 0) return [];
-    const perTopic = splitEvenly(take, topicIds.length);
-    const selected = [...excludedIds];
-    const result: string[] = [];
-    for (const [index, topicId] of topicIds.entries()) {
-      const ids = await this.findRandomQuestionIds(
-        [topicId],
-        level,
-        perTopic[index],
-        selected,
-      );
-      result.push(...ids);
-      selected.push(...ids);
-    }
-    if (result.length < take) {
-      result.push(
-        ...(await this.findRandomQuestionIds(
-          topicIds,
-          level,
-          take - result.length,
-          selected,
-        )),
-      );
-    }
-    return result;
-  }
-
-  private async findRandomQuestionIds(
     topicIds: string[],
     level: Level | undefined,
     take: number,
     excludedIds: string[],
   ): Promise<string[]> {
     if (take <= 0 || topicIds.length === 0) return [];
-    const levelFilter = level
-      ? Prisma.sql`AND "level" = ${level}::"Level"`
-      : Prisma.empty;
-    const exclusionFilter = excludedIds.length
-      ? Prisma.sql`AND "id" NOT IN (${Prisma.join(excludedIds)})`
-      : Prisma.empty;
-    const rows = await this.prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
-      SELECT "id"
-      FROM "Question"
-      WHERE "isActive" = true
-        AND "topicId" IN (${Prisma.join(topicIds)})
-        ${levelFilter}
-        ${exclusionFilter}
-      ORDER BY random()
-      LIMIT ${take}
-    `);
-    return rows.map((row) => row.id);
+    // Chỉ query một lần cho mỗi level, sau đó chia quota theo topic trong memory.
+    const candidates = await this.prisma.question.findMany({
+      where: {
+        isActive: true,
+        topicId: { in: topicIds },
+        ...(level ? { level } : {}),
+        ...(excludedIds.length > 0
+          ? { id: { notIn: excludedIds } }
+          : {}),
+      },
+      select: { id: true, topicId: true },
+    });
+    return selectDistributedQuestionIds(candidates, topicIds, take);
   }
 }

@@ -26,6 +26,7 @@ import { CacheService } from '../../cache/cache.service';
 import { REDIS_CLIENT } from '../../redis/redis.module';
 import { MAX_AUDIO_DURATION_SEC } from '../../common/upload/audio.constants';
 import { lockAdvisoryKey } from '../../common/utils/billing-lock.util';
+import { selectDistributedQuestionIds } from '../../common/utils/question-selection.util';
 import {
   CreateMockInterviewDto,
   type MockInterviewLevelOption,
@@ -924,7 +925,7 @@ export class MockInterviewsService {
 
     // Nếu một level thiếu dữ liệu, bù từ các level còn lại để phiên mock vẫn đủ số câu yêu cầu.
     if (selected.length < take) {
-      const extra = await this.findRandomQuestionIds(
+      const extra = await this.findDistributedRandomQuestionIds(
         topicIds,
         undefined,
         take - selected.length,
@@ -944,61 +945,21 @@ export class MockInterviewsService {
     take: number,
     excludedIds: string[] = [],
   ) {
-    const perTopicCounts = splitEvenly(take, topicIds.length);
-    const selected = [...excludedIds];
-    const result: string[] = [];
+    if (take <= 0 || topicIds.length === 0) return [];
 
-    for (const [index, topicId] of topicIds.entries()) {
-      const questions = await this.findRandomQuestionIds(
-        [topicId],
-        level,
-        perTopicCounts[index],
-        selected,
-      );
-      result.push(...questions);
-      selected.push(...questions);
-    }
-
-    if (result.length < take) {
-      const extra = await this.findRandomQuestionIds(
-        topicIds,
-        level,
-        take - result.length,
-        selected,
-      );
-      result.push(...extra);
-    }
-
-    return result;
-  }
-
-  // Hàm thực tế lấy id câu hỏi ngẫu nhiên từ DB, có thể loại trừ các câu đã chọn.
-  // Dùng trong hàm findDistributedRandomQuestionIds().
-  private async findRandomQuestionIds(
-    topicIds: string[],
-    level: Level | undefined,
-    take: number,
-    excludedIds: string[] = [],
-  ): Promise<string[]> {
-    if (take <= 0) return Promise.resolve([]);
-    const levelFilter = level
-      ? Prisma.sql`AND "level" = ${level}::"Level"`
-      : Prisma.empty;
-    const exclusionFilter = excludedIds.length
-      ? Prisma.sql`AND "id" NOT IN (${Prisma.join(excludedIds)})`
-      : Prisma.empty;
-
-    const rows = await this.prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
-      SELECT "id"
-      FROM "Question"
-      WHERE "isActive" = true
-        AND "topicId" IN (${Prisma.join(topicIds)})
-        ${levelFilter}
-        ${exclusionFilter}
-      ORDER BY random()
-      LIMIT ${take}
-    `);
-    return rows.map((row) => row.id);
+    // Một query lấy ứng viên của cả level; việc chia đều và random được xử lý trong memory.
+    const candidates = await this.prisma.question.findMany({
+      where: {
+        isActive: true,
+        topicId: { in: topicIds },
+        ...(level ? { level } : {}),
+        ...(excludedIds.length > 0
+          ? { id: { notIn: excludedIds } }
+          : {}),
+      },
+      select: { id: true, topicId: true },
+    });
+    return selectDistributedQuestionIds(candidates, topicIds, take);
   }
 
   // Chuyển relation trung gian thành mảng topics phẳng cho frontend, đồng thời giữ topic cũ làm fallback.
@@ -1034,16 +995,6 @@ function splitMixedLevelCounts(totalQuestions: number) {
     medium: base + (remainder >= 2 ? 1 : 0),
     hard: base,
   };
-}
-
-// Util function để chia số lượng câu hỏi gần đều cho từng topic.
-function splitEvenly(total: number, parts: number): number[] {
-  const base = Math.floor(total / parts);
-  const remainder = total % parts;
-  return Array.from(
-    { length: parts },
-    (_, index) => base + (index < remainder ? 1 : 0),
-  );
 }
 
 // Util function để trộn mảng, dùng khi tạo mock interview nhiều chủ đề.

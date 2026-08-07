@@ -19,15 +19,6 @@ export function splitBalancedLevelCounts(
   return result;
 }
 
-export function splitEvenly(total: number, parts: number): number[] {
-  const base = Math.floor(total / parts);
-  const remainder = total % parts;
-  return Array.from(
-    { length: parts },
-    (_, index) => base + (index < remainder ? 1 : 0),
-  );
-}
-
 function stableHash(value: string): number {
   let result = 0;
   for (let index = 0; index < value.length; index += 1) {

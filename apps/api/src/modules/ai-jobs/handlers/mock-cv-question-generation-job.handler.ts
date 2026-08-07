@@ -112,7 +112,8 @@ export class MockCvQuestionGenerationJobHandler {
           analysis.requestedQuestionCount - bankQuestions.length,
       });
 
-      const questions = shuffle([
+      // Giữ luồng tuyến tính: câu lý thuyết từ bank đi trước, sau đó mới đến câu cá nhân hóa từ CV.
+      const questions = [
         ...bankQuestions.map((question) => ({
           bankQuestionId: question.id,
           source: MockCvQuestionSource.QUESTION_BANK,
@@ -131,7 +132,7 @@ export class MockCvQuestionGenerationJobHandler {
           answerKeywords: question.answerKeywords,
           rationale: question.rationale,
         })),
-      ]);
+      ];
 
       const stored = await this.prisma.$transaction(async (tx) => {
         // Trạng thái và snapshot được ghi cùng transaction để READY luôn đồng nghĩa bộ câu hỏi đã đầy đủ.
@@ -276,13 +277,4 @@ export class MockCvQuestionGenerationJobHandler {
       message: 'Không thể chuẩn bị câu hỏi lúc này. Bạn có thể thử lại sau.',
     });
   }
-}
-
-function shuffle<T>(items: T[]): T[] {
-  const output = [...items];
-  for (let index = output.length - 1; index > 0; index -= 1) {
-    const nextIndex = Math.floor(Math.random() * (index + 1));
-    [output[index], output[nextIndex]] = [output[nextIndex], output[index]];
-  }
-  return output;
 }
