@@ -4,6 +4,7 @@ import { AiJobsModule } from '../ai-jobs/ai-jobs.module';
 import { CacheModule } from '../../cache/cache.module';
 import { ConcurrencyModule } from '../../common/concurrency/concurrency.module';
 import { MockCoreModule } from '../mock-core/mock-core.module';
+import { MockCvInterviewsModule } from '../mock-cv-interviews/mock-cv-interviews.module';
 import { MockInterviewsController } from './mock-interviews.controller';
 import { MockInterviewsService } from './mock-interviews.service';
 import { MockInterviewJobsService } from './mock-interview-jobs.service';
@@ -17,6 +18,7 @@ import { MOCK_INTERVIEW_JOBS_QUEUE } from './mock-interview-jobs.types';
 @Module({
   imports: [
     MockCoreModule,
+    MockCvInterviewsModule,
     AiJobsModule,
     CacheModule,
     ConcurrencyModule,
@@ -28,5 +30,6 @@ import { MOCK_INTERVIEW_JOBS_QUEUE } from './mock-interview-jobs.types';
     MockInterviewJobsService,
     MockInterviewJobsProcessor,
   ],
+  exports: [MockInterviewJobsService],
 })
 export class MockInterviewsModule {}

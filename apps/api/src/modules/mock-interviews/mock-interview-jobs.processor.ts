@@ -3,13 +3,16 @@ import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import type { Job } from 'bullmq';
 import {
   JOB_AUTO_SUBMIT_EXPIRED_MOCK,
+  JOB_AUTO_SUBMIT_EXPIRED_MOCK_CV,
   JOB_RECOVER_EXPIRED_MOCKS,
   MOCK_INTERVIEW_JOBS_QUEUE,
+  type AutoSubmitExpiredMockCvJobData,
   type AutoSubmitExpiredMockJobData,
   type MockInterviewJobData,
 } from './mock-interview-jobs.types';
 import { MockInterviewJobsService } from './mock-interview-jobs.service';
 import { MockInterviewsService } from './mock-interviews.service';
+import { MockCvInterviewsService } from '../mock-cv-interviews/mock-cv-interviews.service';
 
 /*
  * Queue này tách khỏi ai-jobs để việc auto-submit không bị chậm bởi các job chấm điểm.
@@ -23,6 +26,7 @@ export class MockInterviewJobsProcessor extends WorkerHost {
 
   constructor(
     private readonly mockInterviews: MockInterviewsService,
+    private readonly mockCvInterviews: MockCvInterviewsService,
     private readonly jobs: MockInterviewJobsService,
   ) {
     super();
@@ -34,6 +38,14 @@ export class MockInterviewJobsProcessor extends WorkerHost {
         const data = job.data as AutoSubmitExpiredMockJobData;
         await this.mockInterviews.autoSubmitExpired(
           data.mockInterviewId,
+          data.userId,
+        );
+        return;
+      }
+      case JOB_AUTO_SUBMIT_EXPIRED_MOCK_CV: {
+        const data = job.data as AutoSubmitExpiredMockCvJobData;
+        await this.mockCvInterviews.autoSubmitExpired(
+          data.mockCvInterviewId,
           data.userId,
         );
         return;
@@ -61,17 +73,31 @@ export class MockInterviewJobsProcessor extends WorkerHost {
   }
 
   private async recoverExpiredMocks() {
-    const mocks = await this.mockInterviews.findExpiredForAutoSubmit();
+    const [mocks, mockCvs] = await Promise.all([
+      this.mockInterviews.findExpiredForAutoSubmit(),
+      this.mockCvInterviews.findExpiredForAutoSubmit(),
+    ]);
     this.logger.log(
-      `Recovery tìm thấy ${mocks.length} mock interview hết hạn cần kiểm tra.`,
+      `Recovery tìm thấy ${mocks.length} mock thường và ${mockCvs.length} Mock CV hết hạn.`,
     );
-    const enqueued = await Promise.all(
-      mocks.map((mock) =>
-        this.jobs.enqueueAutoSubmit(mock.id, mock.userId, mock.expiresAt),
+    const [enqueued, enqueuedCv] = await Promise.all([
+      Promise.all(
+        mocks.map((mock) =>
+          this.jobs.enqueueAutoSubmit(mock.id, mock.userId, mock.expiresAt),
+        ),
       ),
-    );
+      Promise.all(
+        mockCvs.map((mock) =>
+          this.jobs.enqueueMockCvAutoSubmit(
+            mock.id,
+            mock.userId,
+            mock.expiresAt,
+          ),
+        ),
+      ),
+    ]);
     this.logger.log(
-      `Recovery đã tạo lại ${enqueued.filter(Boolean).length}/${mocks.length} delayed job mock interview.`,
+      `Recovery đã tạo lại ${enqueued.filter(Boolean).length}/${mocks.length} mock thường và ${enqueuedCv.filter(Boolean).length}/${mockCvs.length} Mock CV.`,
     );
   }
 }

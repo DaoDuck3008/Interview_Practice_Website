@@ -5,6 +5,8 @@ export const JOB_IMPROVE = 'improve';
 export const JOB_MOCK_CV_PROFILE = 'mock-cv-profile';
 export const JOB_MOCK_CV_QUESTION_GENERATION =
   'mock-cv-question-generation';
+export const JOB_MOCK_CV_INTERVIEW_OVERVIEW =
+  'mock-cv-interview-overview';
 
 export interface ScoreJobData {
   sessionId: string;
@@ -28,8 +30,14 @@ export interface MockCvQuestionGenerationJobData {
   attempt: number;
 }
 
+export interface MockCvInterviewOverviewJobData {
+  mockCvInterviewId: string;
+  userId: string;
+}
+
 export type AiJobData =
   | ScoreJobData
   | ImproveJobData
   | MockCvProfileJobData
-  | MockCvQuestionGenerationJobData;
+  | MockCvQuestionGenerationJobData
+  | MockCvInterviewOverviewJobData;

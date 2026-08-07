@@ -28,7 +28,7 @@ import { Audit } from '../audit/audit.decorator';
 import { MockInterviewsService } from './mock-interviews.service';
 import { CreateMockInterviewDto } from './dto/create-mock-interview.dto';
 import { QueryMockInterviewDto } from './dto/query-mock-interview.dto';
-import { AnswerMockQuestionDto } from './dto/answer-mock-question.dto';
+import { AnswerMockQuestionDto } from '../mock-core/dto/answer-mock-question.dto';
 import { QueryAdminMockInterviewDto } from './dto/query-admin-mock-interview.dto';
 
 interface AuthUser {

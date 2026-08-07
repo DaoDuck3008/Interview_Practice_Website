@@ -7,8 +7,8 @@ import { MockAnswerMediaService } from './services/mock-answer-media.service';
 
 /**
  * Vai trò: đóng gói các service hạ tầng dùng chung cho Mock Interview và Mock CV Interview.
- * Module dùng Quota/Speech/Storage, export answer media + Redis lock; hiện được import bởi
- * MockInterviewsModule và sẽ được MockCvInterviewsModule import ở giai đoạn kế tiếp.
+ * Module dùng Quota/Speech/Storage, export answer media + Redis lock; được import bởi
+ * MockInterviewsModule và MockCvInterviewsModule.
  */
 @Module({
   imports: [QuotaModule, SpeechModule, StorageModule],

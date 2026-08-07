@@ -6,11 +6,13 @@ import {
   AI_JOBS_QUEUE,
   JOB_IMPROVE,
   JOB_MOCK_CV_PROFILE,
+  JOB_MOCK_CV_INTERVIEW_OVERVIEW,
   JOB_MOCK_CV_QUESTION_GENERATION,
   JOB_SCORE,
   type AiJobData,
   type ImproveJobData,
   type MockCvProfileJobData,
+  type MockCvInterviewOverviewJobData,
   type MockCvQuestionGenerationJobData,
   type ScoreJobData,
 } from './ai-jobs.types';
@@ -18,6 +20,7 @@ import { ImproveJobHandler } from './handlers/improve-job.handler';
 import { MockCvProfileJobHandler } from './handlers/mock-cv-profile-job.handler';
 import { MockCvQuestionGenerationJobHandler } from './handlers/mock-cv-question-generation-job.handler';
 import { ScoreJobHandler } from './handlers/score-job.handler';
+import { MockCvInterviewOverviewJobHandler } from './handlers/mock-cv-interview-overview-job.handler';
 
 /**
  * Worker mỏng của queue AI: chỉ cấu hình concurrency, log lifecycle và chuyển job
@@ -33,6 +36,7 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
     private readonly improveHandler: ImproveJobHandler,
     private readonly mockCvProfileHandler: MockCvProfileJobHandler,
     private readonly mockCvQuestionHandler: MockCvQuestionGenerationJobHandler,
+    private readonly mockCvOverviewHandler: MockCvInterviewOverviewJobHandler,
     private readonly config: ConfigService,
   ) {
     super();
@@ -57,6 +61,10 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
       case JOB_MOCK_CV_QUESTION_GENERATION:
         return this.mockCvQuestionHandler.process(
           job as Job<MockCvQuestionGenerationJobData>,
+        );
+      case JOB_MOCK_CV_INTERVIEW_OVERVIEW:
+        return this.mockCvOverviewHandler.process(
+          job as Job<MockCvInterviewOverviewJobData>,
         );
       default:
         this.logger.warn(`Job name lạ, bỏ qua: ${job.name}`);
@@ -105,6 +113,10 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
       case JOB_MOCK_CV_QUESTION_GENERATION:
         return this.mockCvQuestionHandler.onFailed(
           job as Job<MockCvQuestionGenerationJobData>,
+        );
+      case JOB_MOCK_CV_INTERVIEW_OVERVIEW:
+        return this.mockCvOverviewHandler.onFailed(
+          job as Job<MockCvInterviewOverviewJobData>,
         );
       default:
         this.logger.error(

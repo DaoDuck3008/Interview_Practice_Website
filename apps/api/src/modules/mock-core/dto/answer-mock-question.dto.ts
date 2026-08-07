@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import { IsInt, Max, Min } from 'class-validator';
 import { MAX_AUDIO_DURATION_SEC } from '../../../common/upload/audio.constants';
 
+/** DTO duration dùng chung cho endpoint trả lời của Mock Interview và Mock CV Interview. */
 export class AnswerMockQuestionDto {
   @Type(() => Number)
   @IsInt({ message: 'Thời lượng audio phải là số nguyên.' })

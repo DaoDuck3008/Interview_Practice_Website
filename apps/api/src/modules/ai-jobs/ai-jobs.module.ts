@@ -15,6 +15,9 @@ import { MockCvQuestionGenerationJobHandler } from './handlers/mock-cv-question-
 import { MockInterviewScoringService } from './services/mock-interview-scoring.service';
 import { ScoreJobHandler } from './handlers/score-job.handler';
 import { MockCvQuestionBankService } from './services/mock-cv-question-bank.service';
+import { MockCvInterviewOverviewService } from '../mock-cv-analysis/mock-cv-interview-overview.service';
+import { MockCvInterviewOverviewJobHandler } from './handlers/mock-cv-interview-overview-job.handler';
+import { MockCvInterviewScoringService } from './services/mock-cv-interview-scoring.service';
 
 @Module({
   imports: [
@@ -29,11 +32,14 @@ import { MockCvQuestionBankService } from './services/mock-cv-question-bank.serv
     AiJobsProcessor,
     MockCvProfileService,
     MockCvQuestionGenerationService,
+    MockCvInterviewOverviewService,
     ScoreJobHandler,
     ImproveJobHandler,
     MockCvProfileJobHandler,
     MockCvQuestionGenerationJobHandler,
+    MockCvInterviewOverviewJobHandler,
     MockInterviewScoringService,
+    MockCvInterviewScoringService,
     MockCvQuestionBankService,
   ],
   exports: [AiJobsService],

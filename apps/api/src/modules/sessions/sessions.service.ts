@@ -373,7 +373,8 @@ export class SessionsService {
     }
 
     // Câu AI của Mock CV không có questionId; dùng snapshot gắn trực tiếp với Session.
-    const question = session.question ?? session.mockCvInterviewQuestion;
+    // Mock CV ưu tiên snapshot để dữ liệu hiển thị/chấm không lệch khi question bank đổi.
+    const question = session.mockCvInterviewQuestion ?? session.question;
     if (!question) {
       throw new NotFoundException(
         'Không tìm thấy dữ liệu câu hỏi dùng để chấm Session.',

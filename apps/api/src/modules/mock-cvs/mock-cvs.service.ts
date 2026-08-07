@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
@@ -14,6 +15,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AiJobsService } from '../ai-jobs/ai-jobs.service';
 import { MOCK_CV_JOB_STALE_MS } from '../mock-cv-analysis/mock-cv.constants';
 import { StartMockCvInterviewDto } from '../mock-cv-analysis/dto/start-mock-cv-interview.dto';
+import { MockInterviewJobsService } from '../mock-interviews/mock-interview-jobs.service';
 
 const INTERVIEW_SELECT = {
   id: true,
@@ -42,9 +44,12 @@ const INTERVIEW_SELECT = {
 
 @Injectable()
 export class MockCvsService {
+  private readonly logger = new Logger(MockCvsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly aiJobs: AiJobsService,
+    private readonly mockInterviewJobs: MockInterviewJobsService,
   ) {}
 
   async start(id: string, userId: string, dto: StartMockCvInterviewDto) {
@@ -205,7 +210,7 @@ export class MockCvsService {
     userId: string,
     durationSeconds: number,
   ) {
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // Lock theo CV để hai request start song song không tạo hai phòng đang làm.
       await lockAdvisoryKey(tx, `mock-cv-start:${mockCvId}`);
 
@@ -288,5 +293,24 @@ export class MockCvsService {
 
       return { status: 'STARTED', interview };
     });
+
+    if (
+      result.interview.status === MockInterviewStatus.IN_PROGRESS &&
+      result.interview.expiresAt
+    ) {
+      try {
+        // Enqueue sau commit; recovery scheduler sẽ bù nếu Redis đang gián đoạn.
+        await this.mockInterviewJobs.enqueueMockCvAutoSubmit(
+          result.interview.id,
+          userId,
+          result.interview.expiresAt,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Không thể tạo delayed job cho Mock CV ${result.interview.id}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+    return result;
   }
 }

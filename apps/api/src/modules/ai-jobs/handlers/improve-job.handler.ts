@@ -59,7 +59,8 @@ export class ImproveJobHandler {
         return;
       }
 
-      const question = session.question ?? session.mockCvInterviewQuestion;
+      // Mock CV ưu tiên snapshot để improvement không đổi theo question bank bị chỉnh sửa sau đó.
+      const question = session.mockCvInterviewQuestion ?? session.question;
       if (!question) {
         throw new NotFoundException(
           'Không tìm thấy dữ liệu câu hỏi dùng để cải thiện câu trả lời.',

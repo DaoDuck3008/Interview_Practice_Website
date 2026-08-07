@@ -1,7 +1,7 @@
 /**
  * Vai trò: tập trung các mốc thời gian dùng chung cho vòng đời các loại mock interview.
  * Được dùng bởi utility trong `mock-core`, Mock Interview thường và timer queue;
- * Mock CV Interview sẽ dùng lại các giá trị này ở giai đoạn tiếp theo.
+ * Mock CV Interview cũng dùng lại toàn bộ các giá trị này.
  */
 
 // Cho phép request audio đã bắt đầu sát giờ kết thúc thêm thời gian để hoàn tất upload/phiên âm.

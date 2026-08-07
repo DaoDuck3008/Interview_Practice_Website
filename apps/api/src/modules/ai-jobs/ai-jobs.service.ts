@@ -5,11 +5,13 @@ import {
   AI_JOBS_QUEUE,
   JOB_IMPROVE,
   JOB_MOCK_CV_PROFILE,
+  JOB_MOCK_CV_INTERVIEW_OVERVIEW,
   JOB_MOCK_CV_QUESTION_GENERATION,
   JOB_SCORE,
   type AiJobData,
   type ImproveJobData,
   type MockCvProfileJobData,
+  type MockCvInterviewOverviewJobData,
   type MockCvQuestionGenerationJobData,
   type ScoreJobData,
 } from './ai-jobs.types';
@@ -72,6 +74,22 @@ export class AiJobsService {
     return this.enqueue(
       JOB_MOCK_CV_QUESTION_GENERATION,
       `mock_cv_questions_${analysisId}_${attempt}`,
+      data,
+    );
+  }
+
+  /** Enqueue tổng hợp kết quả sau khi toàn bộ câu Mock CV đã terminal. */
+  enqueueMockCvInterviewOverview(
+    mockCvInterviewId: string,
+    userId: string,
+  ): Promise<void> {
+    const data: MockCvInterviewOverviewJobData = {
+      mockCvInterviewId,
+      userId,
+    };
+    return this.enqueue(
+      JOB_MOCK_CV_INTERVIEW_OVERVIEW,
+      `mock_cv_overview_${mockCvInterviewId}`,
       data,
     );
   }

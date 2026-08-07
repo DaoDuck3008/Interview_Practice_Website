@@ -17,6 +17,9 @@ import { StorageService } from '../../storage/storage.service';
 import type { ScoreJobData } from '../ai-jobs.types';
 import { GENERIC_AI_JOB_FAILURE_MESSAGE } from '../ai-jobs.constants';
 import { MockInterviewScoringService } from '../services/mock-interview-scoring.service';
+import { MockCvInterviewScoringService } from '../services/mock-cv-interview-scoring.service';
+
+type MockScoreOwner = 'MOCK_INTERVIEW' | 'MOCK_CV_INTERVIEW' | null;
 
 @Injectable()
 export class ScoreJobHandler {
@@ -28,11 +31,13 @@ export class ScoreJobHandler {
     private readonly storage: StorageService,
     private readonly scoring: ScoringService,
     private readonly mockInterviewScoring: MockInterviewScoringService,
+    private readonly mockCvInterviewScoring: MockCvInterviewScoringService,
     private readonly websocket: WebsocketGateway,
   ) {}
 
   async process(job: Job<ScoreJobData>): Promise<void> {
     const { sessionId, userId } = job.data;
+    let mockOwner: MockScoreOwner = null;
     try {
       const session = await this.prisma.session.findUnique({
         where: { id: sessionId },
@@ -46,16 +51,20 @@ export class ScoreJobHandler {
         const error = new NotFoundException(
           'Session không tồn tại (có thể đã bị xóa).',
         );
-        await this.mockInterviewScoring.markFailure(sessionId, error);
         this.emitFailure(job.id, userId, sessionId, error, false);
         return;
       }
+      mockOwner = session.mockCvInterviewQuestion
+        ? 'MOCK_CV_INTERVIEW'
+        : session.mockInterviewQuestion
+          ? 'MOCK_INTERVIEW'
+          : null;
 
       const existing = await this.prisma.score.findUnique({
         where: { sessionId },
       });
       if (existing) {
-        await this.mockInterviewScoring.markSuccess(sessionId);
+        await this.markSuccess(sessionId, mockOwner);
         this.websocket.emitToUser(userId, 'score:ready', {
           sessionId,
           score: existing,
@@ -63,8 +72,8 @@ export class ScoreJobHandler {
         return;
       }
 
-      // Câu AI của Mock CV không có Question; khi đó dùng snapshot trong phòng phỏng vấn.
-      const question = session.question ?? session.mockCvInterviewQuestion;
+      // Mock CV luôn ưu tiên snapshot để admin sửa question bank không làm đổi đáp án giữa bài.
+      const question = session.mockCvInterviewQuestion ?? session.question;
       if (!question) {
         throw new NotFoundException(
           'Không tìm thấy dữ liệu câu hỏi dùng để chấm Session.',
@@ -112,12 +121,37 @@ export class ScoreJobHandler {
         score = await this.createScore(sessionId, result);
       }
 
-      await this.mockInterviewScoring.markSuccess(sessionId);
+      await this.markSuccess(sessionId, mockOwner);
       this.websocket.emitToUser(userId, 'score:ready', { sessionId, score });
     } catch (error) {
-      await this.mockInterviewScoring.markFailure(sessionId, error);
+      await this.markFailure(sessionId, mockOwner, error);
       this.emitFailure(job.id, userId, sessionId, error, true);
       throw error;
+    }
+  }
+
+  /** Điều hướng lifecycle theo relation của Session; session luyện tập đơn không có mock owner. */
+  private async markSuccess(
+    sessionId: string,
+    owner: MockScoreOwner,
+  ): Promise<void> {
+    if (owner === 'MOCK_CV_INTERVIEW') {
+      await this.mockCvInterviewScoring.markSuccess(sessionId);
+    } else if (owner === 'MOCK_INTERVIEW') {
+      await this.mockInterviewScoring.markSuccess(sessionId);
+    }
+  }
+
+  /** Đánh dấu FAILED đúng bảng question item để retry không tác động nhầm loại mock. */
+  private async markFailure(
+    sessionId: string,
+    owner: MockScoreOwner,
+    error: unknown,
+  ): Promise<void> {
+    if (owner === 'MOCK_CV_INTERVIEW') {
+      await this.mockCvInterviewScoring.markFailure(sessionId, error);
+    } else if (owner === 'MOCK_INTERVIEW') {
+      await this.mockInterviewScoring.markFailure(sessionId, error);
     }
   }
 
