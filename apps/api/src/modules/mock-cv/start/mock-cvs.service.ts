@@ -10,12 +10,12 @@ import {
   MockInterviewStatus,
   Prisma,
 } from '@prisma/client';
-import { lockAdvisoryKey } from '../../common/utils/billing-lock.util';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AiJobsService } from '../ai-jobs/ai-jobs.service';
-import { MOCK_CV_JOB_STALE_MS } from '../mock-cv-analysis/mock-cv.constants';
-import { StartMockCvInterviewDto } from '../mock-cv-analysis/dto/start-mock-cv-interview.dto';
-import { MockInterviewJobsService } from '../mock-interviews/mock-interview-jobs.service';
+import { lockAdvisoryKey } from '../../../common/utils/billing-lock.util';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { AiJobsService } from '../../ai-jobs/ai-jobs.service';
+import { MOCK_CV_JOB_STALE_MS } from '../analysis/mock-cv.constants';
+import { StartMockCvInterviewDto } from '../analysis/dto/start-mock-cv-interview.dto';
+import { MockInterviewJobsService } from '../../mock-interviews/mock-interview-jobs.service';
 
 const INTERVIEW_SELECT = {
   id: true,

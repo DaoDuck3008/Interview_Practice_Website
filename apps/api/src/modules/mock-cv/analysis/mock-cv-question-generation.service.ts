@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DeepSeekClient } from '../ai/clients/deepseek.client';
+import { DeepSeekClient } from '../../ai/clients/deepseek.client';
 import { MOCK_CV_QUESTION_GENERATION_AI_TIMEOUT_MS } from './mock-cv.constants';
 import {
   MOCK_CV_QUESTION_GENERATION_SYSTEM_PROMPT,

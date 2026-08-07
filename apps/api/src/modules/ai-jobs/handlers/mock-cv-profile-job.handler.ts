@@ -11,7 +11,7 @@ import { WebsocketGateway } from '../../../websocket/websocket.gateway';
 import {
   MockCvNeedsReuploadError,
   MockCvProfileService,
-} from '../../mock-cv-analysis/mock-cv-profile.service';
+} from '../../mock-cv/analysis/mock-cv-profile.service';
 import type { MockCvProfileJobData } from '../ai-jobs.types';
 import { mockCvErrorCode } from '../utils/mock-cv-job.utils';
 

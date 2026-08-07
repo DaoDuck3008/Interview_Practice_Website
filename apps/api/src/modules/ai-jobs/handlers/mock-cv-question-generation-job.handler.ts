@@ -10,12 +10,12 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { WebsocketGateway } from '../../../websocket/websocket.gateway';
-import { MockCvQuestionGenerationService } from '../../mock-cv-analysis/mock-cv-question-generation.service';
-import { MOCK_CV_QUESTION_GENERATION_PROMPT_VERSION } from '../../mock-cv-analysis/prompts/mock-cv-question-generation.prompt';
+import { MockCvQuestionGenerationService } from '../../mock-cv/analysis/mock-cv-question-generation.service';
+import { MOCK_CV_QUESTION_GENERATION_PROMPT_VERSION } from '../../mock-cv/analysis/prompts/mock-cv-question-generation.prompt';
 import type {
   MockCvProfileResult,
   MockCvProjectProfile,
-} from '../../mock-cv-analysis/prompts/mock-cv-profile.prompt';
+} from '../../mock-cv/analysis/prompts/mock-cv-profile.prompt';
 import type { MockCvQuestionGenerationJobData } from '../ai-jobs.types';
 import { MockCvQuestionBankService } from '../services/mock-cv-question-bank.service';
 import { mockCvErrorCode } from '../utils/mock-cv-job.utils';

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Level } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { selectDistributedQuestionIds } from '../../../common/utils/question-selection.util';
-import { splitBalancedLevelCounts } from '../../mock-cv-analysis/mock-cv-bank-question.utils';
+import { splitBalancedLevelCounts } from '../../mock-cv/analysis/mock-cv-bank-question.utils';
 
 const LEVEL_ORDER: Record<Level, number> = {
   [Level.EASY]: 0,

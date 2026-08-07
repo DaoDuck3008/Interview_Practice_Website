@@ -12,7 +12,7 @@ import {
 } from './mock-interview-jobs.types';
 import { MockInterviewJobsService } from './mock-interview-jobs.service';
 import { MockInterviewsService } from './mock-interviews.service';
-import { MockCvInterviewsService } from '../mock-cv-interviews/mock-cv-interviews.service';
+import { MockCvInterviewsService } from '../mock-cv/interviews/mock-cv-interviews.service';
 
 /*
  * Queue này tách khỏi ai-jobs để việc auto-submit không bị chậm bởi các job chấm điểm.

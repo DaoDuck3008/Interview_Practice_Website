@@ -13,26 +13,26 @@ import {
   MockQuestionScoreStatus,
   Prisma,
 } from '@prisma/client';
-import { CacheService } from '../../cache/cache.service';
-import { lockAdvisoryKey } from '../../common/utils/billing-lock.util';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AiJobsService } from '../ai-jobs/ai-jobs.service';
+import { CacheService } from '../../../cache/cache.service';
+import { lockAdvisoryKey } from '../../../common/utils/billing-lock.util';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { AiJobsService } from '../../ai-jobs/ai-jobs.service';
 import {
   MOCK_ANSWER_GRACE_MS,
   MOCK_AUTO_SUBMIT_BUFFER_MS,
   MOCK_EXPIRED_RECOVERY_BATCH_SIZE,
   MOCK_SCORING_STALE_MS,
-} from '../mock-core/mock-core.constants';
-import { MockAnswerLockService } from '../mock-core/services/mock-answer-lock.service';
+} from '../../mock-core/mock-core.constants';
+import { MockAnswerLockService } from '../../mock-core/services/mock-answer-lock.service';
 import {
   MockAnswerMediaService,
   type PreparedMockAnswerMedia,
-} from '../mock-core/services/mock-answer-media.service';
-import { assertMockCanAnswer } from '../mock-core/utils/mock-deadline.util';
+} from '../../mock-core/services/mock-answer-media.service';
+import { assertMockCanAnswer } from '../../mock-core/utils/mock-deadline.util';
 import {
   isMockScoringStale,
   mockScoringRetryWaitSeconds,
-} from '../mock-core/utils/mock-retry.util';
+} from '../../mock-core/utils/mock-retry.util';
 
 const ROOM_SELECT = {
   id: true,

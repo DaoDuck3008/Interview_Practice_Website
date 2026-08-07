@@ -13,13 +13,13 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { fileUploadOptions } from '../../common/upload/file-upload.options';
+import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
+import { fileUploadOptions } from '../../../common/upload/file-upload.options';
 import {
   THROTTLE_AI_ACTION,
   THROTTLE_HEAVY_UPLOAD,
-} from '../../common/throttling/throttle-profiles';
+} from '../../../common/throttling/throttle-profiles';
 import { MAX_CV_BYTES } from './mock-cv.constants';
 import { MockCvAnalysisService } from './mock-cv-analysis.service';
 import { CreateMockCvDto } from './dto/create-mock-cv.dto';

@@ -7,8 +7,8 @@ import {
 import type { Job } from 'bullmq';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { WebsocketGateway } from '../../../websocket/websocket.gateway';
-import { MockCvInterviewOverviewService } from '../../mock-cv-analysis/mock-cv-interview-overview.service';
-import { MOCK_CV_INTERVIEW_OVERVIEW_PROMPT_VERSION } from '../../mock-cv-analysis/prompts/mock-cv-interview-overview.prompt';
+import { MockCvInterviewOverviewService } from '../../mock-cv/analysis/mock-cv-interview-overview.service';
+import { MOCK_CV_INTERVIEW_OVERVIEW_PROMPT_VERSION } from '../../mock-cv/analysis/prompts/mock-cv-interview-overview.prompt';
 import {
   calculateMockScoreAverages,
   mockScoreErrorMessage,

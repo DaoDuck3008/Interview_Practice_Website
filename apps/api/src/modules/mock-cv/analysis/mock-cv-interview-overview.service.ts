@@ -1,6 +1,6 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { MockCvReadiness } from '@prisma/client';
-import { DeepSeekClient } from '../ai/clients/deepseek.client';
+import { DeepSeekClient } from '../../ai/clients/deepseek.client';
 import { MOCK_CV_OVERVIEW_AI_TIMEOUT_MS } from './mock-cv.constants';
 import {
   MOCK_CV_INTERVIEW_OVERVIEW_SYSTEM_PROMPT,

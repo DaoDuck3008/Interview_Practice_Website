@@ -13,9 +13,9 @@ import {
   MockInterviewStatus,
   type Prisma,
 } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AiJobsService } from '../ai-jobs/ai-jobs.service';
-import { StorageService } from '../storage/storage.service';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { AiJobsService } from '../../ai-jobs/ai-jobs.service';
+import { StorageService } from '../../storage/storage.service';
 import {
   MOCK_CV_JOB_STALE_MS,
   MOCK_CV_RETRY_COOLDOWN_MS,

@@ -1,9 +1,9 @@
 import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { THROTTLE_AI_ACTION } from '../../common/throttling/throttle-profiles';
-import { StartMockCvInterviewDto } from '../mock-cv-analysis/dto/start-mock-cv-interview.dto';
+import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
+import { THROTTLE_AI_ACTION } from '../../../common/throttling/throttle-profiles';
+import { StartMockCvInterviewDto } from '../analysis/dto/start-mock-cv-interview.dto';
 import { MockCvsService } from './mock-cvs.service';
 
 interface AuthUser {

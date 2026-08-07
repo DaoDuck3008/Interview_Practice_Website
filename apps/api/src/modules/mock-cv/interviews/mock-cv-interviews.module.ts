@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
-import { CacheModule } from '../../cache/cache.module';
-import { ConcurrencyModule } from '../../common/concurrency/concurrency.module';
-import { AiJobsModule } from '../ai-jobs/ai-jobs.module';
-import { MockCoreModule } from '../mock-core/mock-core.module';
+import { CacheModule } from '../../../cache/cache.module';
+import { ConcurrencyModule } from '../../../common/concurrency/concurrency.module';
+import { AiJobsModule } from '../../ai-jobs/ai-jobs.module';
+import { MockCoreModule } from '../../mock-core/mock-core.module';
 import { MockCvInterviewsController } from './mock-cv-interviews.controller';
 import { MockCvInterviewsService } from './mock-cv-interviews.service';
 

@@ -10,16 +10,16 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
-import { ConcurrencyInterceptor } from '../../common/concurrency/concurrency.interceptor';
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { ConcurrencyInterceptor } from '../../../common/concurrency/concurrency.interceptor';
+import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import {
   THROTTLE_AI_ACTION,
   THROTTLE_HEAVY_UPLOAD,
-} from '../../common/throttling/throttle-profiles';
-import { MAX_AUDIO_BYTES } from '../../common/upload/audio.constants';
-import { fileUploadOptions } from '../../common/upload/file-upload.options';
-import { AnswerMockQuestionDto } from '../mock-core/dto/answer-mock-question.dto';
+} from '../../../common/throttling/throttle-profiles';
+import { MAX_AUDIO_BYTES } from '../../../common/upload/audio.constants';
+import { fileUploadOptions } from '../../../common/upload/file-upload.options';
+import { AnswerMockQuestionDto } from '../../mock-core/dto/answer-mock-question.dto';
 import { MockCvInterviewsService } from './mock-cv-interviews.service';
 
 interface AuthUser {

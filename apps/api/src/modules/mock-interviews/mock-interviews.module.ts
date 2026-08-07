@@ -4,7 +4,7 @@ import { AiJobsModule } from '../ai-jobs/ai-jobs.module';
 import { CacheModule } from '../../cache/cache.module';
 import { ConcurrencyModule } from '../../common/concurrency/concurrency.module';
 import { MockCoreModule } from '../mock-core/mock-core.module';
-import { MockCvInterviewsModule } from '../mock-cv-interviews/mock-cv-interviews.module';
+import { MockCvInterviewsModule } from '../mock-cv/interviews/mock-cv-interviews.module';
 import { MockInterviewsController } from './mock-interviews.controller';
 import { MockInterviewsService } from './mock-interviews.service';
 import { MockInterviewJobsService } from './mock-interview-jobs.service';

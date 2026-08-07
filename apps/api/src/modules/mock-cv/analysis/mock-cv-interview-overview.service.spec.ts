@@ -1,5 +1,5 @@
 import { InternalServerErrorException } from '@nestjs/common';
-import type { DeepSeekClient } from '../ai/clients/deepseek.client';
+import type { DeepSeekClient } from '../../ai/clients/deepseek.client';
 import { MockCvInterviewOverviewService } from './mock-cv-interview-overview.service';
 
 const INPUT = {
