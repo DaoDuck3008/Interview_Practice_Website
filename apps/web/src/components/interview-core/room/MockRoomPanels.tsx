@@ -1,5 +1,5 @@
 import { ArrowLeft, Clock3, Loader2, Send } from "lucide-react";
-import type { MockInterview } from "@/lib/api/mockInterviews";
+import type { InterviewSessionView } from "@/lib/interview-core/types";
 import StatusModal from "@/components/ui/StatusModal";
 import { PrimaryPillButton, SecondaryPillButton } from "./MockRoomShell";
 
@@ -12,7 +12,7 @@ export function ExpiredMockPanel({
   onBack,
   onSubmit,
 }: {
-  mock: MockInterview;
+  mock: InterviewSessionView;
   answeredCount: number;
   unansweredCount: number;
   submitting: boolean;
@@ -70,7 +70,7 @@ export function SubmitConfirmModal({
   onConfirm,
 }: {
   open: boolean;
-  mock: MockInterview;
+  mock: InterviewSessionView;
   answeredCount: number;
   unansweredCount: number;
   submitting: boolean;

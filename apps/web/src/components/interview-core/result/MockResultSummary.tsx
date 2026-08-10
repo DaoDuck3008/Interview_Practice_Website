@@ -4,7 +4,7 @@ import {
   Loader2,
   Sparkles,
 } from "lucide-react";
-import type { MockInterview } from "@/lib/api/mockInterviews";
+import type { InterviewSessionView } from "@/lib/interview-core/types";
 import { formatDateTime, formatTime } from "@/lib/utils/format";
 import {
   mockInterviewScoreBand,
@@ -28,7 +28,7 @@ export function ResultHero({
   counts,
   shouldPoll,
 }: {
-  mock: MockInterview;
+  mock: InterviewSessionView;
   counts: ResultCounts;
   shouldPoll: boolean;
 }) {
@@ -58,7 +58,7 @@ export function ResultHero({
             {mock.title}
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-white/62">
-            {mockInterviewTopicLabel(mock)} · {mock.totalQuestions} câu ·{" "}
+            {mock.contextLabel ?? mockInterviewTopicLabel(mock)} · {mock.totalQuestions} câu ·{" "}
             {formatTime(mock.durationSeconds)}
           </p>
         </div>
@@ -109,7 +109,7 @@ export function ResultHero({
 }
 
 // Khối tổng hợp điểm thành phần và các mốc thời gian của buổi mock.
-export function ResultSummaryPanel({ mock }: { mock: MockInterview }) {
+export function ResultSummaryPanel({ mock }: { mock: InterviewSessionView }) {
   return (
     <ResultGlassPanel className="p-5">
       <div className="mb-4 flex flex-col gap-1">
@@ -148,7 +148,7 @@ export function ResultSummaryPanel({ mock }: { mock: MockInterview }) {
 }
 
 // Nhận xét tổng quan AI gồm tóm tắt, điểm mạnh, điểm thiếu và gợi ý luyện tiếp.
-export function OverviewPanel({ mock }: { mock: MockInterview }) {
+export function OverviewPanel({ mock }: { mock: InterviewSessionView }) {
   const hasOverview =
     !!mock.summary ||
     mock.strengths.length > 0 ||
@@ -199,7 +199,7 @@ export function OverviewPanel({ mock }: { mock: MockInterview }) {
   );
 }
 
-function StatusChip({ status }: { status: MockInterview["status"] }) {
+function StatusChip({ status }: { status: InterviewSessionView["status"] }) {
   const badge = mockInterviewStatusBadge(status);
   return <span className={badge.className}>{badge.label}</span>;
 }

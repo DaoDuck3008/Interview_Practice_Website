@@ -1,5 +1,5 @@
 import { BarChart3, FileText, Loader2 } from "lucide-react";
-import type { MockInterviewQuestion } from "@/lib/api/mockInterviews";
+import type { InterviewQuestionView } from "@/lib/interview-core/types";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
 import { mockQuestionStatusBadge } from "@/lib/utils/mockInterview";
 import { SkeletonBlock } from "./MockResultShell";
@@ -14,7 +14,7 @@ export function QuestionResultsSection({
 }: {
   filter: QuestionFilter;
   onFilterChange: (filter: QuestionFilter) => void;
-  visibleQuestions: MockInterviewQuestion[];
+  visibleQuestions: InterviewQuestionView[];
 }) {
   return (
     <section>
@@ -61,10 +61,12 @@ export function QuestionResultsSection({
 }
 
 // Card kết quả từng câu, gom câu hỏi, transcript, audio và điểm AI của câu đó.
-function QuestionResultCard({ item }: { item: MockInterviewQuestion }) {
+function QuestionResultCard({ item }: { item: InterviewQuestionView }) {
   const score = item.session?.score ?? null;
   const average = score ? averageScore(score) : null;
-  const levelStyle = LEVEL_STYLE[item.question.level];
+  const levelStyle = item.question.level
+    ? LEVEL_STYLE[item.question.level]
+    : null;
 
   return (
     <article className="rounded-[1.5rem] border border-white/12 bg-white/[0.045] p-4 shadow-xl shadow-slate-950/15 backdrop-blur-xl">
@@ -74,14 +76,16 @@ function QuestionResultCard({ item }: { item: MockInterviewQuestion }) {
             <span className="rounded-full border border-white/15 bg-white/[0.055] px-2.5 py-1 text-xs font-bold text-white">
               Câu {item.order}
             </span>
-            <span
-              className={[
-                "rounded-full px-2.5 py-1 text-xs font-bold",
-                levelStyle.className,
-              ].join(" ")}
-            >
-              {levelStyle.label}
-            </span>
+            {levelStyle && (
+              <span
+                className={[
+                  "rounded-full px-2.5 py-1 text-xs font-bold",
+                  levelStyle.className,
+                ].join(" ")}
+              >
+                {levelStyle.label}
+              </span>
+            )}
             <QuestionStatusChip item={item} />
           </div>
           <h3 className="text-base font-bold leading-relaxed text-white">
@@ -157,7 +161,7 @@ function QuestionResultCard({ item }: { item: MockInterviewQuestion }) {
   );
 }
 
-function QuestionStatusChip({ item }: { item: MockInterviewQuestion }) {
+function QuestionStatusChip({ item }: { item: InterviewQuestionView }) {
   const badge = mockQuestionStatusBadge(item);
   return <span className={badge.className}>{badge.label}</span>;
 }

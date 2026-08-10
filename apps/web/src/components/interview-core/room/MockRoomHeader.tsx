@@ -1,6 +1,9 @@
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, Clock3, FileQuestion } from "lucide-react";
-import type { MockInterview, MockInterviewQuestion } from "@/lib/api/mockInterviews";
+import type {
+  InterviewQuestionView,
+  InterviewSessionView,
+} from "@/lib/interview-core/types";
 import { formatTime } from "@/lib/utils/format";
 import { mockInterviewTopicLabel, mockInterviewTopics } from "@/lib/utils/mockInterview";
 
@@ -9,8 +12,8 @@ export function TopicBadge({
   mock,
   questionTopic,
 }: {
-  mock: MockInterview;
-  questionTopic?: MockInterviewQuestion["question"]["topic"];
+  mock: InterviewSessionView;
+  questionTopic?: InterviewQuestionView["question"]["topic"];
 }) {
   const topic = questionTopic ?? mockInterviewTopics(mock)[0];
   return (
@@ -29,7 +32,7 @@ export function TopicBadge({
         )}
       </span>
       <span className="truncate">
-        {topic?.name ?? mockInterviewTopicLabel(mock)}
+        {topic?.name ?? mock.contextLabel ?? mockInterviewTopicLabel(mock)}
       </span>
     </span>
   );

@@ -41,7 +41,10 @@ export default function TextType<T extends ElementType = "div">({
   cursorClassName = "",
 }: TextTypeProps<T>) {
   const Component = as ?? "div";
-  const sentences = useMemo(() => (Array.isArray(text) ? text : [text]), [text]);
+  const sentences = useMemo(
+    () => (Array.isArray(text) ? text : [text]),
+    [text],
+  );
   const fullText = sentences.join(" ");
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const prefersReducedMotion = usePrefersReducedMotion();

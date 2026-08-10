@@ -59,6 +59,16 @@ const PUBLIC_MOCK_CV_SELECT = {
   createdAt: true,
   updatedAt: true,
   analysis: { select: PUBLIC_ANALYSIS_SELECT },
+  interviews: {
+    orderBy: { createdAt: 'desc' },
+    take: 1,
+    select: {
+      id: true,
+      status: true,
+      overallScore: true,
+      submittedAt: true,
+    },
+  },
   _count: { select: { interviews: true } },
 } satisfies Prisma.MockCvSelect;
 
@@ -361,9 +371,16 @@ export class MockCvAnalysisService {
         questionGenerationStatus: MockCvQuestionGenerationStatus;
         questionGenerationStartedAt: Date | null;
       } | null;
+      interviews: Array<{
+        id: string;
+        status: MockInterviewStatus;
+        overallScore: number | null;
+        submittedAt: Date | null;
+      }>;
     },
   >(mockCv: T) {
-    const analysis = mockCv.analysis;
+    const { interviews, ...publicMockCv } = mockCv;
+    const analysis = publicMockCv.analysis;
     const now = Date.now();
     const isStale =
       analysis?.status === MockCvAnalysisStatus.ANALYZING &&
@@ -385,7 +402,8 @@ export class MockCvAnalysisService {
       (!retryAvailableAt || retryAvailableAt.getTime() <= now);
 
     return {
-      ...mockCv,
+      ...publicMockCv,
+      latestInterview: interviews[0] ?? null,
       analysis: analysis
         ? {
             ...analysis,

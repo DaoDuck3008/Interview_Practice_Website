@@ -1,5 +1,5 @@
 import { ArrowLeft, Clock3, ListChecks, Loader2, Send } from "lucide-react";
-import type { MockInterviewQuestion } from "@/lib/api/mockInterviews";
+import type { InterviewQuestionView } from "@/lib/interview-core/types";
 import { formatTime } from "@/lib/utils/format";
 import { PrimaryPillButton } from "./MockRoomShell";
 import { TopicBadge } from "./MockRoomHeader";
@@ -100,7 +100,7 @@ export function MobileBottomDock({
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-xs font-semibold text-white/45">
-            {mockInterviewTopicLabel(mock)}
+            {mock.contextLabel ?? mockInterviewTopicLabel(mock)}
           </p>
           <p className="mt-0.5 animate-pulse font-mono text-xl font-black tabular-nums text-white">
             {remaining === null ? "--:--" : formatTime(remaining)}
@@ -148,7 +148,7 @@ function QuestionNavItem({
   compact = false,
   onClick,
 }: {
-  item: MockInterviewQuestion;
+  item: InterviewQuestionView;
   active: boolean;
   compact?: boolean;
   onClick: () => void;
