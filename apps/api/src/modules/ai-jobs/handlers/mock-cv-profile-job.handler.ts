@@ -14,6 +14,7 @@ import {
 } from '../../mock-cv/analysis/mock-cv-profile.service';
 import type { MockCvProfileJobData } from '../ai-jobs.types';
 import { mockCvErrorCode } from '../utils/mock-cv-job.utils';
+import { MockCvQuestionPreparationService } from '../services/mock-cv-question-preparation.service';
 
 @Injectable()
 export class MockCvProfileJobHandler {
@@ -24,6 +25,7 @@ export class MockCvProfileJobHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mockCvProfile: MockCvProfileService,
+    private readonly questionPreparation: MockCvQuestionPreparationService,
     private readonly websocket: WebsocketGateway,
     config: ConfigService,
   ) {
@@ -134,6 +136,9 @@ export class MockCvProfileJobHandler {
         analysisId,
         status: profile.status,
       });
+      if (profile.status === MockCvAnalysisStatus.READY) {
+        await this.questionPreparation.ensureQueued(analysisId, userId);
+      }
     } catch (error) {
       if (error instanceof MockCvNeedsReuploadError) {
         await this.handleNeedsReupload(

@@ -12,10 +12,9 @@ import {
 } from '@prisma/client';
 import { lockAdvisoryKey } from '../../../common/utils/billing-lock.util';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { AiJobsService } from '../../ai-jobs/ai-jobs.service';
-import { MOCK_CV_JOB_STALE_MS } from '../analysis/mock-cv.constants';
-import { StartMockCvInterviewDto } from '../analysis/dto/start-mock-cv-interview.dto';
 import { MockInterviewJobsService } from '../../mock-interviews/mock-interview-jobs.service';
+import { MockCvQuestionPreparationService } from '../../ai-jobs/services/mock-cv-question-preparation.service';
+import { DEFAULT_MOCK_CV_DURATION_SECONDS } from '../analysis/mock-cv.constants';
 
 const INTERVIEW_SELECT = {
   id: true,
@@ -48,11 +47,11 @@ export class MockCvsService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly aiJobs: AiJobsService,
+    private readonly questionPreparation: MockCvQuestionPreparationService,
     private readonly mockInterviewJobs: MockInterviewJobsService,
   ) {}
 
-  async start(id: string, userId: string, dto: StartMockCvInterviewDto) {
+  async start(id: string, userId: string) {
     const mockCv = await this.prisma.mockCv.findFirst({
       where: { id, userId },
       select: {
@@ -65,94 +64,45 @@ export class MockCvsService {
             questionGenerationAttempt: true,
             questionGenerationStartedAt: true,
             requestedQuestionCount: true,
+            requestedDurationSeconds: true,
           },
         },
       },
     });
     if (!mockCv?.analysis) throw new NotFoundException('Không tìm thấy CV.');
-    if (mockCv.analysis.status !== MockCvAnalysisStatus.READY) {
-      throw new ConflictException('CV chưa sẵn sàng để bắt đầu phỏng vấn.');
-    }
-
     const analysis = mockCv.analysis;
     if (
-      analysis.requestedQuestionCount !== null &&
-      analysis.requestedQuestionCount !== dto.totalQuestions
+      analysis.status === MockCvAnalysisStatus.UNSUPPORTED ||
+      analysis.status === MockCvAnalysisStatus.NEEDS_REUPLOAD ||
+      analysis.status === MockCvAnalysisStatus.FAILED
     ) {
       throw new ConflictException(
-        `Bộ câu hỏi của CV này đã được đặt là ${analysis.requestedQuestionCount} câu và không thể thay đổi.`,
+        'CV chưa sẵn sàng để bắt đầu phỏng vấn.',
       );
     }
+    if (analysis.status !== MockCvAnalysisStatus.READY) {
+      return { status: 'PREPARING', mockCvId: id, analysisId: analysis.id };
+    }
 
-    // Nếu như bộ câu hỏi chưa được chuẩn bị, hoặc đang được chuẩn bị nhưng đã stale, thì claim quyền để chuẩn bị bộ câu hỏi. Nếu claim thành công, enqueue job tạo bộ câu hỏi.
-    // Nếu không, kiểm tra lại trạng thái để trả về cho user.
     if (
       analysis.questionGenerationStatus !== MockCvQuestionGenerationStatus.READY
     ) {
-      const claimed = await this.claimQuestionGeneration(
+      const preparation = await this.questionPreparation.ensureQueued(
         analysis.id,
         userId,
-        dto.totalQuestions,
       );
-
-      if (claimed) {
-        const current = await this.prisma.mockCvAnalysis.findUnique({
-          where: { id: analysis.id },
-          select: { questionGenerationAttempt: true },
-        });
-        if (!current) throw new NotFoundException('Không tìm thấy CV.');
-
-        try {
-          await this.aiJobs.enqueueMockCvQuestionGeneration(
-            analysis.id,
-            userId,
-            current.questionGenerationAttempt,
-          );
-        } catch {
-          await this.prisma.mockCvAnalysis.updateMany({
-            where: {
-              id: analysis.id,
-              questionGenerationStatus:
-                MockCvQuestionGenerationStatus.GENERATING,
-              questionGenerationAttempt: current.questionGenerationAttempt,
-            },
-            data: {
-              questionGenerationStatus: MockCvQuestionGenerationStatus.FAILED,
-              questionGenerationError: 'QUEUE_ENQUEUE_FAILED',
-            },
-          });
-          throw new ConflictException(
-            'Chưa thể chuẩn bị câu hỏi lúc này. Vui lòng thử lại sau.',
-          );
-        }
-      } else {
-        // Trạng thái có thể đổi ngay sau lần đọc đầu tiên do request/job khác.
-        const current = await this.prisma.mockCvAnalysis.findUnique({
-          where: { id: analysis.id },
-          select: {
-            requestedQuestionCount: true,
-            questionGenerationStatus: true,
-          },
-        });
-        if (!current) throw new NotFoundException('Không tìm thấy CV.');
-        if (
-          current.requestedQuestionCount !== null &&
-          current.requestedQuestionCount !== dto.totalQuestions
-        ) {
-          throw new ConflictException(
-            `Bộ câu hỏi của CV này đã được đặt là ${current.requestedQuestionCount} câu và không thể thay đổi.`,
-          );
-        }
-        if (
-          current.questionGenerationStatus ===
-          MockCvQuestionGenerationStatus.READY
-        ) {
-          return this.createOrGetActiveInterview(
-            id,
-            userId,
-            dto.durationSeconds,
-          );
-        }
+      if (preparation === 'FAILED') {
+        throw new ConflictException(
+          'Chưa thể chuẩn bị câu hỏi lúc này. Vui lòng thử lại sau.',
+        );
+      }
+      if (preparation === 'READY') {
+        return this.createOrGetActiveInterview(
+          id,
+          userId,
+          analysis.requestedDurationSeconds ??
+            DEFAULT_MOCK_CV_DURATION_SECONDS,
+        );
       }
 
       return {
@@ -163,46 +113,11 @@ export class MockCvsService {
     }
 
     // Nếu đã có bộ câu hỏi sẵn sàng, tạo hoặc lấy phòng phỏng vấn đang làm.
-    return this.createOrGetActiveInterview(id, userId, dto.durationSeconds);
-  }
-
-  private async claimQuestionGeneration(
-    analysisId: string,
-    userId: string,
-    totalQuestions: number,
-  ): Promise<boolean> {
-    const now = new Date();
-    const staleAt = new Date(now.getTime() - MOCK_CV_JOB_STALE_MS);
-    const claimed = await this.prisma.mockCvAnalysis.updateMany({
-      where: {
-        id: analysisId,
-        mockCv: { is: { userId } },
-        OR: [
-          { questionGenerationStatus: MockCvQuestionGenerationStatus.PENDING },
-          { questionGenerationStatus: MockCvQuestionGenerationStatus.FAILED },
-          {
-            questionGenerationStatus: MockCvQuestionGenerationStatus.GENERATING,
-            questionGenerationStartedAt: { lte: staleAt },
-          },
-        ],
-        AND: [
-          {
-            OR: [
-              { requestedQuestionCount: null },
-              { requestedQuestionCount: totalQuestions },
-            ],
-          },
-        ],
-      },
-      data: {
-        questionGenerationStatus: MockCvQuestionGenerationStatus.GENERATING,
-        questionGenerationAttempt: { increment: 1 },
-        questionGenerationStartedAt: now,
-        requestedQuestionCount: totalQuestions,
-        questionGenerationError: null,
-      },
-    });
-    return claimed.count === 1;
+    return this.createOrGetActiveInterview(
+      id,
+      userId,
+      analysis.requestedDurationSeconds ?? DEFAULT_MOCK_CV_DURATION_SECONDS,
+    );
   }
 
   private async createOrGetActiveInterview(

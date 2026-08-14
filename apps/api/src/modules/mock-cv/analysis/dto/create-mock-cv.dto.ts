@@ -1,10 +1,28 @@
-import { Transform } from 'class-transformer';
-import { IsString, MaxLength, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsEnum, IsIn, IsInt } from 'class-validator';
+import {
+  MOCK_CV_DURATION_OPTIONS_SECONDS,
+  MOCK_CV_QUESTION_OPTIONS,
+  MockCvTargetRoleCode,
+} from '../mock-cv.constants';
 
 export class CreateMockCvDto {
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
-  @IsString({ message: 'Vị trí ứng tuyển phải là chuỗi.' })
-  @MinLength(2, { message: 'Vị trí ứng tuyển phải có ít nhất 2 ký tự.' })
-  @MaxLength(120, { message: 'Vị trí ứng tuyển tối đa 120 ký tự.' })
-  targetRole: string;
+  @IsEnum(MockCvTargetRoleCode, {
+    message: 'Vị trí ứng tuyển không nằm trong danh sách được hỗ trợ.',
+  })
+  targetRoleCode: MockCvTargetRoleCode;
+
+  @Type(() => Number)
+  @IsInt({ message: 'Số câu hỏi phải là số nguyên.' })
+  @IsIn(MOCK_CV_QUESTION_OPTIONS, {
+    message: 'Số câu hỏi chỉ có thể là 10, 20 hoặc 30 câu.',
+  })
+  totalQuestions: number;
+
+  @Type(() => Number)
+  @IsInt({ message: 'Thời lượng phải là số nguyên.' })
+  @IsIn(MOCK_CV_DURATION_OPTIONS_SECONDS, {
+    message: 'Thời lượng chỉ có thể là 15, 30, 45 hoặc 60 phút.',
+  })
+  durationSeconds: number;
 }

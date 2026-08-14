@@ -17,7 +17,9 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { AiJobsService } from '../../ai-jobs/ai-jobs.service';
 import { StorageService } from '../../storage/storage.service';
 import {
+  MOCK_CV_TARGET_ROLE_LABELS,
   MOCK_CV_JOB_STALE_MS,
+  MOCK_CV_QUESTION_JOB_STALE_MS,
   MOCK_CV_RETRY_COOLDOWN_MS,
 } from './mock-cv.constants';
 import { hasPdfMagic } from './mock-cv-profile.utils';
@@ -45,6 +47,7 @@ const PUBLIC_ANALYSIS_SELECT = {
   questionGenerationStatus: true,
   questionGenerationStartedAt: true,
   requestedQuestionCount: true,
+  requestedDurationSeconds: true,
   selectedBankQuestionCount: true,
   generatedQuestionCount: true,
   questionGeneratedAt: true,
@@ -100,12 +103,17 @@ export class MockCvAnalysisService {
       const created = await this.prisma.mockCv.create({
         data: {
           userId,
-          targetRole: dto.targetRole.trim(),
+          targetRole: MOCK_CV_TARGET_ROLE_LABELS[dto.targetRoleCode],
           fileKey: key,
           fileName: basename(file.originalname).slice(0, 255) || 'cv.pdf',
           mimeType: 'application/pdf',
           fileSize: file.size,
-          analysis: { create: {} },
+          analysis: {
+            create: {
+              requestedQuestionCount: dto.totalQuestions,
+              requestedDurationSeconds: dto.durationSeconds,
+            },
+          },
         },
         select: { id: true, analysis: { select: { id: true } } },
       });
@@ -149,11 +157,7 @@ export class MockCvAnalysisService {
 
   async getOwned(id: string, userId: string) {
     const mockCv = await this.prisma.mockCv.findFirst({
-      where: {
-        id,
-        userId,
-        analysis: { NOT: { status: MockCvAnalysisStatus.NEEDS_REUPLOAD } },
-      },
+      where: { id, userId },
       select: PUBLIC_MOCK_CV_SELECT,
     });
     if (!mockCv) throw new NotFoundException('Không tìm thấy CV.');
@@ -390,7 +394,7 @@ export class MockCvAnalysisService {
       analysis?.questionGenerationStatus === 'GENERATING' &&
       !!analysis.questionGenerationStartedAt &&
       now - analysis.questionGenerationStartedAt.getTime() >=
-        MOCK_CV_JOB_STALE_MS;
+        MOCK_CV_QUESTION_JOB_STALE_MS;
     const retryAvailableAt = analysis?.lastRetryAt
       ? new Date(analysis.lastRetryAt.getTime() + MOCK_CV_RETRY_COOLDOWN_MS)
       : null;

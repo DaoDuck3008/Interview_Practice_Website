@@ -2,10 +2,11 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
+  FileSearch2,
   FileText,
   ListFilter,
   Plus,
@@ -16,25 +17,25 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 import MockCvCard from "./MockCvCard";
-import MockCvStartModal from "./MockCvStartModal";
-import MockCvUploadModal from "./MockCvUploadModal";
+import MockCvHeroUploadCard from "./MockCvHeroUploadCard";
 import {
   createMockCv,
   deleteMockCv,
   getMockCvs,
   retryMockCvAnalysis,
-  startMockCvInterview,
+  type CreateMockCvInput,
   type MockCv,
-  type StartMockCvInterviewInput,
 } from "@/lib/api/mockCvs";
 import { toastApiError } from "@/lib/utils/apiError";
 import { useStatusModal } from "@/components/ui/useStatusModal";
 import TextType from "@/components/ui/TextType";
+import { useSocket } from "@/hooks/useSocket";
 
 const PAGE_SIZE = 6;
 
 export default function MockCvPage() {
   const router = useRouter();
+  const socket = useSocket();
   const { confirm, statusModal } = useStatusModal();
   const [cvs, setCvs] = useState<MockCv[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,12 +43,28 @@ export default function MockCvPage() {
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [page, setPage] = useState(1);
-  const [uploadOpen, setUploadOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [selectedCv, setSelectedCv] = useState<MockCv | null>(null);
-  const [startingCvId, setStartingCvId] = useState<string | null>(null);
   const [retryingCvId, setRetryingCvId] = useState<string | null>(null);
   const [deletingCvId, setDeletingCvId] = useState<string | null>(null);
+  const uploadLockRef = useRef(false);
+
+  const scrollToUploadForm = useCallback(() => {
+    const uploadCard = document.getElementById("mock-cv-upload-card");
+    const targetRoleInput = document.getElementById(
+      "mock-cv-target-role",
+    ) as HTMLSelectElement | null;
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    uploadCard?.scrollIntoView({
+      behavior: reduceMotion ? "auto" : "smooth",
+      block: "center",
+    });
+    window.requestAnimationFrame(() => {
+      targetRoleInput?.focus({ preventScroll: true });
+    });
+  }, []);
 
   const loadCvs = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -70,20 +87,22 @@ export default function MockCvPage() {
     queueMicrotask(() => void loadCvs());
   }, [loadCvs]);
 
-  const needsPolling = cvs.some(
-    (cv) =>
-      cv.analysis?.status === "PENDING" ||
-      cv.analysis?.status === "ANALYZING" ||
-      cv.analysis?.questionGenerationStatus === "GENERATING" ||
-      cv.latestInterview?.status === "SUBMITTED" ||
-      cv.latestInterview?.status === "SCORING",
-  );
-
   useEffect(() => {
-    if (!needsPolling) return;
-    const timer = window.setInterval(() => void loadCvs(true), 5000);
-    return () => window.clearInterval(timer);
-  }, [loadCvs, needsPolling]);
+    if (!socket) return;
+    const refresh = () => void loadCvs(true);
+    socket.on("mock-cv:analysis-updated", refresh);
+    socket.on("mock-cv:questions-updated", refresh);
+    socket.on("mock-cv-interview:scored", refresh);
+    socket.on("mock-cv-interview:failed", refresh);
+    socket.on("connect", refresh);
+    return () => {
+      socket.off("mock-cv:analysis-updated", refresh);
+      socket.off("mock-cv:questions-updated", refresh);
+      socket.off("mock-cv-interview:scored", refresh);
+      socket.off("mock-cv-interview:failed", refresh);
+      socket.off("connect", refresh);
+    };
+  }, [loadCvs, socket]);
 
   const filteredCvs = useMemo(() => {
     const normalized = search.trim().toLocaleLowerCase("vi");
@@ -113,40 +132,20 @@ export default function MockCvPage() {
     if (page > totalPages) queueMicrotask(() => setPage(totalPages));
   }, [page, totalPages]);
 
-  async function handleUpload(input: { targetRole: string; cv: File }) {
+  async function handleUpload(input: CreateMockCvInput) {
+    if (uploadLockRef.current) return false;
+    uploadLockRef.current = true;
     setUploading(true);
     try {
-      await createMockCv(input);
-      setUploadOpen(false);
-      toast.success("CV đã được tải lên và đang được chuẩn bị.");
-      await loadCvs(true);
+      const created = await createMockCv(input);
+      router.push(`/mock-cv/processing/${created.id}`);
       return true;
     } catch (error) {
       toastApiError(error, "Không thể tải CV lên. Vui lòng thử lại.");
       return false;
     } finally {
+      uploadLockRef.current = false;
       setUploading(false);
-    }
-  }
-
-  async function handleStart(input: StartMockCvInterviewInput) {
-    if (!selectedCv) return;
-    setStartingCvId(selectedCv.id);
-    try {
-      const result = await startMockCvInterview(selectedCv.id, input);
-      if (result.status === "PREPARING") {
-        setSelectedCv(null);
-        toast.info(
-          "Hệ thống đang chuẩn bị bộ câu hỏi. Card sẽ tự cập nhật khi sẵn sàng.",
-        );
-        await loadCvs(true);
-        return;
-      }
-      router.push(`/mock-cv/interviews/${result.interview.id}`);
-    } catch (error) {
-      toastApiError(error, "Không thể bắt đầu buổi luyện. Vui lòng thử lại.");
-    } finally {
-      setStartingCvId(null);
     }
   }
 
@@ -186,47 +185,63 @@ export default function MockCvPage() {
   }
 
   return (
-    <main className="py-3 sm:py-5 md:py-8">
-      <section className="relative min-h-52 overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#0f172a] shadow-[0_22px_70px_rgba(2,6,23,0.38),inset_0_1px_0_rgba(255,255,255,0.12)] sm:min-h-60 md:rounded-[2rem]">
+    <main className="mx-2 py-3 text-white sm:mx-3 sm:py-5 md:py-8">
+      <section
+        className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0f172a] shadow-[0_24px_90px_rgba(0,0,0,0.42)]"
+        style={{ minHeight: "clamp(650px, 82vh, 860px)" }}
+      >
         <Image
-          src="/images/mock-cv/add-cv-practice-cta-bg.png"
+          src="/images/mock-cv/mock-cv-hero-bg-v2.png"
           alt=""
           fill
           priority
           sizes="100vw"
-          className="object-cover object-top"
+          className="object-cover object-center"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(76,29,149,0.88)_0%,rgba(124,58,237,0.46)_48%,rgba(139,92,246,0.08)_78%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_16%_10%,rgba(139,92,246,0.28),transparent_38%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(15,23,42,0.08)_0%,rgba(15,23,42,0.18)_42%,rgba(15,23,42,0.5)_70%,rgba(15,23,42,0.68)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_76%_16%,rgba(196,181,253,0.16),transparent_34%)]" />
 
-        <div className="relative flex min-h-52 max-w-2xl flex-col justify-center px-5 py-7 sm:min-h-60 sm:px-8 md:px-10">
-          <p className="text-xs font-semibold text-accent-light">
-            Luyện phỏng vấn theo CV
-          </p>
-          <TextType
-            as="h1"
-            text="Thêm CV để luyện đúng trọng tâm luôn"
-            typingSpeed={54}
-            initialDelay={180}
-            startOnVisible
-            loop={false}
-            replayInterval={10000}
-            cursorCharacter="_"
-            className="mt-2 min-h-[2.4em] text-2xl font-extrabold tracking-tight text-text-primary sm:text-3xl md:text-4xl"
-            cursorClassName="ml-1 text-accent-light"
+        <div className="relative grid min-h-[inherit] gap-5 p-4 sm:p-5 md:gap-8 md:p-8 lg:grid-cols-[minmax(0,1fr)_430px] lg:items-center lg:p-10">
+          <div className="flex min-h-[300px] flex-col justify-between sm:min-h-[380px] lg:min-h-[620px]">
+            <div className="max-w-2xl animate-[fadeIn_700ms_ease-out_both]">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.08] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ddd6fe] shadow-[inset_0_1px_0_rgba(255,255,255,0.16)] backdrop-blur-xl sm:mb-5 sm:px-3.5 sm:py-2 sm:text-xs">
+                <FileSearch2 size={14} />
+                Mock CV
+              </div>
+              <div
+                className="max-w-xl"
+                style={{
+                  WebkitMaskImage:
+                    "linear-gradient(90deg, transparent 0%, black 7%, black 93%, transparent 100%)",
+                  maskImage:
+                    "linear-gradient(90deg, transparent 0%, black 7%, black 93%, transparent 100%)",
+                }}
+              >
+                <TextType
+                  as="h1"
+                  text="Luyện đúng những gì nhà tuyển dụng sẽ hỏi từ CV."
+                  typingSpeed={54}
+                  initialDelay={220}
+                  startOnVisible
+                  loop={false}
+                  replayInterval={10000}
+                  cursorCharacter="_"
+                  className="min-h-[calc(3*1em)] bg-[linear-gradient(105deg,#ffffff_0%,#ddd6fe_24%,#a78bfa_56%,#c4b5fd_78%,#f5f3ff_100%)] bg-clip-text text-3xl font-black leading-tight tracking-tight text-transparent drop-shadow-[0_0_26px_rgba(124,58,237,0.28)] sm:text-4xl md:text-5xl lg:text-6xl"
+                  cursorClassName="ml-1 text-[#c4b5fd]"
+                />
+                <p className="mt-4 max-w-lg text-sm leading-6 text-[#d8d6ea] sm:mt-5 sm:text-white sm:leading-7 md:text-lg">
+                  Tải CV và chọn vị trí ứng tuyển. Hệ thống sẽ đọc kinh
+                  nghiệm, kỹ năng và dự án để chuẩn bị bộ câu hỏi sát với hồ
+                  sơ của bạn.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <MockCvHeroUploadCard
+            submitting={uploading}
+            onSubmit={handleUpload}
           />
-          <p className="mt-3 max-w-xl text-sm leading-6 text-[#d8d6ea] sm:text-white">
-            Hệ thống đọc kinh nghiệm và kỹ năng trong CV để chuẩn bị bộ câu hỏi
-            sát với vị trí bạn đang ứng tuyển.
-          </p>
-          <button
-            type="button"
-            onClick={() => setUploadOpen(true)}
-            className="mt-5 inline-flex h-11 w-fit items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(76,29,149,0.24),inset_0_1px_0_rgba(255,255,255,0.18)] transition-all hover:-translate-y-0.5 hover:bg-accent-light active:scale-[0.98]"
-          >
-            <Plus size={17} />
-            Thêm CV để luyện
-          </button>
         </div>
       </section>
 
@@ -253,7 +268,7 @@ export default function MockCvPage() {
             </button>
             <button
               type="button"
-              onClick={() => setUploadOpen(true)}
+              onClick={scrollToUploadForm}
               className="inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-3.5 text-sm font-semibold text-white transition-colors hover:bg-accent-light active:scale-[0.98]"
             >
               <Plus size={16} />
@@ -316,7 +331,7 @@ export default function MockCvPage() {
                   : "Tải CV đầu tiên để bắt đầu luyện phỏng vấn theo kinh nghiệm của bạn."
               }
               actionLabel={search ? undefined : "Thêm CV"}
-              onAction={search ? undefined : () => setUploadOpen(true)}
+              onAction={search ? undefined : scrollToUploadForm}
             />
           ) : (
             <div className="grid gap-3 lg:grid-cols-2">
@@ -325,14 +340,15 @@ export default function MockCvPage() {
                   key={cv.id}
                   cv={cv}
                   busy={
-                    startingCvId === cv.id ||
                     retryingCvId === cv.id ||
                     deletingCvId === cv.id
                   }
-                  onStart={setSelectedCv}
+                  onStart={(item) =>
+                    router.push(`/mock-cv/processing/${item.id}`)
+                  }
                   onRetry={(item) => void handleRetry(item)}
                   onDelete={(item) => void handleDelete(item)}
-                  onReplace={() => setUploadOpen(true)}
+                  onReplace={scrollToUploadForm}
                 />
               ))}
             </div>
@@ -373,19 +389,6 @@ export default function MockCvPage() {
         )}
       </section>
 
-      <MockCvUploadModal
-        open={uploadOpen}
-        submitting={uploading}
-        onClose={() => setUploadOpen(false)}
-        onSubmit={handleUpload}
-      />
-      <MockCvStartModal
-        key={selectedCv?.id ?? "closed"}
-        cv={selectedCv}
-        submitting={startingCvId === selectedCv?.id}
-        onClose={() => setSelectedCv(null)}
-        onSubmit={handleStart}
-      />
       {statusModal}
     </main>
   );

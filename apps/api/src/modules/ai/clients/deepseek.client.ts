@@ -6,7 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 
 const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
-const DEFAULT_TIMEOUT_MS = 15_000;
+const DEFAULT_TIMEOUT_MS = 60_000;
 
 // Lỗi mạng/timeout/quá tải thường chỉ tạm thời -> thử lại 1 lần. Lỗi cấu hình
 // (401 sai key, 402 hết hạn mức) sẽ KHÔNG được retry vì thử lại cũng không giải quyết được.

@@ -12,6 +12,8 @@ import {
   normalizeMockCvGeneratedQuestions,
 } from './mock-cv-question-generation.utils';
 
+const MAX_QUESTIONS_PER_AI_CALL = 5;
+
 @Injectable()
 export class MockCvQuestionGenerationService {
   constructor(private readonly deepseek: DeepSeekClient) {}
@@ -21,6 +23,32 @@ export class MockCvQuestionGenerationService {
   ): Promise<MockCvGeneratedQuestion[]> {
     if (input.requestedQuestionCount === 0) return [];
 
+    const generated: MockCvGeneratedQuestion[] = [];
+    while (generated.length < input.requestedQuestionCount) {
+      const batchSize = Math.min(
+        MAX_QUESTIONS_PER_AI_CALL,
+        input.requestedQuestionCount - generated.length,
+      );
+      const batchInput: MockCvQuestionGenerationInput = {
+        ...input,
+        requestedQuestionCount: batchSize,
+        selectedBankQuestions: [
+          ...input.selectedBankQuestions,
+          ...generated.map((question) => ({
+            content: question.content,
+            topicName: 'Câu hỏi đã sinh ở lượt trước',
+            level: 'MEDIUM' as const,
+          })),
+        ],
+      };
+      generated.push(...(await this.generateBatch(batchInput)));
+    }
+    return generated;
+  }
+
+  private async generateBatch(
+    input: MockCvQuestionGenerationInput,
+  ): Promise<MockCvGeneratedQuestion[]> {
     const userPrompt = buildMockCvQuestionGenerationUserPrompt(input);
     const existingContents = input.selectedBankQuestions.map(
       (question) => question.content,

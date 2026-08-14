@@ -1,6 +1,11 @@
 import { io, Socket } from "socket.io-client";
 
 let socket: Socket | null = null;
+const socketSubscribers = new Set<() => void>();
+
+function notifySocketSubscribers() {
+  for (const subscriber of socketSubscribers) subscriber();
+}
 
 /** Origin thuần (bỏ path /api/v1) — namespace /ws không nằm dưới global prefix HTTP. */
 function socketOrigin(): string {
@@ -17,16 +22,25 @@ export function connectSocket(token: string): Socket {
   socket = io(`${socketOrigin()}/ws`, {
     auth: { token },
   });
+  notifySocketSubscribers();
   return socket;
 }
 
 export function disconnectSocket() {
   socket?.disconnect();
   socket = null;
+  notifySocketSubscribers();
 }
 
 export function getSocket(): Socket | null {
   return socket;
+}
+
+export function subscribeSocket(subscriber: () => void) {
+  socketSubscribers.add(subscriber);
+  return () => {
+    socketSubscribers.delete(subscriber);
+  };
 }
 
 /**

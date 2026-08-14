@@ -404,6 +404,7 @@ model MockCvAnalysis {
   questionGenerationError     String?
   questionPromptVersion       String?
   requestedQuestionCount      Int?
+  requestedDurationSeconds    Int      @default(900)
   selectedBankQuestionCount   Int?
   generatedQuestionCount      Int?
 

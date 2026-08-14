@@ -227,12 +227,48 @@ function CardSummary({ cv }: { cv: MockCv }) {
     );
   }
 
-  if (cv.analysis?.status === "READY") {
+  if (cv.analysis?.isStale || cv.analysis?.isQuestionGenerationStale) {
+    return (
+      <SummaryIcon
+        icon={RotateCcw}
+        title="Chuẩn bị lâu hơn dự kiến"
+        subtitle="Bạn có thể chủ động thử lại"
+      />
+    );
+  }
+
+  if (
+    cv.analysis?.status === "READY" &&
+    cv.analysis.questionGenerationStatus === "READY"
+  ) {
     return (
       <SummaryIcon
         icon={Sparkles}
         title="Sẵn sàng để luyện"
         subtitle="Câu hỏi bám theo nội dung CV"
+      />
+    );
+  }
+
+  if (
+    cv.analysis?.status === "READY" &&
+    cv.analysis.questionGenerationStatus === "FAILED"
+  ) {
+    return (
+      <SummaryIcon
+        icon={RotateCcw}
+        title="Chưa thể tạo bộ câu hỏi"
+        subtitle="Bạn có thể thử chuẩn bị lại"
+      />
+    );
+  }
+
+  if (cv.analysis?.status === "READY") {
+    return (
+      <SummaryIcon
+        icon={Loader2}
+        title="Đang tạo bộ câu hỏi"
+        subtitle="CV đã phân tích xong"
       />
     );
   }
@@ -250,7 +286,7 @@ function CardSummary({ cv }: { cv: MockCv }) {
     );
   }
 
-  if (cv.analysis?.status === "FAILED") {
+  if (cv.analysis?.status === "FAILED" || cv.analysis?.isStale) {
     return (
       <SummaryIcon
         icon={RotateCcw}
@@ -380,7 +416,7 @@ function CardAction({
     );
   }
 
-  if (cv.analysis?.status === "FAILED") {
+  if (cv.analysis?.status === "FAILED" || cv.analysis?.isStale) {
     return (
       <button
         type="button"
@@ -407,6 +443,36 @@ function CardAction({
       >
         <Loader2 size={15} className="animate-spin" />
         Đang chuẩn bị
+      </button>
+    );
+  }
+
+  if (
+    cv.analysis.questionGenerationStatus === "FAILED" ||
+    cv.analysis.isQuestionGenerationStale
+  ) {
+    return (
+      <button
+        type="button"
+        onClick={onStart}
+        disabled={busy}
+        className={`${baseClass} border border-accent-light/25 bg-accent/10 text-accent-light hover:bg-accent/20`}
+      >
+        <RotateCcw size={15} />
+        Chuẩn bị lại
+      </button>
+    );
+  }
+
+  if (cv.analysis.questionGenerationStatus !== "READY") {
+    return (
+      <button
+        type="button"
+        onClick={onStart}
+        className={`${baseClass} border border-white/10 bg-white/[0.04] text-text-primary hover:bg-white/[0.08]`}
+      >
+        <Loader2 size={15} className="animate-spin" />
+        Xem tiến độ
       </button>
     );
   }
