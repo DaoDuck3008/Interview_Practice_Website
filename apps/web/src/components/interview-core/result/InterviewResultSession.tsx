@@ -75,6 +75,14 @@ export default function InterviewResultSession<TDetails = never>({
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<QuestionFilter>("ALL");
 
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "instant",
+    });
+  }, [id]);
+
   // Tải báo cáo từ đúng nguồn phỏng vấn; phần trình bày được dùng chung để giữ trải nghiệm nhất quán.
   const loadResult = useCallback(
     async (options: { initial?: boolean } = {}) => {
@@ -91,9 +99,7 @@ export default function InterviewResultSession<TDetails = never>({
           ? err.response?.status
           : undefined;
         if (status === 401) {
-          router.push(
-            `/login?redirect=${encodeURIComponent(resultPath)}`,
-          );
+          router.push(`/login?redirect=${encodeURIComponent(resultPath)}`);
           return;
         }
         const serverMsg = axios.isAxiosError(err)
@@ -112,9 +118,7 @@ export default function InterviewResultSession<TDetails = never>({
   useEffect(() => {
     if (!hydrated) return;
     if (!user) {
-      router.push(
-        `/login?redirect=${encodeURIComponent(resultPath)}`,
-      );
+      router.push(`/login?redirect=${encodeURIComponent(resultPath)}`);
       return;
     }
     queueMicrotask(() => {
