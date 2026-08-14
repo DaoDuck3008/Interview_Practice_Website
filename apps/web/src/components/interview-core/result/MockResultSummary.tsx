@@ -1,9 +1,4 @@
-import {
-  AlertCircle,
-  CheckCircle2,
-  Loader2,
-  Sparkles,
-} from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Sparkles } from "lucide-react";
 import type { InterviewSessionView } from "@/lib/interview-core/types";
 import { formatDateTime, formatTime } from "@/lib/utils/format";
 import {
@@ -22,15 +17,13 @@ type ResultCounts = {
   pendingCount: number;
 };
 
-// Hero của trang /mock-interviews/[id]/result, hiển thị điểm tổng và trạng thái polling.
+// Hero của trang kết quả, chỉ hiển thị sau khi toàn bộ pipeline chấm điểm hoàn tất.
 export function ResultHero({
   mock,
   counts,
-  shouldPoll,
 }: {
   mock: InterviewSessionView;
   counts: ResultCounts;
-  shouldPoll: boolean;
 }) {
   const overall = mock.overallScore;
   const overallBand = mockInterviewScoreBand(overall);
@@ -39,17 +32,11 @@ export function ResultHero({
 
   return (
     <ResultGlassPanel className="overflow-hidden p-5 md:p-6">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_50%_0%,rgba(221,214,254,0.22),transparent_58%)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-40" />
       <div className="relative grid gap-6 lg:grid-cols-[1fr_16rem] lg:items-start">
         <div>
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <StatusChip status={mock.status} />
-            {shouldPoll && (
-              <span className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-bold text-accent-light">
-                <Loader2 size={13} className="animate-spin" />
-                Tự cập nhật
-              </span>
-            )}
           </div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-violet-200/80">
             Báo cáo mock interview
@@ -58,8 +45,8 @@ export function ResultHero({
             {mock.title}
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-white/62">
-            {mock.contextLabel ?? mockInterviewTopicLabel(mock)} · {mock.totalQuestions} câu ·{" "}
-            {formatTime(mock.durationSeconds)}
+            {mock.contextLabel ?? mockInterviewTopicLabel(mock)} ·{" "}
+            {mock.totalQuestions} câu · {formatTime(mock.durationSeconds)}
           </p>
         </div>
 
@@ -98,10 +85,18 @@ export function ResultHero({
       </div>
 
       <div className="relative mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <MetricCard label="Đã trả lời" value={counts.answeredCount} tone="success" />
+        <MetricCard
+          label="Đã trả lời"
+          value={counts.answeredCount}
+          tone="success"
+        />
         <MetricCard label="Bỏ qua" value={counts.skippedCount} />
         <MetricCard label="Đã chấm" value={counts.scoredCount} tone="success" />
-        <MetricCard label="Đang chấm" value={counts.pendingCount} tone="accent" />
+        <MetricCard
+          label="Đang chấm"
+          value={counts.pendingCount}
+          tone="accent"
+        />
         <MetricCard label="Lỗi chấm" value={counts.failedCount} tone="danger" />
       </div>
     </ResultGlassPanel>
@@ -169,7 +164,8 @@ export function OverviewPanel({ mock }: { mock: InterviewSessionView }) {
       {!hasOverview ? (
         <div className="flex items-center gap-3 rounded-3xl border border-white/10 bg-white/[0.045] p-4 text-sm text-white/62">
           <Loader2 size={16} className="animate-spin text-violet-200" />
-          Đang tổng hợp nhận xét tổng quan. Trang sẽ tự cập nhật khi backend chấm xong.
+          Đang tổng hợp nhận xét tổng quan. Trang sẽ tự cập nhật khi backend
+          chấm xong.
         </div>
       ) : (
         <div className="space-y-4">
@@ -179,8 +175,16 @@ export function OverviewPanel({ mock }: { mock: InterviewSessionView }) {
             </blockquote>
           )}
           <div className="grid gap-3 md:grid-cols-3">
-            <InsightList title="Điểm mạnh" items={mock.strengths} tone="success" />
-            <InsightList title="Điểm thiếu" items={mock.weaknesses} tone="danger" />
+            <InsightList
+              title="Điểm mạnh"
+              items={mock.strengths}
+              tone="success"
+            />
+            <InsightList
+              title="Điểm thiếu"
+              items={mock.weaknesses}
+              tone="danger"
+            />
             <InsightList
               title="Nên luyện tiếp"
               items={mock.nextRecommendations}
@@ -270,7 +274,10 @@ function InsightList({
       ) : (
         <ul className="space-y-2">
           {items.map((item, index) => (
-            <li key={index} className="flex gap-2 text-sm leading-6 text-white/62">
+            <li
+              key={index}
+              className="flex gap-2 text-sm leading-6 text-white/62"
+            >
               <span
                 className={[
                   "mt-2 h-1.5 w-1.5 shrink-0 rounded-full",

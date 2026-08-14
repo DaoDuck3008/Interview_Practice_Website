@@ -27,6 +27,7 @@ export default function MockInterviewResult({ id }: { id: string }) {
       resultPath={`/mock-interviews/${id}/result`}
       fetchResult={fetchMockInterviewResult}
       retryScoring={retryScoring}
+      scoredEvent="mock-interview:scored"
     />
   );
 }

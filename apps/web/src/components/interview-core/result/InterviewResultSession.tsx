@@ -10,12 +10,14 @@ import {
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Clock3, RefreshCw } from "lucide-react";
 import axios from "axios";
+import { useSocket } from "@/hooks/useSocket";
 import { useAuthStore } from "@/stores/auth.store";
 import type { InterviewSessionView } from "@/lib/interview-core/types";
 import { MOCK_INTERVIEW_STATUS_LABEL } from "@/lib/utils/mockInterview";
 import {
   MockResultShell,
   ResultGlassPanel,
+  ScoringResultSkeleton,
   ResultSkeleton,
 } from "./MockResultShell";
 import { QuestionResultsSection } from "./MockResultQuestions";
@@ -38,7 +40,14 @@ export interface InterviewResultSessionProps<TDetails = never> {
   resultPath: string;
   fetchResult: (id: string) => Promise<InterviewResultPayload<TDetails>>;
   retryScoring: (id: string) => Promise<InterviewResultPayload<TDetails>>;
+  scoredEvent: string;
+  failedEvent?: string;
   renderDetails?: (details: TDetails | undefined) => ReactNode;
+}
+
+interface ScoringEventPayload {
+  mockInterviewId?: string;
+  mockCvInterviewId?: string;
 }
 
 export default function InterviewResultSession<TDetails = never>({
@@ -48,9 +57,12 @@ export default function InterviewResultSession<TDetails = never>({
   resultPath,
   fetchResult,
   retryScoring,
+  scoredEvent,
+  failedEvent,
   renderDetails,
 }: InterviewResultSessionProps<TDetails>) {
   const router = useRouter();
+  const socket = useSocket();
   const user = useAuthStore((s) => s.user);
   const hydrated = useAuthStore((s) => s.hydrated);
 
@@ -110,6 +122,29 @@ export default function InterviewResultSession<TDetails = never>({
     });
   }, [hydrated, user, id, router, loadResult, resultPath]);
 
+  useEffect(() => {
+    if (!socket) return;
+
+    const belongsToCurrentInterview = (payload: ScoringEventPayload) =>
+      (payload.mockInterviewId ?? payload.mockCvInterviewId) === id;
+    const handleScored = (payload: ScoringEventPayload) => {
+      if (belongsToCurrentInterview(payload)) void loadResult();
+    };
+    const handleFailed = (payload: ScoringEventPayload) => {
+      if (belongsToCurrentInterview(payload)) void loadResult();
+    };
+    const handleReconnect = () => void loadResult();
+
+    socket.on(scoredEvent, handleScored);
+    if (failedEvent) socket.on(failedEvent, handleFailed);
+    socket.on("connect", handleReconnect);
+    return () => {
+      socket.off(scoredEvent, handleScored);
+      if (failedEvent) socket.off(failedEvent, handleFailed);
+      socket.off("connect", handleReconnect);
+    };
+  }, [failedEvent, id, loadResult, scoredEvent, socket]);
+
   const questions = useMemo(() => mock?.questions ?? [], [mock?.questions]);
   const answeredCount = questions.filter(
     (q) => q.answerStatus === "ANSWERED",
@@ -126,21 +161,6 @@ export default function InterviewResultSession<TDetails = never>({
   const pendingCount = questions.filter((q) =>
     ["PENDING", "QUEUED"].includes(q.scoreStatus),
   ).length;
-  const shouldPoll =
-    !!mock &&
-    (mock.status === "SCORING" ||
-      mock.status === "SUBMITTED" ||
-      (mock.status !== "SCORED" && pendingCount > 0));
-
-  // Khi backend còn đang chấm, trang tự polling để người dùng không phải bấm làm mới thủ công.
-  useEffect(() => {
-    if (!shouldPoll) return;
-    const timer = setInterval(() => {
-      void loadResult();
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [shouldPoll, loadResult]);
-
   const visibleQuestions = useMemo(() => {
     if (filter === "ALL") return questions;
     if (filter === "PENDING") {
@@ -172,13 +192,15 @@ export default function InterviewResultSession<TDetails = never>({
   if (!mock) return null;
 
   const notSubmitted = mock.status === "DRAFT" || mock.status === "IN_PROGRESS";
+  const awaitingResult = !notSubmitted && mock.status !== "SCORED";
   const isScoringStale =
-    mock.status === "SCORING" &&
+    (mock.status === "SCORING" || mock.status === "SUBMITTED") &&
     !!mock.updatedAt &&
     lastCheckedAt !== null &&
     lastCheckedAt - new Date(mock.updatedAt).getTime() >= 2 * 60 * 1000;
   const canRetryScoring =
     failedCount > 0 ||
+    mock.overviewStatus === "FAILED" ||
     (isScoringStale &&
       questions.some(
         (question) =>
@@ -253,6 +275,15 @@ export default function InterviewResultSession<TDetails = never>({
 
         {notSubmitted ? (
           <NotSubmittedPanel mock={mock} roomPath={roomPath} />
+        ) : awaitingResult ? (
+          <section className="space-y-4">
+            {error && (
+              <div className="rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+                {error}
+              </div>
+            )}
+            <ScoringResultSkeleton />
+          </section>
         ) : (
           <section className="space-y-5">
             {error && (
@@ -260,7 +291,7 @@ export default function InterviewResultSession<TDetails = never>({
                 {error}
               </div>
             )}
-            <ResultHero mock={mock} counts={counts} shouldPoll={shouldPoll} />
+            <ResultHero mock={mock} counts={counts} />
 
             <div className="space-y-5">
               <ResultSummaryPanel mock={mock} />

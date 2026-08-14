@@ -291,7 +291,7 @@ export default function InterviewRoomSession({
     setSubmitConfirmOpen(true);
   }
 
-  // Gửi lệnh nộp bài lên backend rồi chuyển sang trang kết quả để polling trạng thái chấm điểm.
+  // Gửi lệnh nộp bài rồi chuyển sang skeleton kết quả; WebSocket sẽ báo khi chấm hoàn tất.
   async function handleSubmit() {
     if (!mock) return;
     setSubmitConfirmOpen(false);

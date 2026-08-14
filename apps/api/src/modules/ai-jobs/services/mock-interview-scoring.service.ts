@@ -5,6 +5,7 @@ import {
   MockQuestionScoreStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { WebsocketGateway } from '../../../websocket/websocket.gateway';
 import { ScoringService } from '../../scoring/scoring.service';
 import type { MockInterviewOverviewInput } from '../../scoring/prompts/mock-interview-overview.prompt';
 import {
@@ -25,6 +26,7 @@ export class MockInterviewScoringService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly scoring: ScoringService,
+    private readonly websocket: WebsocketGateway,
   ) {}
 
   async markSuccess(sessionId: string) {
@@ -111,6 +113,7 @@ export class MockInterviewScoringService {
           ],
         },
       });
+      this.emitScored(mock.userId, mockInterviewId);
       return;
     }
 
@@ -169,6 +172,13 @@ export class MockInterviewScoringService {
         },
       });
     }
+    this.emitScored(mock.userId, mockInterviewId);
+  }
+
+  private emitScored(userId: string, mockInterviewId: string) {
+    this.websocket.emitToUser(userId, 'mock-interview:scored', {
+      mockInterviewId,
+    });
   }
 }
 

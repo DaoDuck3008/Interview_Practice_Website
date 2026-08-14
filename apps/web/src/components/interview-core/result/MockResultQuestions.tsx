@@ -1,4 +1,13 @@
-import { BarChart3, FileText, Loader2 } from "lucide-react";
+"use client";
+
+import { useState } from "react";
+import {
+  BarChart3,
+  ChevronDown,
+  FileText,
+  Headphones,
+  Loader2,
+} from "lucide-react";
 import type { InterviewQuestionView } from "@/lib/interview-core/types";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
 import { mockQuestionStatusBadge } from "@/lib/utils/mockInterview";
@@ -104,23 +113,21 @@ function QuestionResultCard({ item }: { item: InterviewQuestionView }) {
       {item.session ? (
         <div className="mt-4 grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="space-y-3">
-            <div className="rounded-[1.25rem] border border-yellow-200/20 bg-yellow-400/10 p-4 shadow-lg shadow-yellow-950/10 backdrop-blur-xl">
-              <p className="mb-2 flex items-center gap-2 text-xs font-bold text-white">
-                <FileText size={14} className="text-violet-200/70" />
-                Transcript
-              </p>
-              <p className="whitespace-pre-wrap text-sm leading-7 text-white/72">
-                {item.session.transcript || "Không có transcript."}
-              </p>
-            </div>
-
             {item.session.audioUrl && (
-              <audio
-                controls
-                src={item.session.audioUrl}
-                className="h-10 w-full"
-              />
+              <div className="rounded-[1.25rem] border border-white/10 bg-black/15 p-4">
+                <p className="mb-3 flex items-center gap-2 text-xs font-bold text-text-secondary">
+                  <Headphones size={14} className="text-accent-light" />
+                  Bản ghi âm
+                </p>
+                <audio
+                  controls
+                  src={item.session.audioUrl}
+                  className="h-10 w-full"
+                />
+              </div>
             )}
+
+            <TranscriptDisclosure transcript={item.session.transcript} />
 
             {score?.summary && (
               <blockquote className="rounded-[1.25rem] border border-violet-200/15 bg-violet-400/10 p-3 text-sm leading-6 text-white/70 shadow-lg shadow-violet-950/10 backdrop-blur-xl">
@@ -158,6 +165,43 @@ function QuestionResultCard({ item }: { item: InterviewQuestionView }) {
         </p>
       )}
     </article>
+  );
+}
+
+function TranscriptDisclosure({ transcript }: { transcript: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const content = transcript.trim() || "Không có transcript.";
+  const canExpand = transcript.trim().length > 140 || transcript.includes("\n");
+
+  return (
+    <div className="rounded-[1.25rem] border border-white/10 bg-black/15 p-4">
+      <p className="mb-2 flex items-center gap-2 text-xs font-bold text-text-secondary">
+        <FileText size={14} className="text-accent-light" />
+        Transcript
+      </p>
+      <p
+        className={[
+          "whitespace-pre-wrap text-sm leading-7 text-text-primary/75",
+          canExpand && !expanded ? "line-clamp-2" : "",
+        ].join(" ")}
+      >
+        {content}
+      </p>
+      {canExpand && (
+        <button
+          type="button"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((current) => !current)}
+          className="mt-2 inline-flex min-h-9 items-center gap-1.5 text-xs font-bold text-accent-light transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+        >
+          {expanded ? "Thu gọn transcript" : "Xem toàn bộ transcript"}
+          <ChevronDown
+            size={14}
+            className={`transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+          />
+        </button>
+      )}
+    </div>
   );
 }
 

@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
+import { Loader2 } from "lucide-react";
 
 // Shell nền riêng cho trang /mock-interviews/[id]/result, đồng bộ với phòng mock.
 export function MockResultShell({ children }: { children: ReactNode }) {
   return (
-    <main className="relative min-h-[calc(100dvh-3.5rem)] px-3 py-4 text-white md:px-6 md:py-6 lg:px-8">
-      <div className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(circle_at_50%_-10%,rgba(248,250,252,0.3),transparent_22%),radial-gradient(circle_at_14%_14%,rgba(124,58,237,0.24),transparent_34%),radial-gradient(circle_at_86%_18%,rgba(59,130,246,0.13),transparent_32%)]" />
+    <main className="relative min-h-[calc(100dvh-3.5rem)] overflow-hidden rounded-3xl bg-base/30 px-3 py-4 text-white md:px-6 md:py-6 lg:px-8">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-10%,rgba(139,92,246,0.1),transparent_26%),radial-gradient(circle_at_12%_18%,rgba(124,58,237,0.1),transparent_32%)]" />
       <div className="relative z-10">{children}</div>
     </main>
   );
@@ -21,12 +22,60 @@ export function ResultGlassPanel({
   return (
     <section
       className={[
-        "rounded-[1.75rem] border border-white/15 bg-white/[0.055] shadow-[0_18px_70px_rgba(15,23,42,0.34)] backdrop-blur-2xl",
+        "relative rounded-[1.75rem] border border-white/10  shadow-[0_18px_70px_rgba(2,6,23,0.4)] backdrop-blur-2xl",
         className,
       ].join(" ")}
     >
       {children}
     </section>
+  );
+}
+
+export function ScoringResultSkeleton() {
+  return (
+    <div
+      className="mx-auto max-w-5xl space-y-4"
+      role="status"
+      aria-live="polite"
+    >
+      <ResultGlassPanel className="overflow-hidden px-5 py-8 text-center md:px-8 md:py-12">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-[radial-gradient(circle_at_50%_0%,rgba(139,92,246,0.12),transparent_62%)]" />
+        <div className="relative">
+          <span className="mx-auto grid size-14 place-items-center rounded-2xl border border-accent/25 bg-accent/10 text-accent-light">
+            <Loader2 size={25} className="animate-spin" />
+          </span>
+          <p className="mt-5 text-xs font-bold uppercase tracking-[0.16em] text-accent-light">
+            Đang xử lý kết quả
+          </p>
+          <h1 className="mx-auto mt-2 max-w-xl text-balance text-2xl font-black tracking-tight text-text-primary md:text-4xl">
+            Hệ thống đang chấm câu trả lời của bạn
+          </h1>
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-text-secondary md:text-base">
+            Báo cáo chỉ được mở khi tất cả câu trả lời và phần nhận xét tổng
+            quan đã hoàn tất. Kết quả sẽ tự xuất hiện, bạn không cần tải lại
+            trang.
+          </p>
+          <span className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-text-secondary">
+            <span className="relative flex size-2">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent-light opacity-50" />
+              <span className="relative inline-flex size-2 rounded-full bg-accent-light" />
+            </span>
+            Đang chờ cập nhật trực tiếp
+          </span>
+        </div>
+      </ResultGlassPanel>
+
+      <div className="grid gap-4 md:grid-cols-2" aria-hidden="true">
+        {Array.from({ length: 2 }).map((_, index) => (
+          <ResultGlassPanel key={index} className="p-5">
+            <SkeletonBlock className="h-5 w-36 rounded-full" />
+            <SkeletonBlock className="mt-4 h-4 w-full rounded-full" />
+            <SkeletonBlock className="mt-3 h-4 w-4/5 rounded-full" />
+            <SkeletonBlock className="mt-6 h-20 rounded-2xl" />
+          </ResultGlassPanel>
+        ))}
+      </div>
+    </div>
   );
 }
 

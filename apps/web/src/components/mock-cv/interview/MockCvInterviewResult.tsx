@@ -42,6 +42,8 @@ export default function MockCvInterviewResult({ id }: { id: string }) {
       resultPath={`/mock-cv/interviews/${id}/result`}
       fetchResult={fetchResult}
       retryScoring={retryScoring}
+      scoredEvent="mock-cv-interview:scored"
+      failedEvent="mock-cv-interview:failed"
       renderDetails={(details) => (
         <MockCvResultDetails details={details} />
       )}
