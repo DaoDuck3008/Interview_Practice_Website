@@ -10,6 +10,7 @@ import {
   FileText,
   LoaderCircle,
   ScanSearch,
+  TriangleAlert,
   UploadCloud,
   X,
 } from "lucide-react";
@@ -243,6 +244,21 @@ export default function MockCvHeroUploadCard({
             <span className="text-xs font-medium text-white/45">
               PDF · tối đa 5 MB
             </span>
+          </div>
+
+          <div
+            role="note"
+            className="mb-3 flex items-start gap-2.5 rounded-lg border border-amber-300/30 bg-amber-400/10 px-3 py-2.5 text-amber-100"
+          >
+            <TriangleAlert
+              size={17}
+              aria-hidden="true"
+              className="mt-0.5 shrink-0 text-amber-300"
+            />
+            <p className="text-xs font-medium leading-5">
+              PDF cần chứa văn bản có thể chọn hoặc sao chép, không sử dụng bản
+              scan chỉ gồm hình ảnh.
+            </p>
           </div>
 
           <div

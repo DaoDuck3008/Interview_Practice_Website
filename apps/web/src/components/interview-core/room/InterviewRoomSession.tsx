@@ -17,7 +17,7 @@ import { useAuthStore } from "@/stores/auth.store";
 import StatusModal from "@/components/ui/StatusModal";
 import { MockQuestionArticle } from "./MockRoomShell";
 import { QuestionMoveButton, TimerPill, TopicBadge } from "./MockRoomHeader";
-import { ExpiredMockPanel, SubmitConfirmModal } from "./MockRoomPanels";
+import { SubmitConfirmModal } from "./MockRoomPanels";
 import { MobileBottomDock, ProgressSidebar } from "./MockRoomProgress";
 import { AnsweredPanel, RecorderPanel } from "./MockRoomRecorder";
 import type { UploadState } from "./types";
@@ -67,6 +67,19 @@ export default function InterviewRoomSession({
   const [backWarningOpen, setBackWarningOpen] = useState(false);
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
   const recordStartSoundRef = useRef<HTMLAudioElement | null>(null);
+  const accessRedirectedRef = useRef(false);
+
+  const leaveUnavailableRoom = useCallback(() => {
+    if (accessRedirectedRef.current) return;
+    accessRedirectedRef.current = true;
+
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.replace(listPath);
+  }, [listPath, router]);
 
   const activeQuestion = mock?.questions?.[activeIndex] ?? null;
   const activeLevelStyle = activeQuestion?.question.level
@@ -95,13 +108,17 @@ export default function InterviewRoomSession({
         data = await startInterview(id);
         setStarting(false);
       }
-      if (
+
+      const hasExpired =
         data.status === "IN_PROGRESS" &&
         data.expiresAt &&
-        new Date(data.expiresAt).getTime() <= Date.now()
-      ) {
-        setRemaining(0);
+        new Date(data.expiresAt).getTime() <= Date.now();
+
+      if (data.status !== "IN_PROGRESS" || hasExpired) {
+        leaveUnavailableRoom();
+        return;
       }
+
       setMock(data);
       const firstPending = data.questions?.findIndex(
         (q) => q.answerStatus !== "ANSWERED",
@@ -123,7 +140,14 @@ export default function InterviewRoomSession({
       setStarting(false);
       setLoading(false);
     }
-  }, [id, loadInterview, roomPath, router, startInterview]);
+  }, [
+    id,
+    leaveUnavailableRoom,
+    loadInterview,
+    roomPath,
+    router,
+    startInterview,
+  ]);
 
   // Chờ auth hydrate xong rồi mới load phòng mock, tránh gọi API khi chưa biết trạng thái đăng nhập.
   useEffect(() => {
@@ -157,6 +181,12 @@ export default function InterviewRoomSession({
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
   }, [mock?.expiresAt, mock?.status]);
+
+  useEffect(() => {
+    if (mock?.status === "IN_PROGRESS" && remaining === 0) {
+      leaveUnavailableRoom();
+    }
+  }, [leaveUnavailableRoom, mock?.status, remaining]);
 
   // Upload audio cho câu hiện tại, cập nhật state local và tự chuyển sang câu kế tiếp nếu còn.
   const handleRecordingComplete = useCallback(
@@ -299,7 +329,7 @@ export default function InterviewRoomSession({
     setError("");
     try {
       await submitInterview(mock.id);
-      router.push(resultPath);
+      router.replace(resultPath);
     } catch (err) {
       const serverMsg = axios.isAxiosError(err)
         ? (err.response?.data?.message as string | undefined)
@@ -357,32 +387,7 @@ export default function InterviewRoomSession({
   if (!mock || !activeQuestion) return null;
 
   if (mock.status === "IN_PROGRESS" && timeIsUp) {
-    return (
-      <>
-        <ExpiredMockPanel
-          mock={mock}
-          answeredCount={answeredCount}
-          unansweredCount={unansweredCount}
-          submitting={submitting}
-          onBack={() => router.push(listPath)}
-          onSubmit={handleSubmitRequest}
-        />
-
-        <SubmitConfirmModal
-          open={submitConfirmOpen}
-          mock={mock}
-          answeredCount={answeredCount}
-          unansweredCount={unansweredCount}
-          submitting={submitting}
-          onClose={() => {
-            if (!submitting) setSubmitConfirmOpen(false);
-          }}
-          onConfirm={() => {
-            if (!submitting) void handleSubmit();
-          }}
-        />
-      </>
-    );
+    return null;
   }
 
   return (
