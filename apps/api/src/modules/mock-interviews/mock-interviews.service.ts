@@ -164,7 +164,32 @@ export class MockInterviewsService {
   async findAll(userId: string, query: QueryMockInterviewDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 10;
-    const where = { userId };
+    const search = query.search?.trim();
+    const sortDirection = query.sortOrder === 'oldest' ? 'asc' : 'desc';
+    const where: Prisma.MockInterviewWhereInput = {
+      userId,
+      ...(search && {
+        OR: [
+          { title: { contains: search, mode: 'insensitive' } },
+          {
+            topicLinks: {
+              some: {
+                topic: {
+                  name: { contains: search, mode: 'insensitive' },
+                },
+              },
+            },
+          },
+          {
+            topic: {
+              is: {
+                name: { contains: search, mode: 'insensitive' },
+              },
+            },
+          },
+        ],
+      }),
+    };
 
     const [items, total] = await this.prisma.$transaction([
       this.prisma.mockInterview.findMany({
@@ -196,7 +221,7 @@ export class MockInterviewsService {
           },
           _count: { select: { questions: true } },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ updatedAt: sortDirection }, { id: sortDirection }],
         skip: (page - 1) * limit,
         take: limit,
       }),

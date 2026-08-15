@@ -97,6 +97,8 @@ export async function getMockInterviews(
   query: {
     page?: number;
     limit?: number;
+    search?: string;
+    sortOrder?: "newest" | "oldest";
   } = {},
 ): Promise<Paginated<MockInterview>> {
   const res = await api.get<ApiResponse<Paginated<MockInterview>>>(

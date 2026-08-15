@@ -102,7 +102,7 @@ export default function MockCvPage() {
         }
       } finally {
         if (requestId === loadRequestIdRef.current) {
-          if (!silent) setLoading(false);
+          setLoading(false);
           if (debouncedSearch === latestSearchRef.current.trim()) {
             setSearching(false);
           }

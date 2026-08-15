@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { Mic2 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
@@ -33,10 +33,18 @@ export default function MockInterviewsLanding() {
   const [historyPage, setHistoryPage] = useState(1);
   const [historyTotal, setHistoryTotal] = useState(0);
   const [historyTotalPages, setHistoryTotalPages] = useState(1);
+  const [historySearch, setHistorySearch] = useState("");
+  const [debouncedHistorySearch, setDebouncedHistorySearch] = useState("");
+  const [searchingHistory, setSearchingHistory] = useState(false);
+  const [historySortOrder, setHistorySortOrder] = useState<"newest" | "oldest">(
+    "newest",
+  );
   const [loadingTopics, setLoadingTopics] = useState(true);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
+  const historyRequestIdRef = useRef(0);
+  const latestHistorySearchRef = useRef("");
 
   useEffect(() => {
     let alive = true;
@@ -57,27 +65,58 @@ export default function MockInterviewsLanding() {
   }, []);
 
   // Tải riêng lịch sử theo trang để việc chuyển trang không làm lại form cấu hình mock.
-  const loadHistory = useCallback(async (page: number) => {
-    setLoadingHistory(true);
-    try {
-      const data = await getMockInterviews({ page, limit: 6 });
-      setHistory(data.items);
-      setHistoryPage(data.page);
-      setHistoryTotal(data.total);
-      setHistoryTotalPages(data.totalPages);
-    } catch {
-      setHistory([]);
-      setHistoryTotal(0);
-      setHistoryTotalPages(1);
-    } finally {
-      setLoadingHistory(false);
-    }
-  }, []);
+  const loadHistory = useCallback(
+    async (page: number) => {
+      const requestId = ++historyRequestIdRef.current;
+      setLoadingHistory(true);
+      try {
+        const data = await getMockInterviews({
+          page,
+          limit: 6,
+          search: debouncedHistorySearch || undefined,
+          sortOrder: historySortOrder,
+        });
+        if (requestId !== historyRequestIdRef.current) return;
+
+        setHistory(data.items);
+        setHistoryPage(data.page);
+        setHistoryTotal(data.total);
+        setHistoryTotalPages(data.totalPages);
+      } catch {
+        if (requestId !== historyRequestIdRef.current) return;
+        setHistory([]);
+        setHistoryTotal(0);
+        setHistoryTotalPages(1);
+      } finally {
+        if (requestId === historyRequestIdRef.current) {
+          setLoadingHistory(false);
+          if (
+            debouncedHistorySearch === latestHistorySearchRef.current.trim()
+          ) {
+            setSearchingHistory(false);
+          }
+        }
+      }
+    },
+    [debouncedHistorySearch, historySortOrder],
+  );
 
   useEffect(() => {
     if (!hydrated || !user) return;
     queueMicrotask(() => void loadHistory(1));
   }, [hydrated, loadHistory, user]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      const normalizedSearch = historySearch.trim();
+      if (normalizedSearch === debouncedHistorySearch) {
+        setSearchingHistory(false);
+        return;
+      }
+      setDebouncedHistorySearch(normalizedSearch);
+    }, 300);
+    return () => window.clearTimeout(timeoutId);
+  }, [debouncedHistorySearch, historySearch]);
 
   async function handleStart() {
     setError("");
@@ -198,6 +237,15 @@ export default function MockInterviewsLanding() {
         total={historyTotal}
         totalPages={historyTotalPages}
         onPageChange={loadHistory}
+        search={historySearch}
+        searching={searchingHistory}
+        sortOrder={historySortOrder}
+        onSearchChange={(value) => {
+          latestHistorySearchRef.current = value;
+          setHistorySearch(value);
+          setSearchingHistory(true);
+        }}
+        onSortOrderChange={setHistorySortOrder}
       />
     </main>
   );
