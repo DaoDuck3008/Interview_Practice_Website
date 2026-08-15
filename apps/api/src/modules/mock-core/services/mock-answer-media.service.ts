@@ -110,6 +110,14 @@ export class MockAnswerMediaService {
     );
   }
 
+  async deleteStoredAudio(audioUrls: string[]): Promise<void> {
+    await Promise.all(
+      audioUrls.map((audioUrl) =>
+        this.storage.delete(this.storage.keyFromUrl(audioUrl)),
+      ),
+    );
+  }
+
   /**
    * Chạy xóa R2 và hủy quota song song; từng lỗi cleanup được log riêng
    * để một tài nguyên lỗi không ngăn việc dọn tài nguyên còn lại.

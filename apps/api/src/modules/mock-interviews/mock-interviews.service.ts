@@ -339,6 +339,81 @@ export class MockInterviewsService {
     return this.toMockResponse(mock);
   }
 
+  async hardDeleteAdmin(id: string) {
+    const mock = await this.prisma.mockInterview.findUnique({
+      where: { id },
+      select: {
+        userId: true,
+        status: true,
+        updatedAt: true,
+        questions: {
+          where: { sessionId: { not: null } },
+          select: {
+            sessionId: true,
+            session: { select: { audioUrl: true } },
+          },
+        },
+      },
+    });
+    if (!mock) throw new NotFoundException('Mock interview không tồn tại.');
+
+    const staleAt = Date.now() - MOCK_SCORING_STALE_MS;
+    const processingRecently =
+      (mock.status === MockInterviewStatus.SUBMITTED ||
+        mock.status === MockInterviewStatus.SCORING) &&
+      mock.updatedAt.getTime() > staleAt;
+    if (
+      mock.status === MockInterviewStatus.IN_PROGRESS ||
+      processingRecently
+    ) {
+      throw new ConflictException(
+        'Không thể xóa bài đang làm hoặc đang được AI xử lý.',
+      );
+    }
+
+    const sessions = mock.questions.flatMap((question) =>
+      question.sessionId
+        ? [{ id: question.sessionId, audioUrl: question.session?.audioUrl }]
+        : [],
+    );
+    const activeAiJobs = await this.aiJobs.removeJobs(
+      sessions.flatMap((session) => [
+        `score_${session.id}`,
+        `improve_${session.id}`,
+      ]),
+    );
+    const activeTimerJobs = await this.mockInterviewJobs.removeAutoSubmitJobs({
+      mockInterviewIds: [id],
+    });
+    if (activeAiJobs.length > 0 || activeTimerJobs.length > 0) {
+      throw new ConflictException(
+        'Không thể xóa vì vẫn còn job xử lý đang chạy.',
+      );
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      if (sessions.length > 0) {
+        await tx.session.deleteMany({
+          where: { id: { in: sessions.map((session) => session.id) } },
+        });
+      }
+      await tx.mockInterview.delete({ where: { id } });
+    });
+
+    await Promise.all([
+      this.answerMedia.deleteStoredAudio(
+        sessions.flatMap((session) =>
+          session.audioUrl ? [session.audioUrl] : [],
+        ),
+      ),
+      this.cache.del(
+        `sessions:me:stats:${mock.userId}`,
+        `sessions:me:heatmap:${mock.userId}`,
+      ),
+    ]);
+    return { deleted: true as const, userId: mock.userId };
+  }
+
   // Hàm kiểm tra quyền sở hữu và trả về mock interview chi tiết
   // Dùng trong các hàm start(), answer(), submit(), getResult().
   async getOwned(id: string, userId: string) {

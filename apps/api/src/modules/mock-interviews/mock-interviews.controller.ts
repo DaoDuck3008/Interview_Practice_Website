@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -98,6 +99,23 @@ export class MockInterviewsController {
   })
   retryScoringAdmin(@Param('id') id: string) {
     return this.mockInterviews.retryScoringAdmin(id);
+  }
+
+  @Delete('admin/:id')
+  @Throttle(THROTTLE_ADMIN_MUTATION)
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  @Audit({
+    action: AuditAction.MOCK_INTERVIEW_ADMIN_HARD_DELETE,
+    entityType: 'MockInterview',
+    entityId: ({ request }) => String(request.params.id),
+    targetUserId: ({ response }) =>
+      typeof response === 'object' && response !== null && 'userId' in response
+        ? String(response.userId)
+        : null,
+  })
+  hardDeleteAdmin(@Param('id') id: string) {
+    return this.mockInterviews.hardDeleteAdmin(id);
   }
 
   @Post(':id/start')

@@ -94,6 +94,31 @@ export class AiJobsService {
     );
   }
 
+  /** Gỡ các job chưa chạy trước khi admin xóa vĩnh viễn dữ liệu nguồn. */
+  async removeJobs(jobIds: string[]): Promise<string[]> {
+    const activeJobIds: string[] = [];
+    for (const jobId of new Set(jobIds)) {
+      const job = await this.queue.getJob(jobId);
+      if (!job) continue;
+      const state = await job.getState();
+      if (state === 'active') {
+        activeJobIds.push(jobId);
+        continue;
+      }
+      try {
+        await job.remove();
+      } catch (error) {
+        const currentState = await job.getState().catch(() => 'unknown');
+        if (currentState === 'active') {
+          activeJobIds.push(jobId);
+          continue;
+        }
+        throw error;
+      }
+    }
+    return activeJobIds;
+  }
+
   /**
    * `jobId` cố định theo session là cơ chế dedup chính: 2 request cùng lúc chỉ
    * tạo được 1 job thật. Nhưng nếu job trước đó đã FAIL (hết attempts), nó vẫn

@@ -174,6 +174,52 @@ export class AuditService {
         return this.prisma.order.findUnique({ where: { id: entityId } });
       case 'Session':
         return this.prisma.session.findUnique({ where: { id: entityId } });
+      case 'MockInterview':
+        return this.prisma.mockInterview.findUnique({
+          where: { id: entityId },
+          select: {
+            id: true,
+            userId: true,
+            title: true,
+            status: true,
+            totalQuestions: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+      case 'MockCv':
+        return this.prisma.mockCv.findUnique({
+          where: { id: entityId },
+          select: {
+            id: true,
+            userId: true,
+            targetRole: true,
+            fileName: true,
+            fileSize: true,
+            createdAt: true,
+            updatedAt: true,
+            analysis: {
+              select: {
+                status: true,
+                questionGenerationStatus: true,
+              },
+            },
+          },
+        });
+      case 'MockCvInterview':
+        return this.prisma.mockCvInterview.findUnique({
+          where: { id: entityId },
+          select: {
+            id: true,
+            mockCvId: true,
+            userId: true,
+            title: true,
+            status: true,
+            totalQuestions: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
       case 'Score':
         // Các endpoint score admin đang dùng sessionId trên URL, không phải id của Score.
         return this.prisma.score.findUnique({ where: { sessionId: entityId } });

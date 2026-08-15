@@ -91,6 +91,39 @@ export class MockInterviewJobsService implements OnModuleInit {
     });
   }
 
+  async removeAutoSubmitJobs(input: {
+    mockInterviewIds?: string[];
+    mockCvInterviewIds?: string[];
+  }): Promise<string[]> {
+    const jobIds = [
+      ...(input.mockInterviewIds ?? []).map((id) => `expire_mock_${id}`),
+      ...(input.mockCvInterviewIds ?? []).map(
+        (id) => `expire_mock_cv_${id}`,
+      ),
+    ];
+    const activeJobIds: string[] = [];
+    for (const jobId of new Set(jobIds)) {
+      const job = await this.queue.getJob(jobId);
+      if (!job) continue;
+      const state = await job.getState();
+      if (state === 'active') {
+        activeJobIds.push(jobId);
+        continue;
+      }
+      try {
+        await job.remove();
+      } catch (error) {
+        const currentState = await job.getState().catch(() => 'unknown');
+        if (currentState === 'active') {
+          activeJobIds.push(jobId);
+          continue;
+        }
+        throw error;
+      }
+    }
+    return activeJobIds;
+  }
+
   /** Hàm dùng chung tạo job idempotent, tính delay sau grace window và cấu hình retry. */
   private async enqueueDelayedAutoSubmit(input: {
     jobName: string;
