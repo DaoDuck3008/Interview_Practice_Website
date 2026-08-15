@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -41,12 +41,18 @@ export default function MockCvPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [searching, setSearching] = useState(false);
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [uploading, setUploading] = useState(false);
   const [retryingCvId, setRetryingCvId] = useState<string | null>(null);
   const [deletingCvId, setDeletingCvId] = useState<string | null>(null);
   const uploadLockRef = useRef(false);
+  const loadRequestIdRef = useRef(0);
+  const latestSearchRef = useRef("");
 
   const scrollToUploadForm = useCallback(() => {
     const uploadCard = document.getElementById("mock-cv-upload-card");
@@ -66,26 +72,62 @@ export default function MockCvPage() {
     });
   }, []);
 
-  const loadCvs = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
-    try {
-      const data = await getMockCvs({ page: 1, limit: 50 });
-      setCvs(data.items);
-      setLoadError("");
-    } catch (error) {
-      if (!silent) {
-        setLoadError(
-          toastApiError(error, "Không thể tải danh sách CV. Vui lòng thử lại."),
-        );
+  const loadCvs = useCallback(
+    async (silent = false) => {
+      const requestId = ++loadRequestIdRef.current;
+      if (!silent) setLoading(true);
+      try {
+        const data = await getMockCvs({
+          page,
+          limit: PAGE_SIZE,
+          search: debouncedSearch || undefined,
+          sortOrder,
+        });
+        if (requestId !== loadRequestIdRef.current) return;
+
+        setCvs(data.items);
+        setTotal(data.total);
+        setTotalPages(data.totalPages);
+        setLoadError("");
+        if (data.page > data.totalPages) setPage(data.totalPages);
+      } catch (error) {
+        if (requestId !== loadRequestIdRef.current) return;
+        if (!silent) {
+          setLoadError(
+            toastApiError(
+              error,
+              "Không thể tải danh sách CV. Vui lòng thử lại.",
+            ),
+          );
+        }
+      } finally {
+        if (requestId === loadRequestIdRef.current) {
+          if (!silent) setLoading(false);
+          if (debouncedSearch === latestSearchRef.current.trim()) {
+            setSearching(false);
+          }
+        }
       }
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, []);
+    },
+    [debouncedSearch, page, sortOrder],
+  );
 
   useEffect(() => {
     queueMicrotask(() => void loadCvs());
   }, [loadCvs]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      const normalizedSearch = search.trim();
+      if (normalizedSearch === debouncedSearch) {
+        setSearching(false);
+        return;
+      }
+      setPage(1);
+      setDebouncedSearch(normalizedSearch);
+    }, 600);
+    return () => window.clearTimeout(timeoutId);
+  }, [debouncedSearch, search]);
 
   useEffect(() => {
     if (!socket) return;
@@ -104,33 +146,7 @@ export default function MockCvPage() {
     };
   }, [loadCvs, socket]);
 
-  const filteredCvs = useMemo(() => {
-    const normalized = search.trim().toLocaleLowerCase("vi");
-    const items = normalized
-      ? cvs.filter(
-          (cv) =>
-            cv.targetRole.toLocaleLowerCase("vi").includes(normalized) ||
-            cv.fileName.toLocaleLowerCase("vi").includes(normalized),
-        )
-      : [...cvs];
-
-    return items.sort((first, second) => {
-      const delta =
-        new Date(second.updatedAt).getTime() -
-        new Date(first.updatedAt).getTime();
-      return sortOrder === "newest" ? delta : -delta;
-    });
-  }, [cvs, search, sortOrder]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredCvs.length / PAGE_SIZE));
-  const visibleCvs = filteredCvs.slice(
-    (page - 1) * PAGE_SIZE,
-    page * PAGE_SIZE,
-  );
-
-  useEffect(() => {
-    if (page > totalPages) queueMicrotask(() => setPage(totalPages));
-  }, [page, totalPages]);
+  const shouldShowPagination = total > PAGE_SIZE;
 
   async function handleUpload(input: CreateMockCvInput) {
     if (uploadLockRef.current) return false;
@@ -230,9 +246,8 @@ export default function MockCvPage() {
                   cursorClassName="ml-1 text-[#c4b5fd]"
                 />
                 <p className="mt-4 max-w-lg text-sm leading-6 text-[#d8d6ea] sm:mt-5 sm:text-white sm:leading-7 md:text-lg">
-                  Tải CV và chọn vị trí ứng tuyển. Hệ thống sẽ đọc kinh
-                  nghiệm, kỹ năng và dự án để chuẩn bị bộ câu hỏi sát với hồ
-                  sơ của bạn.
+                  Tải CV và chọn vị trí ứng tuyển. Hệ thống sẽ đọc kinh nghiệm,
+                  kỹ năng và dự án để chuẩn bị bộ câu hỏi sát với hồ sơ của bạn.
                 </p>
               </div>
             </div>
@@ -259,12 +274,15 @@ export default function MockCvPage() {
             <button
               type="button"
               onClick={() => void loadCvs()}
-              disabled={loading}
+              disabled={loading || searching}
               aria-label="Làm mới danh sách CV"
               title="Làm mới"
               className="grid size-10 place-items-center rounded-lg border border-white/10 bg-white/[0.04] text-text-secondary transition-colors hover:bg-white/[0.08] hover:text-text-primary disabled:opacity-50"
             >
-              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+              <RefreshCw
+                size={16}
+                className={loading || searching ? "animate-spin" : ""}
+              />
             </button>
             <button
               type="button"
@@ -283,9 +301,11 @@ export default function MockCvPage() {
             <input
               value={search}
               onChange={(event) => {
+                latestSearchRef.current = event.target.value;
                 setSearch(event.target.value);
-                setPage(1);
+                setSearching(true);
               }}
+              aria-busy={searching}
               placeholder="Tìm theo tên CV hoặc vị trí ứng tuyển"
               className="min-w-0 flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted"
             />
@@ -311,8 +331,8 @@ export default function MockCvPage() {
         </div>
 
         <div className="mt-4">
-          {loading ? (
-            <MockCvSkeleton />
+          {loading || searching ? (
+            <MockCvSkeleton searching={searching} />
           ) : loadError ? (
             <EmptyState
               icon={RefreshCw}
@@ -321,7 +341,7 @@ export default function MockCvPage() {
               actionLabel="Thử lại"
               onAction={() => void loadCvs()}
             />
-          ) : visibleCvs.length === 0 ? (
+          ) : cvs.length === 0 ? (
             <EmptyState
               icon={search ? Search : FileText}
               title={search ? "Không tìm thấy CV phù hợp" : "Chưa có CV nào"}
@@ -335,14 +355,11 @@ export default function MockCvPage() {
             />
           ) : (
             <div className="grid gap-3 lg:grid-cols-2">
-              {visibleCvs.map((cv) => (
+              {cvs.map((cv) => (
                 <MockCvCard
                   key={cv.id}
                   cv={cv}
-                  busy={
-                    retryingCvId === cv.id ||
-                    deletingCvId === cv.id
-                  }
+                  busy={retryingCvId === cv.id || deletingCvId === cv.id}
                   onStart={(item) =>
                     router.push(`/mock-cv/processing/${item.id}`)
                   }
@@ -355,7 +372,7 @@ export default function MockCvPage() {
           )}
         </div>
 
-        {totalPages > 1 && !loading && (
+        {shouldShowPagination && !loading && !searching && (
           <nav
             aria-label="Phân trang danh sách CV"
             className="mt-5 flex items-center justify-between border-t border-white/[0.07] pt-4"
@@ -394,14 +411,49 @@ export default function MockCvPage() {
   );
 }
 
-function MockCvSkeleton() {
+function MockCvSkeleton({ searching = false }: { searching?: boolean }) {
   return (
-    <div className="grid gap-3 lg:grid-cols-2">
+    <div className="grid gap-3 lg:grid-cols-2" role="status" aria-live="polite">
+      <span className="sr-only">
+        {searching ? "Đang tìm CV phù hợp" : "Đang tải danh sách CV"}
+      </span>
       {Array.from({ length: 4 }).map((_, index) => (
         <div
           key={index}
-          className="h-60 rounded-[1.25rem] border border-white/10 bg-white/[0.04] skeleton-pulse"
-        />
+          className={`relative w-full max-w-[42rem] justify-self-start overflow-hidden rounded-[1.25rem] border border-white/10 bg-surface/70 p-4 shadow-[0_20px_55px_rgba(2,6,23,0.22)] sm:p-5 ${
+            searching
+              ? "blur-[1px] motion-safe:animate-pulse"
+              : "skeleton-pulse"
+          }`}
+          style={{ animationDelay: `${index * 90}ms` }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="size-13 shrink-0 rounded-xl bg-white/[0.08] sm:size-14" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="h-4 w-2/5 rounded-md bg-white/[0.09]" />
+              <div className="h-3 w-3/5 rounded-md bg-white/[0.06]" />
+            </div>
+            <div className="size-8 rounded-full bg-white/[0.05]" />
+          </div>
+
+          <div className="mt-3 flex gap-2">
+            <div className="h-7 w-24 rounded-full bg-accent/10" />
+            <div className="h-7 w-28 rounded-full bg-accent/10" />
+            <div className="h-7 w-16 rounded-full bg-accent/10" />
+          </div>
+
+          <div className="mt-3 flex items-end justify-between gap-3 border-t border-white/[0.07] pt-3">
+            <div className="flex flex-1 items-center gap-2.5">
+              <div className="size-8 shrink-0 rounded-lg bg-white/[0.07]" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3 w-36 rounded-md bg-white/[0.08]" />
+                <div className="h-2.5 w-24 rounded-md bg-white/[0.05]" />
+                <div className="h-2.5 w-28 rounded-md bg-white/[0.05]" />
+              </div>
+            </div>
+            <div className="h-9 w-28 rounded-lg bg-white/[0.07]" />
+          </div>
+        </div>
       ))}
     </div>
   );

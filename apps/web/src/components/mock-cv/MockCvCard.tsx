@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowUpRight,
-  BriefcaseBusiness,
   CalendarDays,
   Ellipsis,
   Eye,
@@ -52,7 +51,7 @@ export default function MockCvCard({
     return () => document.removeEventListener("mousedown", closeMenu);
   }, [menuOpen]);
 
-  const skills = analysis?.technicalSkills.slice(0, 3) ?? [];
+  const skills = analysis?.technicalSkills.slice(0, 5) ?? [];
   const remainingSkills = Math.max(
     0,
     (analysis?.technicalSkills.length ?? 0) - skills.length,
@@ -64,7 +63,7 @@ export default function MockCvCard({
     latest?.status === "SUBMITTED" || latest?.status === "SCORING";
 
   return (
-    <article className="group relative overflow-hidden rounded-[1.25rem] border border-white/10 bg-surface/80 p-4 shadow-[0_20px_55px_rgba(2,6,23,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-accent-light/30 hover:bg-elevated/85 sm:p-5">
+    <article className="group relative w-full max-w-[42rem] justify-self-start overflow-hidden rounded-[1.25rem] border border-white/10 bg-surface/70 p-4 shadow-[0_20px_55px_rgba(2,6,23,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-accent-light/30 hover:bg-elevated/75 sm:p-5">
       <div className="pointer-events-none absolute inset-y-0 left-0 w-24 bg-accent/5 [mask-image:linear-gradient(to_right,black,transparent)]" />
 
       <div className="relative flex items-center gap-3">
@@ -125,13 +124,7 @@ export default function MockCvCard({
         </div>
       </div>
 
-      <div className="relative mt-3 grid grid-cols-3 overflow-hidden rounded-lg border border-white/[0.07] bg-white/[0.025]">
-        <Meta icon={BriefcaseBusiness} text={`${cv._count.interviews} lần luyện`} />
-        <Meta icon={CalendarDays} text={formatDay(cv.createdAt)} bordered />
-        <Meta icon={FileText} text={formatFileSize(cv.fileSize)} bordered />
-      </div>
-
-      <div className="relative mt-2.5 flex min-h-7 items-center gap-1.5 overflow-hidden">
+      <div className="relative mt-3 flex min-h-7 items-center gap-1.5 overflow-hidden">
         {skills.length > 0 ? (
           <>
             {skills.map((skill) => (
@@ -155,8 +148,14 @@ export default function MockCvCard({
         )}
       </div>
 
-      <div className="relative mt-3 flex items-center justify-between gap-3 border-t border-white/[0.07] pt-3">
-        <CardSummary cv={cv} />
+      <div className="relative mt-3 flex flex-col gap-3 border-t border-white/[0.07] pt-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0 flex w-full justify-between gap-2.5">
+          <CardSummary cv={cv} />
+          <span className="mt-2 flex gap-1.5 text-[10px] font-medium text-text-muted">
+            <CalendarDays size={12} className="shrink-0" />
+            Ngày tạo {formatDay(cv.createdAt)}
+          </span>
+        </div>
         <CardAction
           cv={cv}
           busy={busy}
@@ -169,27 +168,6 @@ export default function MockCvCard({
         />
       </div>
     </article>
-  );
-}
-
-function Meta({
-  icon: Icon,
-  text,
-  bordered = false,
-}: {
-  icon: LucideIcon;
-  text: string;
-  bordered?: boolean;
-}) {
-  return (
-    <span
-      className={`flex min-w-0 items-center gap-2 px-2.5 py-2 text-[11px] font-semibold text-text-secondary ${
-        bordered ? "border-l border-white/[0.07]" : ""
-      }`}
-    >
-      <Icon size={14} className="shrink-0 text-text-muted" />
-      <span className="truncate">{text}</span>
-    </span>
   );
 }
 
@@ -493,11 +471,6 @@ function CardAction({
       <ArrowUpRight size={14} />
     </button>
   );
-}
-
-function formatFileSize(bytes: number) {
-  if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
 }
 
 function formatScore(score: number | null) {

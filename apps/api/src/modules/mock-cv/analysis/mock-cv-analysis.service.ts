@@ -135,15 +135,29 @@ export class MockCvAnalysisService {
   async findAll(userId: string, query: QueryMockCvDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
+    const search = query.search?.trim();
+    const sortDirection = query.sortOrder === 'oldest' ? 'asc' : 'desc';
+    const where: Prisma.MockCvWhereInput = {
+      userId,
+      ...(search && {
+        OR: [
+          { targetRole: { contains: search, mode: 'insensitive' } },
+          { fileName: { contains: search, mode: 'insensitive' } },
+        ],
+      }),
+    };
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.mockCv.findMany({
-        where: { userId },
+        where,
         select: PUBLIC_MOCK_CV_SELECT,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [
+          { updatedAt: sortDirection },
+          { id: sortDirection },
+        ],
         skip: (page - 1) * limit,
         take: limit,
       }),
-      this.prisma.mockCv.count({ where: { userId } }),
+      this.prisma.mockCv.count({ where }),
     ]);
 
     return {

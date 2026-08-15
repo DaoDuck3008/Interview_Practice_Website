@@ -1,7 +1,26 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Max, Min } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class QueryMockCvDto {
+  @IsOptional()
+  @IsString({ message: 'Từ khóa tìm kiếm phải là chuỗi.' })
+  @MaxLength(120, { message: 'Từ khóa tìm kiếm tối đa 120 ký tự.' })
+  search?: string;
+
+  @IsOptional()
+  @IsIn(['newest', 'oldest'], {
+    message: 'Thứ tự sắp xếp không hợp lệ.',
+  })
+  sortOrder?: 'newest' | 'oldest';
+
   @IsOptional()
   @Type(() => Number)
   @IsInt({ message: 'Trang phải là số nguyên.' })

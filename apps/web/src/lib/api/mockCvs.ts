@@ -140,7 +140,12 @@ export type StartMockCvInterviewResponse =
     };
 
 export async function getMockCvs(
-  query: { page?: number; limit?: number } = {},
+  query: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    sortOrder?: "newest" | "oldest";
+  } = {},
 ): Promise<Paginated<MockCv>> {
   const res = await api.get<ApiResponse<Paginated<MockCv>>>("/mock-cvs", {
     params: query,

@@ -14,7 +14,6 @@ import {
   type MockInterviewLevelOption,
 } from "@/lib/api/mockInterviews";
 import TextType from "@/components/ui/TextType";
-import CvQuestionCta from "./CvQuestionCta";
 import MockConfigCard from "./MockConfigCard";
 import MockHistorySection from "./MockHistorySection";
 
@@ -189,8 +188,6 @@ export default function MockInterviewsLanding() {
           />
         </div>
       </section>
-
-      <CvQuestionCta />
 
       <MockHistorySection
         history={history}
