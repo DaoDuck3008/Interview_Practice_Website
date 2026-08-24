@@ -63,6 +63,17 @@ Primary font: `Be Vietnam Pro`
 
 Weights in use: `400`, `500`, `600`, `700`, `800`.
 
+#### Tailwind `text-base` rule
+
+Never use `text-base` or variants such as `md:text-base`. The `--color-base`
+design token causes Tailwind to generate `text-base` as a dark color utility,
+so it cannot be used safely for the usual 16px font size.
+
+- Use `text-white` for white text.
+- Use `text-text-primary` for the standard primary text color.
+- For 16px text, use `text-[16px]` (or `md:text-[16px]`) and add an explicit
+  text color.
+
 Guidelines:
 
 - Use `font-extrabold` only for marketing hero headlines, major stats, and score numbers.

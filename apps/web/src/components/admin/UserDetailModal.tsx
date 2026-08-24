@@ -73,7 +73,7 @@ export default function UserDetailModal({ userId, onClose }: Props) {
             )}
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <p className="truncate text-base font-bold text-white">
+                <p className="truncate font-bold text-white">
                   {detail.name}
                 </p>
                 {detail.role === "ADMIN" && (

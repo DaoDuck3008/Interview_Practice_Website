@@ -104,7 +104,7 @@ export default function AdminSidebar({ collapsed, onToggle }: Props) {
       <div className="h-14 flex items-center justify-center overflow-hidden px-3 border-b border-[#1c1c28]">
         <Link
           href="/"
-          className="font-extrabold text-base text-[#f4f4f6] tracking-tight whitespace-nowrap"
+          className="font-extrabold text-white tracking-tight whitespace-nowrap"
         >
           {collapsed ? (
             <span className="text-[#8b5cf6]">PV</span>

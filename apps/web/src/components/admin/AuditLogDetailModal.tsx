@@ -119,7 +119,7 @@ export default function AuditLogDetailModal({ logId, onClose }: Props) {
         >
           <div className="flex items-center justify-between border-b border-[#1c1c28] px-6 py-4">
             <div>
-              <h2 className="text-base font-semibold text-white">
+              <h2 className="font-semibold text-white">
                 Chi tiết audit log
               </h2>
               {detail && (

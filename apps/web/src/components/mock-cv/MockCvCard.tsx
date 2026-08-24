@@ -75,7 +75,7 @@ export default function MockCvCard({
         </div>
 
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-base font-bold text-text-primary">
+          <h2 className="truncate font-bold text-white">
             {cv.targetRole}
           </h2>
           <p className="mt-1 truncate text-xs text-text-secondary">

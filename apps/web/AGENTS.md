@@ -93,6 +93,17 @@ Product color values are defined in the `@theme` block in `src/app/globals.css`,
 
 Use `style={{}}` only for values that are **computed at runtime** (e.g., dynamic width percentages, waveform progress). Static design tokens always go in className.
 
+#### `text-base` naming collision
+
+Do **not** use `text-base` or responsive variants such as `md:text-base`. The
+`--color-base` token makes Tailwind generate `text-base` as a dark color
+utility, so it does not safely represent the intended 16px font size.
+
+- For white text, use `text-white`.
+- For the standard primary text color, use `text-text-primary`.
+- When a 16px font size is specifically needed, use `text-[16px]` (or its
+  responsive variant) and pair it with an explicit text color.
+
 Public landing/pricing sections are the exception when they need art-directed values that Tailwind cannot express cleanly: generated background images, glow layers, mask effects, and glass refraction shadows may use raw `rgb(15, 23, 42)`, `rgba(...)`, `linear-gradient(...)`, or `radial-gradient(...)`. Keep these exceptions local to marketing surfaces or `globals.css` utilities.
 
 Landing/public canvas:
@@ -399,3 +410,6 @@ showModal({
 - **No component splitting just to shorten a file** — only extract when genuinely reusable.
 - **No duplicating type definitions** — reuse from `src/lib/api/*.ts`.
 - **No `@apply` in CSS files** — write Tailwind utilities directly in JSX className.
+- **No `text-base` or `md:text-base`** — these collide with `--color-base`; use
+  `text-white` for white text, or `text-[16px]` plus an explicit color when
+  setting the font size.

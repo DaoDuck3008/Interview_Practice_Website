@@ -31,7 +31,7 @@ const markdownComponents: React.ComponentProps<
     <h2 className="mb-3 mt-7 text-xl font-bold text-[#f4f4f6]">{children}</h2>
   ),
   h3: ({ children }) => (
-    <h3 className="mb-2 mt-5 text-base font-bold text-[#e9d5ff]">{children}</h3>
+    <h3 className="mb-2 mt-5 font-bold text-white">{children}</h3>
   ),
   ul: ({ children }) => (
     <ul className="mb-4 list-disc space-y-2 pl-5 text-[15px] leading-7 text-[#cbd5e1]">

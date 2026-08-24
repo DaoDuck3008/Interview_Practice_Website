@@ -137,6 +137,31 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
       </code>
     );
   },
+  table: ({ children }) => (
+    <div className="mb-3 overflow-x-auto rounded-xl border border-white/15 bg-black/25 shadow-inner shadow-black/20">
+      <table className="w-full min-w-[640px] border-collapse text-sm leading-6">
+        {children}
+      </table>
+    </div>
+  ),
+  thead: ({ children }) => (
+    <thead className="bg-white/[0.08]">{children}</thead>
+  ),
+  tbody: ({ children }) => (
+    <tbody className="[&>tr:nth-child(even)]:bg-black/20 [&>tr:hover]:bg-white/[0.035] [&>tr]:transition-colors">
+      {children}
+    </tbody>
+  ),
+  th: ({ children }) => (
+    <th className="border-b border-r border-white/15 px-3 py-2.5 text-left font-bold text-white last:border-r-0">
+      {children}
+    </th>
+  ),
+  td: ({ children }) => (
+    <td className="border-b border-r border-white/[0.11] px-3 py-2.5 align-top text-[#d4d4e0] last:border-r-0">
+      {children}
+    </td>
+  ),
   strong: ({ children }) => (
     <strong className="font-semibold text-[#f4f4f6]">{children}</strong>
   ),
@@ -225,12 +250,8 @@ export default function QuestionCard({
     <article
       className="group overflow-hidden rounded-[24px] border backdrop-blur-2xl transition-all duration-300 hover:-translate-y-0.5"
       style={{
-        borderColor: open
-          ? "rgba(196,181,253,0.28)"
-          : "rgba(255,255,255,0.11)",
-        background: open
-          ? "rgba(76, 29, 149, 0.26)"
-          : "rgba(15, 23, 42, 0.52)",
+        borderColor: open ? "rgba(196,181,253,0.28)" : "rgba(255,255,255,0.11)",
+        background: open ? "rgba(48, 25, 98, 0.80)" : "rgba(9, 14, 29, 0.40)",
         boxShadow: open
           ? "inset 0 1px 0 rgba(255,255,255,0.12), 0 22px 54px rgba(76,29,149,0.16)"
           : "inset 0 1px 0 rgba(255,255,255,0.08), 0 14px 40px rgba(2,6,23,0.18)",
@@ -270,7 +291,10 @@ export default function QuestionCard({
               style={{ color: isFavorited ? "#fbbf24" : "#606072" }}
               title={isFavorited ? "Bỏ lưu" : "Lưu câu hỏi"}
             >
-              <Bookmark size={14} fill={isFavorited ? "currentColor" : "none"} />
+              <Bookmark
+                size={14}
+                fill={isFavorited ? "currentColor" : "none"}
+              />
             </button>
           )}
 

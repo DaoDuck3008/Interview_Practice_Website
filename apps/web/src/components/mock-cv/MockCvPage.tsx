@@ -477,7 +477,7 @@ function EmptyState({
       <span className="grid size-11 place-items-center rounded-full border border-accent-light/20 bg-accent/10 text-accent-light">
         <Icon size={20} />
       </span>
-      <h3 className="mt-3 text-base font-semibold text-text-primary">
+      <h3 className="mt-3 font-semibold text-white">
         {title}
       </h3>
       <p className="mt-1 max-w-md text-sm leading-6 text-text-secondary">

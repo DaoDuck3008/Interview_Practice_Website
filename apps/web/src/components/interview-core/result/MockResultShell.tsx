@@ -50,7 +50,7 @@ export function ScoringResultSkeleton() {
           <h1 className="mx-auto mt-2 max-w-xl text-balance text-2xl font-black tracking-tight text-text-primary md:text-4xl">
             Hệ thống đang chấm câu trả lời của bạn
           </h1>
-          <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-text-secondary md:text-base">
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-text-secondary md:text-white">
             Báo cáo chỉ được mở khi tất cả câu trả lời và phần nhận xét tổng
             quan đã hoàn tất. Kết quả sẽ tự xuất hiện, bạn không cần tải lại
             trang.

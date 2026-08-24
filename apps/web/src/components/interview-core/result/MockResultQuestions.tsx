@@ -97,7 +97,7 @@ function QuestionResultCard({ item }: { item: InterviewQuestionView }) {
             )}
             <QuestionStatusChip item={item} />
           </div>
-          <h3 className="text-base font-bold leading-relaxed text-white">
+          <h3 className="font-bold leading-relaxed text-white">
             {item.question.content}
           </h3>
         </div>

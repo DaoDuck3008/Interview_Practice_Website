@@ -344,7 +344,7 @@ export default function MockCvHeroUploadCard({
           <span className="grid size-14 place-items-center rounded-full border border-white/15 bg-white/[0.08] text-violet-200 shadow-[0_18px_48px_rgba(2,6,23,0.42)]">
             <LoaderCircle size={27} className="animate-spin" />
           </span>
-          <p className="mt-4 text-base font-black text-white">
+          <p className="mt-4 font-black text-white">
             Đang tải CV
           </p>
           <p className="mt-1 max-w-xs text-sm leading-6 text-white/60">
