@@ -3,7 +3,7 @@ import { Prisma, UsageStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../cache/cache.service';
 import { FREE_TIER_LIMITS, QuotaLimits } from './quota.constants';
-import { vnStartOfDay, vnStartOfWeek } from '../../common/utils/vn-time.util';
+import { vnStartOfDay } from '../../common/utils/vn-time.util';
 import { lockBillingUser } from '../../common/utils/billing-lock.util';
 
 const STATUS_TTL = 15;
@@ -32,7 +32,7 @@ export class QuotaService {
     return this.getLimitsWithClient(this.prisma, userId);
   }
 
-  async getUsage(userId: string): Promise<{ daily: number; weekly: number }> {
+  async getUsage(userId: string): Promise<{ daily: number }> {
     return this.getUsageWithClient(this.prisma, userId);
   }
 
@@ -144,7 +144,6 @@ export class QuotaService {
       return {
         unlimited: true,
         daily: null,
-        weekly: null,
         todayCount: usage.daily,
       };
     }
@@ -154,10 +153,6 @@ export class QuotaService {
         limits.dailyLimit === null
           ? null
           : { used: usage.daily, limit: limits.dailyLimit },
-      weekly:
-        limits.weeklyLimit === null
-          ? null
-          : { used: usage.weekly, limit: limits.weeklyLimit },
       todayCount: usage.daily,
     };
   }
@@ -173,7 +168,6 @@ export class QuotaService {
           select: {
             isUnlimited: true,
             dailyScoreLimit: true,
-            weeklyScoreLimit: true,
           },
         },
       },
@@ -186,7 +180,6 @@ export class QuotaService {
     return {
       isUnlimited: sub.plan.isUnlimited,
       dailyLimit: sub.plan.dailyScoreLimit,
-      weeklyLimit: sub.plan.weeklyScoreLimit,
     };
   }
 
@@ -194,7 +187,7 @@ export class QuotaService {
   private async getUsageWithClient(
     client: PrismaClientLike,
     userId: string,
-  ): Promise<{ daily: number; weekly: number }> {
+  ): Promise<{ daily: number }> {
     const now = new Date();
     const activeReservation = {
       OR: [
@@ -202,46 +195,31 @@ export class QuotaService {
         { status: UsageStatus.PENDING, expiresAt: { gt: now } },
       ],
     };
-    const [daily, weekly] = await Promise.all([
-      client.usageLog.count({
-        where: {
-          userId,
-          createdAt: { gte: vnStartOfDay() },
-          ...activeReservation,
-        },
-      }),
-      client.usageLog.count({
-        where: {
-          userId,
-          createdAt: { gte: vnStartOfWeek() },
-          ...activeReservation,
-        },
-      }),
-    ]);
-    return { daily, weekly };
+    const daily = await client.usageLog.count({
+      where: {
+        userId,
+        createdAt: { gte: vnStartOfDay() },
+        ...activeReservation,
+      },
+    });
+    return { daily };
   }
 
   //  Kiểm tra usage hiện tại có vượt quá limits không, nếu vượt thì throw exception
   //  Dùng trong reserve() và assertWithinLimitFor() để kiểm tra quota trước khi tạo reservation
   private assertUsageWithinLimits(
     limits: QuotaLimits,
-    usage: { daily: number; weekly: number },
+    usage: { daily: number },
     requestedUses: number,
   ) {
     if (limits.isUnlimited) return;
-    if (limits.dailyLimit === null && limits.weeklyLimit === null) return;
+    if (limits.dailyLimit === null) return;
 
     if (
       limits.dailyLimit !== null &&
       usage.daily + requestedUses > limits.dailyLimit
     ) {
       throw this.limitException('hôm nay', limits.dailyLimit);
-    }
-    if (
-      limits.weeklyLimit !== null &&
-      usage.weekly + requestedUses > limits.weeklyLimit
-    ) {
-      throw this.limitException('tuần này', limits.weeklyLimit);
     }
   }
 

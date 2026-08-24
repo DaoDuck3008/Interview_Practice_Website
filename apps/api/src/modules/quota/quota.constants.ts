@@ -5,11 +5,9 @@
 export interface QuotaLimits {
   isUnlimited: boolean;
   dailyLimit: number | null; //  null = không giới hạn theo ngày
-  weeklyLimit: number | null; // null = không giới hạn theo tuần
 }
 
 export const FREE_TIER_LIMITS: QuotaLimits = {
   isUnlimited: false,
-  dailyLimit: 10,
-  weeklyLimit: null,
+  dailyLimit: 3,
 };

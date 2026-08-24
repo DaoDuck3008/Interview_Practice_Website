@@ -36,7 +36,11 @@ const CHILDREN: { slug: string; name: string; parent: string }[] = [
   { slug: 'kubernetes', name: 'Kubernetes', parent: 'devops' },
   { slug: 'linux', name: 'Linux', parent: 'devops' },
   // Computer Science
-  { slug: 'data-structures', name: 'Data Structures', parent: 'computer-science' },
+  {
+    slug: 'data-structures',
+    name: 'Data Structures',
+    parent: 'computer-science',
+  },
   { slug: 'algorithms', name: 'Algorithms', parent: 'computer-science' },
   { slug: 'system-design', name: 'System Design', parent: 'computer-science' },
 ];
@@ -76,7 +80,11 @@ async function main() {
             content: 'Closure là gì? Cho ví dụ thực tế.',
             answerKeySummary:
               'Closure là function có khả năng truy cập biến của outer scope ngay cả sau khi outer function đã return.',
-            answerKeywords: ['outer scope', 'lexical environment', 'biến tự do'],
+            answerKeywords: [
+              'outer scope',
+              'lexical environment',
+              'biến tự do',
+            ],
             level: Level.MEDIUM,
           },
           {
@@ -84,7 +92,12 @@ async function main() {
             content: 'Event loop hoạt động như thế nào?',
             answerKeySummary:
               'Event loop liên tục kiểm tra call stack và callback queue, đẩy callback vào stack khi stack rỗng.',
-            answerKeywords: ['call stack', 'callback queue', 'microtask', 'macrotask'],
+            answerKeywords: [
+              'call stack',
+              'callback queue',
+              'microtask',
+              'macrotask',
+            ],
             level: Level.MEDIUM,
           },
           {
@@ -92,7 +105,12 @@ async function main() {
             content: 'Sự khác biệt giữa var, let và const là gì?',
             answerKeySummary:
               'var có function scope và hoisting; let/const có block scope. const không thể reassign, nhưng object/array vẫn mutatable.',
-            answerKeywords: ['scope', 'hoisting', 'temporal dead zone', 'block scope'],
+            answerKeywords: [
+              'scope',
+              'hoisting',
+              'temporal dead zone',
+              'block scope',
+            ],
             level: Level.EASY,
           },
         ],
@@ -109,6 +127,7 @@ async function main() {
       description: 'Dùng thử toàn bộ tính năng trong 1 tuần.',
       priceVnd: 50_000,
       durationDays: 7,
+      creditPerCycle: 35,
       sortOrder: 1,
     },
     {
@@ -117,6 +136,7 @@ async function main() {
       description: 'Phù hợp ôn luyện trước kỳ phỏng vấn.',
       priceVnd: 89_000,
       durationDays: 30,
+      creditPerCycle: 150,
       sortOrder: 2,
     },
     {
@@ -125,6 +145,7 @@ async function main() {
       description: 'Tiết kiệm nhất — chỉ ~85.000đ mỗi tháng.',
       priceVnd: 255_000,
       durationDays: 90,
+      creditPerCycle: 500,
       sortOrder: 3,
     },
   ];
@@ -136,6 +157,7 @@ async function main() {
         description: p.description,
         priceVnd: p.priceVnd,
         durationDays: p.durationDays,
+        creditPerCycle: p.creditPerCycle,
         sortOrder: p.sortOrder,
         isUnlimited: true,
         isActive: true,

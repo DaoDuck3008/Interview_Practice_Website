@@ -34,6 +34,7 @@ export const validationSchema = Joi.object({
 });
 
 export default () => ({
+  nodeEnv: process.env.NODE_ENV ?? 'development',
   port: parseInt(process.env.PORT ?? '3001', 10),
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET,

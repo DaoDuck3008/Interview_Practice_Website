@@ -42,6 +42,12 @@ export class UpdatePlanDto {
   durationDays?: number;
 
   @IsOptional()
+  @IsInt({ message: 'Credit mỗi chu kỳ phải là số nguyên' })
+  @Min(0, { message: 'Credit mỗi chu kỳ không được âm' })
+  @Max(1_000_000, { message: 'Credit mỗi chu kỳ tối đa 1000000' })
+  creditPerCycle?: number;
+
+  @IsOptional()
   @IsBoolean({ message: 'isUnlimited phải là boolean' })
   isUnlimited?: boolean;
 
@@ -50,12 +56,6 @@ export class UpdatePlanDto {
   @Min(0, { message: 'Giới hạn ngày không được âm' })
   @Max(10_000, { message: 'Giới hạn ngày tối đa 10000 lượt' })
   dailyScoreLimit?: number;
-
-  @IsOptional()
-  @IsInt({ message: 'Giới hạn tuần phải là số nguyên' })
-  @Min(0, { message: 'Giới hạn tuần không được âm' })
-  @Max(100_000, { message: 'Giới hạn tuần tối đa 100000 lượt' })
-  weeklyScoreLimit?: number;
 
   @IsOptional()
   @IsObject({ message: 'limits phải là object' })

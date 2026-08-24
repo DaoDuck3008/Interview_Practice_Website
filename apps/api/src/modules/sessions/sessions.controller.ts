@@ -27,6 +27,8 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { QuotaGuard } from '../quota/quota.guard';
+import { UserActionThrottle } from '../../common/throttling/user-action-throttle.decorator';
+import { UserActionThrottlerGuard } from '../../common/throttling/user-action-throttler.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { fileUploadOptions } from '../../common/upload/file-upload.options';
 import { MAX_AUDIO_BYTES } from '../../common/upload/audio.constants';
@@ -35,7 +37,7 @@ import {
   THROTTLE_ADMIN_SENSITIVE,
   THROTTLE_ADMIN_MUTATION,
   THROTTLE_AI_ACTION,
-  THROTTLE_HEAVY_UPLOAD,
+  THROTTLE_USER_AUDIO_UPLOAD,
 } from '../../common/throttling/throttle-profiles';
 import { Audit } from '../audit/audit.decorator';
 
@@ -82,7 +84,7 @@ export class SessionsController {
   }
 
   @Post()
-  @Throttle(THROTTLE_HEAVY_UPLOAD)
+  @UserActionThrottle(THROTTLE_USER_AUDIO_UPLOAD)
   @Audit({
     action: AuditAction.SESSION_CREATE,
     entityType: 'Session',
@@ -92,7 +94,7 @@ export class SessionsController {
         : null,
     targetUserId: ({ request }) => request.user?.id,
   })
-  @UseGuards(QuotaGuard)
+  @UseGuards(UserActionThrottlerGuard, QuotaGuard)
   @UseInterceptors(
     ConcurrencyInterceptor,
     FileInterceptor(

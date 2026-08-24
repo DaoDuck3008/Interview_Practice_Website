@@ -30,6 +30,7 @@ import { AppThrottlerGuard } from './common/throttling/app-throttler.guard';
 import { RedisThrottlerStorage } from './common/throttling/redis-throttler.storage';
 import { ThrottlingModule } from './common/throttling/throttling.module';
 import { AuditInterceptor } from './modules/audit/audit.interceptor';
+import { AiCreditsModule } from './modules/ai-credits/ai-credits.module';
 
 @Module({
   imports: [
@@ -79,6 +80,7 @@ import { AuditInterceptor } from './modules/audit/audit.interceptor';
     WebsocketModule,
     FavoritesModule,
     AuditModule,
+    AiCreditsModule,
     MockInterviewsModule,
     MockCvModule,
   ],

@@ -23,10 +23,14 @@ import { MAX_AUDIO_BYTES } from '../../common/upload/audio.constants';
 import {
   THROTTLE_AI_ACTION,
   THROTTLE_ADMIN_MUTATION,
-  THROTTLE_HEAVY_UPLOAD,
+  THROTTLE_USER_AUDIO_UPLOAD,
+  THROTTLE_USER_MOCK_SCORE_RETRY,
+  THROTTLE_USER_MOCK_SUBMIT,
 } from '../../common/throttling/throttle-profiles';
 import { Audit } from '../audit/audit.decorator';
 import { MockInterviewsService } from './mock-interviews.service';
+import { UserActionThrottle } from '../../common/throttling/user-action-throttle.decorator';
+import { UserActionThrottlerGuard } from '../../common/throttling/user-action-throttler.guard';
 import { CreateMockInterviewDto } from './dto/create-mock-interview.dto';
 import { QueryMockInterviewDto } from './dto/query-mock-interview.dto';
 import { AnswerMockQuestionDto } from '../mock-core/dto/answer-mock-question.dto';
@@ -48,7 +52,10 @@ export class MockInterviewsController {
   }
 
   @Get()
-  findAll(@CurrentUser() user: AuthUser, @Query() query: QueryMockInterviewDto) {
+  findAll(
+    @CurrentUser() user: AuthUser,
+    @Query() query: QueryMockInterviewDto,
+  ) {
     return this.mockInterviews.findAll(user.id, query);
   }
 
@@ -124,7 +131,8 @@ export class MockInterviewsController {
   }
 
   @Post(':id/questions/:questionItemId/answer')
-  @Throttle(THROTTLE_HEAVY_UPLOAD)
+  @UserActionThrottle(THROTTLE_USER_AUDIO_UPLOAD)
+  @UseGuards(UserActionThrottlerGuard)
   @UseInterceptors(
     ConcurrencyInterceptor,
     FileInterceptor(
@@ -153,14 +161,16 @@ export class MockInterviewsController {
   }
 
   @Post(':id/submit')
-  @Throttle(THROTTLE_AI_ACTION)
+  @UserActionThrottle(THROTTLE_USER_MOCK_SUBMIT)
+  @UseGuards(UserActionThrottlerGuard)
   @UseInterceptors(ConcurrencyInterceptor)
   submit(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.mockInterviews.submit(id, user.id);
   }
 
   @Post(':id/retry-scoring')
-  @Throttle(THROTTLE_AI_ACTION)
+  @UserActionThrottle(THROTTLE_USER_MOCK_SCORE_RETRY)
+  @UseGuards(UserActionThrottlerGuard)
   @UseInterceptors(ConcurrencyInterceptor)
   retryScoring(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.mockInterviews.retryScoring(id, user.id);

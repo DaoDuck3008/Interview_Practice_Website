@@ -2,15 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  CalendarDays,
-  Gauge,
-  Infinity as InfinityIcon,
-  Sparkles,
-  Sun,
-} from "lucide-react";
+import { Gauge, Infinity as InfinityIcon, Sparkles, Sun } from "lucide-react";
 import { getQuotaStatus, type QuotaStatus } from "@/lib/api/quota";
-import { getMySubscription, type MySubscription } from "@/lib/api/subscriptions";
+import {
+  getMySubscription,
+  type MySubscription,
+} from "@/lib/api/subscriptions";
 import { formatNumber } from "@/lib/utils/format";
 
 const cardClass =
@@ -84,16 +81,7 @@ export default function UsageView() {
               limit={status.daily.limit}
             />
           )}
-          {status?.weekly && (
-            <UsageBar
-              icon={CalendarDays}
-              label="Tuần này"
-              reset="Đặt lại vào Thứ Hai hằng tuần (giờ VN)"
-              used={status.weekly.used}
-              limit={status.weekly.limit}
-            />
-          )}
-          {!status?.daily && !status?.weekly && (
+          {!status?.daily && (
             <p className="text-sm text-[var(--color-text-secondary)]">
               Gói của bạn không giới hạn số lượt luyện tập.
             </p>
@@ -178,7 +166,9 @@ function UsageBar({
         <span className="text-xs text-[var(--color-text-muted)]">{reset}</span>
         <span
           className="text-xs font-medium"
-          style={{ color: exhausted ? "#ef4444" : "var(--color-text-secondary)" }}
+          style={{
+            color: exhausted ? "#ef4444" : "var(--color-text-secondary)",
+          }}
         >
           {exhausted ? "Đã hết lượt" : `Còn ${formatNumber(remaining)} lượt`}
         </span>

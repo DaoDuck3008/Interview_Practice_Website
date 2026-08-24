@@ -184,6 +184,30 @@ enum UsageStatus {
   CANCELED
 }
 
+enum AiCreditFeature {
+  ANSWER_AUDIO
+  ANSWER_IMPROVEMENT
+  MOCK_INTERVIEW_CREATE
+  MOCK_INTERVIEW_OVERVIEW
+  CV_ANALYSIS_10
+  CV_ANALYSIS_20
+  CV_ANALYSIS_30
+  MOCK_CV_OVERVIEW
+}
+
+enum CreditCycleSource {
+  FREE
+  SUBSCRIPTION
+  MANUAL
+}
+
+enum CreditReservationStatus {
+  PENDING
+  CONSUMED
+  RELEASED
+  EXPIRED
+}
+
 // ─── Models ──────────────────────────────────────────
 
 model User {
@@ -203,6 +227,8 @@ model User {
   orders           Order[]
   grantedOrders    Order[]           @relation("OrderGrantedBy") // các đơn admin này cấp thủ công
   usageLogs        UsageLog[]
+  creditCycles     CreditCycle[]
+  creditReservations CreditReservation[]
   reviewedScores   Score[]           @relation("ScoreReviewedBy") // các Score admin này đã review/chấm lại thủ công
   supportMessages  SupportMessage[] // hội thoại hỗ trợ (1 thread liên tục / user, cả tin user gửi lẫn admin trả lời)
   favorites        Favorite[]
@@ -589,10 +615,9 @@ model Plan {
   priceVnd     Int //                VND, số nguyên
   durationDays Int //                kỳ hạn tính theo ngày: 7 / 30 / 90 (cộng vào expiresAt khi kích hoạt)
 
-  // ── Limits/quota (cột có kiểu + JSON dự phòng) ──
   isUnlimited      Boolean @default(false) // true = không giới hạn lượt
   dailyScoreLimit  Int? //                    null = không giới hạn theo ngày
-  weeklyScoreLimit Int? //                    null = không giới hạn theo tuần
+  creditPerCycle   Int     @default(0) // credit cấp theo chu kỳ subscription; snapshot vào CreditCycle
   limits           Json? //                   mở rộng các limit khác sau này
 
   isActive  Boolean  @default(true)
@@ -602,6 +627,7 @@ model Plan {
 
   subscriptions Subscription[]
   orders        Order[]
+  creditCycles  CreditCycle[]
 }
 
 model Subscription {
@@ -624,6 +650,7 @@ model Subscription {
   updatedAt DateTime @updatedAt
 
   orders Order[] // các đơn đã tạo/gia hạn sub này
+  creditCycles CreditCycle[]
 
   @@index([status, expiresAt]) // job hạ cấp: tìm ACTIVE & expiresAt < now
 }
@@ -677,6 +704,70 @@ model UsageLog {
 
   @@index([userId, createdAt]) // COUNT lượt dùng theo kỳ (ngày/tháng)
   @@index([userId, status, expiresAt])
+}
+
+// Số dư theo chu kỳ là nguồn sự thật cho AI credits. activeKey chỉ có giá trị
+// với cycle đang hiệu lực, nên unique constraint đảm bảo tối đa một cycle active/user.
+model CreditCycle {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  subscriptionId String?
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  planId         String?
+  plan           Plan?         @relation(fields: [planId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  source   CreditCycleSource
+  planName String?
+  startsAt DateTime
+  endsAt   DateTime
+
+  grantedCredits  Int
+  usedCredits     Int @default(0)
+  reservedCredits Int @default(0)
+
+  // `${userId}` khi active, null khi cycle đã đóng/hết hạn.
+  activeKey String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reservations CreditReservation[]
+
+  @@index([userId, endsAt])
+  @@index([subscriptionId])
+}
+
+// Reservation chỉ giữ credit trong lúc thao tác AI đang xử lý. Không dùng bảng
+// này làm event log quota dài hạn; chỉ giữ dữ liệu cần cho idempotency/đối soát.
+model CreditReservation {
+  id String @id @default(uuid())
+
+  cycleId String
+  cycle   CreditCycle @relation(fields: [cycleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  userId  String
+  user    User        @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  feature AiCreditFeature
+  credits Int
+  status  CreditReservationStatus @default(PENDING)
+
+  referenceType  String
+  referenceId    String
+  idempotencyKey String @unique
+
+  expiresAt     DateTime
+  consumedAt    DateTime?
+  releasedAt    DateTime?
+  failureReason String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([cycleId, feature, referenceType, referenceId])
+  @@index([status, expiresAt])
+  @@index([userId, createdAt])
 }
 
 // 1 thread liên tục / user (không có khái niệm "ticket" riêng) — gồm cả tin

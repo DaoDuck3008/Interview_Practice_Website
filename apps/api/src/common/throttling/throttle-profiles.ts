@@ -3,6 +3,7 @@ import { ExecutionContext } from '@nestjs/common';
 
 const SECOND_MS = 1000;
 const MINUTE_MS = 60 * SECOND_MS;
+const DAY_MS = 24 * 60 * MINUTE_MS;
 
 type IdentityResolver = (context: ExecutionContext) => string | undefined;
 
@@ -112,6 +113,39 @@ export const THROTTLE_AI_ACTION = throttleProfile(
   'ai-action',
   { limit: 3, ttl: 30 * SECOND_MS, blockDuration: 30 * SECOND_MS },
   { limit: 10, ttl: 10 * MINUTE_MS, blockDuration: 2 * MINUTE_MS },
+);
+
+// Các profile này dùng chung RedisThrottlerStorage với throttler toàn hệ thống.
+// Khi được gắn UserActionThrottlerGuard, tracker là user id thay vì IP. Môi
+// trường development nhân 10 limit để việc thử nghiệm không bị cản trở.
+export const THROTTLE_USER_AUDIO_UPLOAD = throttleProfile(
+  'user-audio-upload',
+  { limit: 5, ttl: MINUTE_MS, blockDuration: MINUTE_MS },
+  { limit: 60, ttl: DAY_MS, blockDuration: DAY_MS },
+);
+
+export const THROTTLE_USER_CV_UPLOAD = throttleProfile(
+  'user-cv-upload',
+  { limit: 1, ttl: MINUTE_MS, blockDuration: MINUTE_MS },
+  { limit: 4, ttl: DAY_MS, blockDuration: DAY_MS },
+);
+
+export const THROTTLE_USER_CV_RETRY = throttleProfile(
+  'user-cv-retry',
+  { limit: 1, ttl: MINUTE_MS, blockDuration: MINUTE_MS },
+  { limit: 3, ttl: DAY_MS, blockDuration: DAY_MS },
+);
+
+export const THROTTLE_USER_MOCK_SUBMIT = throttleProfile(
+  'user-mock-submit',
+  { limit: 3, ttl: MINUTE_MS, blockDuration: MINUTE_MS },
+  { limit: 12, ttl: DAY_MS, blockDuration: DAY_MS },
+);
+
+export const THROTTLE_USER_MOCK_SCORE_RETRY = throttleProfile(
+  'user-mock-score-retry',
+  { limit: 2, ttl: MINUTE_MS, blockDuration: MINUTE_MS },
+  { limit: 10, ttl: DAY_MS, blockDuration: DAY_MS },
 );
 
 // Checkout là endpoint "tạo hoặc tái dùng" đơn PENDING. Người dùng có thể

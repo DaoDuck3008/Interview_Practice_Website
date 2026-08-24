@@ -9,18 +9,20 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Throttle } from '@nestjs/throttler';
 import { ConcurrencyInterceptor } from '../../../common/concurrency/concurrency.interceptor';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import {
-  THROTTLE_AI_ACTION,
-  THROTTLE_HEAVY_UPLOAD,
+  THROTTLE_USER_AUDIO_UPLOAD,
+  THROTTLE_USER_MOCK_SCORE_RETRY,
+  THROTTLE_USER_MOCK_SUBMIT,
 } from '../../../common/throttling/throttle-profiles';
 import { MAX_AUDIO_BYTES } from '../../../common/upload/audio.constants';
 import { fileUploadOptions } from '../../../common/upload/file-upload.options';
 import { AnswerMockQuestionDto } from '../../mock-core/dto/answer-mock-question.dto';
 import { MockCvInterviewsService } from './mock-cv-interviews.service';
+import { UserActionThrottle } from '../../../common/throttling/user-action-throttle.decorator';
+import { UserActionThrottlerGuard } from '../../../common/throttling/user-action-throttler.guard';
 
 interface AuthUser {
   id: string;
@@ -33,7 +35,8 @@ export class MockCvInterviewsController {
   constructor(private readonly interviews: MockCvInterviewsService) {}
 
   @Post(':id/questions/:questionItemId/answer')
-  @Throttle(THROTTLE_HEAVY_UPLOAD)
+  @UserActionThrottle(THROTTLE_USER_AUDIO_UPLOAD)
+  @UseGuards(UserActionThrottlerGuard)
   @UseInterceptors(
     ConcurrencyInterceptor,
     FileInterceptor(
@@ -62,14 +65,16 @@ export class MockCvInterviewsController {
   }
 
   @Post(':id/submit')
-  @Throttle(THROTTLE_AI_ACTION)
+  @UserActionThrottle(THROTTLE_USER_MOCK_SUBMIT)
+  @UseGuards(UserActionThrottlerGuard)
   @UseInterceptors(ConcurrencyInterceptor)
   submit(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.interviews.submit(id, user.id);
   }
 
   @Post(':id/retry-scoring')
-  @Throttle(THROTTLE_AI_ACTION)
+  @UserActionThrottle(THROTTLE_USER_MOCK_SCORE_RETRY)
+  @UseGuards(UserActionThrottlerGuard)
   @UseInterceptors(ConcurrencyInterceptor)
   retryScoring(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.interviews.retryScoring(id, user.id);

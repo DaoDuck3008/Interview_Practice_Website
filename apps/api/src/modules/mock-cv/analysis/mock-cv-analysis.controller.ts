@@ -20,9 +20,9 @@ import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { fileUploadOptions } from '../../../common/upload/file-upload.options';
 import {
-  THROTTLE_AI_ACTION,
   THROTTLE_ADMIN_MUTATION,
-  THROTTLE_HEAVY_UPLOAD,
+  THROTTLE_USER_CV_RETRY,
+  THROTTLE_USER_CV_UPLOAD,
 } from '../../../common/throttling/throttle-profiles';
 import { Audit } from '../../audit/audit.decorator';
 import { MAX_CV_BYTES } from './mock-cv.constants';
@@ -31,6 +31,8 @@ import { CreateMockCvDto } from './dto/create-mock-cv.dto';
 import { QueryMockCvDto } from './dto/query-mock-cv.dto';
 import { QueryAdminMockCvDto } from './dto/query-admin-mock-cv.dto';
 import { MockCvAdminService } from './mock-cv-admin.service';
+import { UserActionThrottle } from '../../../common/throttling/user-action-throttle.decorator';
+import { UserActionThrottlerGuard } from '../../../common/throttling/user-action-throttler.guard';
 
 interface AuthUser {
   id: string;
@@ -164,7 +166,8 @@ export class MockCvAnalysisController {
   }
 
   @Post()
-  @Throttle(THROTTLE_HEAVY_UPLOAD)
+  @UserActionThrottle(THROTTLE_USER_CV_UPLOAD)
+  @UseGuards(UserActionThrottlerGuard)
   @UseInterceptors(
     FileInterceptor(
       'cv',
@@ -190,7 +193,8 @@ export class MockCvAnalysisController {
   }
 
   @Post(':id/retry-analysis')
-  @Throttle(THROTTLE_AI_ACTION)
+  @UserActionThrottle(THROTTLE_USER_CV_RETRY)
+  @UseGuards(UserActionThrottlerGuard)
   retryAnalysis(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.mockCvs.retryAnalysis(id, user.id);
   }

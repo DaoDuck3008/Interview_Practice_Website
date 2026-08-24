@@ -32,6 +32,7 @@ export class PlansService {
           description: true,
           priceVnd: true,
           durationDays: true,
+          creditPerCycle: true,
         },
       }),
     );
@@ -123,9 +124,9 @@ export class PlansService {
       description: dto.description,
       priceVnd: dto.priceVnd,
       durationDays: dto.durationDays,
+      creditPerCycle: dto.creditPerCycle,
       isUnlimited: dto.isUnlimited,
       dailyScoreLimit: dto.dailyScoreLimit,
-      weeklyScoreLimit: dto.weeklyScoreLimit,
       limits: dto.limits as Prisma.InputJsonValue | undefined,
       isActive: dto.isActive,
       sortOrder: dto.sortOrder,

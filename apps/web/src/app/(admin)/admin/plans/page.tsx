@@ -26,9 +26,7 @@ const inputStyle = { background: "#0d0d14", border: "1px solid #1c1c28" };
 const inputClass =
   "w-full px-4 py-3 rounded-lg text-sm text-[#f4f4f6] placeholder-[#3d3d54] outline-none transition-all";
 
-function onFocus(
-  e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>,
-) {
+function onFocus(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) {
   e.currentTarget.style.borderColor = "#7c3aed";
   e.currentTarget.style.boxShadow = "0 0 0 3px rgba(124,58,237,0.15)";
 }
@@ -41,7 +39,6 @@ function quotaLabel(p: AdminPlan) {
   if (p.isUnlimited) return "Không giới hạn";
   const parts: string[] = [];
   if (p.dailyScoreLimit != null) parts.push(`${p.dailyScoreLimit}/ngày`);
-  if (p.weeklyScoreLimit != null) parts.push(`${p.weeklyScoreLimit}/tuần`);
   return parts.length ? parts.join(" · ") : "—";
 }
 
@@ -54,7 +51,6 @@ interface FormState {
   sortOrder: string;
   isUnlimited: boolean;
   dailyScoreLimit: string;
-  weeklyScoreLimit: string;
   isActive: boolean;
 }
 
@@ -67,7 +63,6 @@ const EMPTY_FORM: FormState = {
   sortOrder: "0",
   isUnlimited: false,
   dailyScoreLimit: "",
-  weeklyScoreLimit: "",
   isActive: true,
 };
 
@@ -122,9 +117,8 @@ export default function AdminPlansPage() {
       durationDays: String(p.durationDays),
       sortOrder: String(p.sortOrder),
       isUnlimited: p.isUnlimited,
-      dailyScoreLimit: p.dailyScoreLimit != null ? String(p.dailyScoreLimit) : "",
-      weeklyScoreLimit:
-        p.weeklyScoreLimit != null ? String(p.weeklyScoreLimit) : "",
+      dailyScoreLimit:
+        p.dailyScoreLimit != null ? String(p.dailyScoreLimit) : "",
       isActive: p.isActive,
     });
     setError("");
@@ -168,11 +162,6 @@ export default function AdminPlansPage() {
         ? null
         : form.dailyScoreLimit.trim()
           ? Number(form.dailyScoreLimit)
-          : null,
-      weeklyScoreLimit: form.isUnlimited
-        ? null
-        : form.weeklyScoreLimit.trim()
-          ? Number(form.weeklyScoreLimit)
           : null,
       isActive: form.isActive,
     };
@@ -312,7 +301,10 @@ export default function AdminPlansPage() {
 
                 <span className="text-sm text-[#9898aa] inline-flex items-center gap-1.5 min-w-0">
                   {p.isUnlimited && (
-                    <InfinityIcon size={14} className="text-[#8b5cf6] flex-shrink-0" />
+                    <InfinityIcon
+                      size={14}
+                      className="text-[#8b5cf6] flex-shrink-0"
+                    />
                   )}
                   <span className="truncate">{quotaLabel(p)}</span>
                 </span>
@@ -323,7 +315,10 @@ export default function AdminPlansPage() {
                     className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
                     style={
                       p.isActive
-                        ? { background: "rgba(34,197,94,0.12)", color: "#22c55e" }
+                        ? {
+                            background: "rgba(34,197,94,0.12)",
+                            color: "#22c55e",
+                          }
                         : { background: "#1c1c28", color: "#606072" }
                     }
                   >
@@ -503,34 +498,19 @@ export default function AdminPlansPage() {
             </label>
 
             {!form.isUnlimited && (
-              <div className="grid grid-cols-2 gap-4">
+              <div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-[#9898aa]">
                     Giới hạn / ngày{" "}
-                    <span className="text-[#3d3d54] normal-case">(trống = ∞)</span>
+                    <span className="text-[#3d3d54] normal-case">
+                      (trống = ∞)
+                    </span>
                   </label>
                   <input
                     type="number"
                     min={0}
                     value={form.dailyScoreLimit}
                     onChange={(e) => set("dailyScoreLimit", e.target.value)}
-                    placeholder="—"
-                    className={inputClass}
-                    style={inputStyle}
-                    onFocus={onFocus}
-                    onBlur={onBlur}
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-[#9898aa]">
-                    Giới hạn / tuần{" "}
-                    <span className="text-[#3d3d54] normal-case">(trống = ∞)</span>
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={form.weeklyScoreLimit}
-                    onChange={(e) => set("weeklyScoreLimit", e.target.value)}
                     placeholder="—"
                     className={inputClass}
                     style={inputStyle}
