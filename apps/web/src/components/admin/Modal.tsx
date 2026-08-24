@@ -26,19 +26,19 @@ export default function Modal({ open, onClose, title, children }: Props) {
   return (
     <ModalPortal>
       <div
-        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60"
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
         onMouseDown={onClose}
       >
         <div
-          className="w-full max-w-2xl rounded-2xl bg-[#0d0d14] border border-[#1c1c28] overflow-hidden"
+          className="w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-surface"
           style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }}
           onMouseDown={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#1c1c28]">
-            <h2 className="text-base font-semibold text-white">{title}</h2>
+          <div className="flex items-center justify-between border-b border-border px-6 py-4">
+            <h2 className="font-semibold text-white">{title}</h2>
             <button
               onClick={onClose}
-              className="text-[#606072] hover:text-[#f4f4f6] transition-colors cursor-pointer"
+              className="cursor-pointer text-text-muted transition-colors hover:text-text-primary"
               aria-label="Đóng"
             >
               <X size={18} />

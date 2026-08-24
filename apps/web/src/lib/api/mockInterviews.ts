@@ -258,3 +258,12 @@ export async function retryMockInterviewScoringAdmin(
   );
   return res.data.data;
 }
+
+export async function hardDeleteMockInterviewAdmin(
+  id: string,
+): Promise<{ deleted: true; userId: string }> {
+  const res = await api.delete<
+    ApiResponse<{ deleted: true; userId: string }>
+  >(`/mock-interviews/admin/${id}`);
+  return res.data.data;
+}

@@ -1,27 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
+  ArrowLeft,
   ChevronDown,
   CircleCheck,
   Loader2,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 import { toast } from "react-toastify";
-import Modal from "./Modal";
 import {
   getMockInterviewAdminDetail,
+  hardDeleteMockInterviewAdmin,
   retryMockInterviewScoringAdmin,
   type AdminMockInterviewDetail,
   type MockInterviewStatus,
 } from "@/lib/api/mockInterviews";
 import { formatDate, formatDuration } from "@/lib/utils/format";
+import { toastApiError } from "@/lib/utils/apiError";
+import { useStatusModal } from "@/components/ui/useStatusModal";
 
 interface Props {
-  mockInterviewId: string | null;
-  onClose: () => void;
-  onUpdated: () => void;
+  mockInterviewId: string;
 }
 
 const statusLabel: Record<MockInterviewStatus, string> = {
@@ -37,30 +41,28 @@ function canRetry(detail: AdminMockInterviewDetail) {
   const hasFailed = detail.questions.some(
     (question) => question.scoreStatus === "FAILED",
   );
-  const isStale =
-    detail.status === "SCORING" &&
-    Date.now() - new Date(detail.updatedAt).getTime() >= 2 * 60 * 1000;
-  return (
-    hasFailed ||
-    (isStale &&
-      detail.questions.some((question) => question.scoreStatus === "QUEUED"))
-  );
+  const hasQueued =
+    (detail.status === "SUBMITTED" || detail.status === "SCORING") &&
+    detail.questions.some((question) => question.scoreStatus === "QUEUED");
+  return hasFailed || hasQueued;
 }
 
-export default function MockInterviewDetailModal({
-  mockInterviewId,
-  onClose,
-  onUpdated,
-}: Props) {
+export default function MockInterviewDetailView({ mockInterviewId }: Props) {
+  const router = useRouter();
   const [detail, setDetail] = useState<AdminMockInterviewDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const { confirm, statusModal } = useStatusModal();
 
   async function load(id: string) {
     setLoading(true);
+    setLoadError(null);
     try {
       setDetail(await getMockInterviewAdminDetail(id));
     } catch {
+      setLoadError("Không tìm thấy mock interview hoặc dữ liệu không còn tồn tại.");
       toast.error("Không tải được chi tiết mock interview.");
     } finally {
       setLoading(false);
@@ -68,7 +70,6 @@ export default function MockInterviewDetailModal({
   }
 
   useEffect(() => {
-    if (!mockInterviewId) return;
     queueMicrotask(() => {
       setDetail(null);
       void load(mockInterviewId);
@@ -81,7 +82,6 @@ export default function MockInterviewDetailModal({
     try {
       setDetail(await retryMockInterviewScoringAdmin(mockInterviewId));
       toast.success("Đã đưa các câu lỗi vào hàng đợi chấm lại.");
-      onUpdated();
     } catch {
       toast.error(
         "Chưa thể chấm lại bài này. Bài có thể chưa đủ điều kiện hoặc đang trong cooldown.",
@@ -91,19 +91,59 @@ export default function MockInterviewDetailModal({
     }
   }
 
+  async function hardDelete() {
+    if (!mockInterviewId || !detail) return;
+    const accepted = await confirm({
+      type: "error",
+      title: "Xóa vĩnh viễn mock interview?",
+      message:
+        "Toàn bộ câu trả lời, transcript, audio và kết quả chấm của bài này sẽ bị xóa và không thể khôi phục.",
+      confirmText: "Xóa vĩnh viễn",
+    });
+    if (!accepted) return;
+
+    setDeleting(true);
+    try {
+      await hardDeleteMockInterviewAdmin(mockInterviewId);
+      toast.success("Đã xóa vĩnh viễn mock interview.");
+      router.replace("/admin/mock-interviews");
+    } catch (error) {
+      toastApiError(error, "Không thể xóa mock interview này.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  const canDelete =
+    detail &&
+    detail.status !== "IN_PROGRESS";
+
   return (
-    <Modal
-      open={mockInterviewId !== null}
-      onClose={onClose}
-      title="Chi tiết mock interview"
-    >
-      {loading || !detail ? (
-        <div className="flex items-center justify-center py-16 text-text-muted">
+    <>
+      <div className="flex flex-col gap-6">
+        <Link
+          href="/admin/mock-interviews"
+          className="inline-flex w-fit items-center gap-2 text-sm font-medium text-text-muted transition-colors hover:text-text-primary"
+        >
+          <ArrowLeft size={16} />
+          Quay lại danh sách Mock Interview
+        </Link>
+      {loading ? (
+        <div className="flex min-h-[420px] items-center justify-center rounded-2xl border border-border bg-surface text-text-muted">
           <Loader2 size={18} className="animate-spin" />
         </div>
+      ) : loadError || !detail ? (
+        <div className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border border-border bg-surface px-6 text-center">
+          <AlertTriangle size={24} className="text-danger" />
+          <h1 className="mt-4 text-lg font-semibold text-text-primary">
+            Không thể mở Mock Interview
+          </h1>
+          <p className="mt-2 text-sm text-text-muted">{loadError}</p>
+        </div>
       ) : (
-        <div className="flex max-h-[70vh] flex-col gap-5 overflow-y-auto pr-1">
-          <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-col gap-6">
+          <section className="rounded-2xl border border-border bg-surface p-5 lg:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-sm font-semibold text-text-primary">
                 {detail.user.name}{" "}
@@ -111,7 +151,9 @@ export default function MockInterviewDetailModal({
                   ({detail.user.email})
                 </span>
               </p>
-              <p className="mt-1 text-sm text-text-secondary">{detail.title}</p>
+              <h1 className="mt-3 text-xl font-bold text-text-primary">
+                {detail.title}
+              </h1>
               <p className="mt-1 text-xs text-text-muted">
                 {detail.topics.map((topic) => topic.name).join(" · ")} ·{" "}
                 {formatDuration(detail.durationSeconds)} ·{" "}
@@ -123,7 +165,7 @@ export default function MockInterviewDetailModal({
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-elevated p-3 text-sm sm:grid-cols-4">
+          <div className="mt-5 grid grid-cols-2 gap-3 rounded-lg border border-border bg-elevated p-4 text-sm sm:grid-cols-4">
             <Metric
               label="Điểm tổng"
               value={detail.overallScore?.toFixed(1) ?? "—"}
@@ -149,21 +191,47 @@ export default function MockInterviewDetailModal({
             />
           </div>
 
-          {canRetry(detail) && (
-            <button
-              onClick={retryScoring}
-              disabled={retrying}
-              className="inline-flex w-fit items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-light disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {retrying ? (
-                <Loader2 size={15} className="animate-spin" />
-              ) : (
-                <RefreshCw size={15} />
-              )}
-              Chấm lại AI
-            </button>
-          )}
+          <div className="mt-4 flex flex-wrap gap-2">
+            {canRetry(detail) && (
+              <button
+                onClick={retryScoring}
+                disabled={retrying || deleting}
+                className="inline-flex w-fit items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-light disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {retrying ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : (
+                  <RefreshCw size={15} />
+                )}
+                Chấm lại AI
+              </button>
+            )}
+            {canDelete && (
+              <button
+                onClick={hardDelete}
+                disabled={retrying || deleting}
+                className="inline-flex w-fit items-center gap-2 rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm font-semibold text-danger transition-colors hover:bg-danger/15 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {deleting ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : (
+                  <Trash2 size={15} />
+                )}
+                Xóa vĩnh viễn
+              </button>
+            )}
+          </div>
+          </section>
 
+          <section>
+            <div className="mb-3">
+              <h2 className="text-sm font-semibold text-text-primary">
+                Câu trả lời và kết quả chấm
+              </h2>
+              <p className="mt-1 text-xs text-text-muted">
+                {detail.questions.length} câu hỏi trong bài phỏng vấn.
+              </p>
+            </div>
           <div className="flex flex-col gap-2">
             {detail.questions.map((item) => (
               <details
@@ -230,9 +298,12 @@ export default function MockInterviewDetailModal({
               </details>
             ))}
           </div>
+          </section>
         </div>
       )}
-    </Modal>
+      </div>
+      {statusModal}
+    </>
   );
 }
 

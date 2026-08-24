@@ -70,3 +70,10 @@ export function formatHoursMinutes(seconds: number): string {
   const m = totalMinutes % 60;
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
+
+/** Định dạng dung lượng file ngắn gọn cho metadata upload. */
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}

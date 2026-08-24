@@ -18,7 +18,6 @@ import { formatDate, formatDuration } from "@/lib/utils/format";
 import { LEVELS } from "@/lib/utils/levels";
 import { buildTopicOptions } from "@/lib/utils/topics";
 import Pagination from "@/components/admin/Pagination";
-import MockInterviewDetailModal from "@/components/admin/MockInterviewDetailModal";
 import EmptyState from "@/components/ui/EmptyState";
 
 const EMPTY: Paginated<AdminMockInterviewListItem> = { items: [], total: 0, page: 1, limit: 20, totalPages: 1 };
@@ -49,7 +48,6 @@ export default function AdminMockTestsPage() {
   const [stats, setStats] = useState<AdminMockInterviewStats>(EMPTY_STATS);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
-  const [detailId, setDetailId] = useState<string | null>(null);
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
   const [debouncedSearch, setDebouncedSearch] = useState(searchParams.get("search") ?? "");
   const [topicId, setTopicId] = useState(searchParams.get("topicId") ?? "");
@@ -140,11 +138,10 @@ export default function AdminMockTestsPage() {
 
       <div className="overflow-x-auto rounded-2xl border border-border bg-surface">
         <div className={`${GRID} border-b border-border py-3 text-xs font-medium uppercase tracking-wider text-text-muted`}><span>Người dùng</span><span>Mock test</span><span>Tiến độ</span><span>Trạng thái</span><span>Cập nhật</span></div>
-        {loading ? <div className="flex justify-center py-16 text-text-muted"><Loader2 size={18} className="animate-spin" /></div> : data.items.length === 0 ? <EmptyState icon={SearchX} title={hasFilters ? "Không tìm thấy mock phù hợp" : "Chưa có mock interview nào"} description={hasFilters ? "Thử điều chỉnh hoặc xóa bớt bộ lọc." : "Dữ liệu mock interview sẽ xuất hiện ở đây khi người dùng bắt đầu làm bài."} action={hasFilters ? { label: "Xóa bộ lọc", onClick: resetFilters } : undefined} /> : data.items.map((item) => <button key={item.id} onClick={() => setDetailId(item.id)} className={`${GRID} w-full border-b border-border py-3.5 text-left transition-colors last:border-0 hover:bg-elevated`}><div className="min-w-0"><p className="truncate text-sm text-text-primary">{item.user.name}</p><p className="truncate text-xs text-text-muted">{item.user.email}</p></div><div className="min-w-0"><p className="truncate text-sm text-text-secondary">{item.topics.map((topic) => topic.name).join(" · ") || item.title}</p><p className="text-xs text-text-muted">{item.totalQuestions} câu · {formatDuration(item.durationSeconds)}</p></div><div><p className="text-sm tabular-nums text-text-secondary">{item.answeredQuestions}/{item.totalQuestions}</p>{item.failedQuestions > 0 ? <p className="mt-0.5 text-xs text-danger">{item.failedQuestions} câu lỗi</p> : item.queuedQuestions > 0 ? <p className="mt-0.5 text-xs text-accent-light">{item.queuedQuestions} đang chấm</p> : null}</div><div><span className={`inline-flex rounded-full border px-2 py-1 text-xs ${statusClass(item.status)}`}>{statusLabel[item.status]}</span>{item.overallScore !== null && <p className="mt-1 text-xs font-semibold text-text-primary">Điểm {item.overallScore.toFixed(1)}</p>}</div><span className="text-xs text-text-secondary">{formatDate(item.updatedAt)}</span></button>)}
+        {loading ? <div className="flex justify-center py-16 text-text-muted"><Loader2 size={18} className="animate-spin" /></div> : data.items.length === 0 ? <EmptyState icon={SearchX} title={hasFilters ? "Không tìm thấy mock phù hợp" : "Chưa có mock interview nào"} description={hasFilters ? "Thử điều chỉnh hoặc xóa bớt bộ lọc." : "Dữ liệu mock interview sẽ xuất hiện ở đây khi người dùng bắt đầu làm bài."} action={hasFilters ? { label: "Xóa bộ lọc", onClick: resetFilters } : undefined} /> : data.items.map((item) => <button key={item.id} onClick={() => router.push(`/admin/mock-interviews/${item.id}`)} className={`${GRID} w-full border-b border-border py-3.5 text-left transition-colors last:border-0 hover:bg-elevated`}><div className="min-w-0"><p className="truncate text-sm text-text-primary">{item.user.name}</p><p className="truncate text-xs text-text-muted">{item.user.email}</p></div><div className="min-w-0"><p className="truncate text-sm text-text-secondary">{item.topics.map((topic) => topic.name).join(" · ") || item.title}</p><p className="text-xs text-text-muted">{item.totalQuestions} câu · {formatDuration(item.durationSeconds)}</p></div><div><p className="text-sm tabular-nums text-text-secondary">{item.answeredQuestions}/{item.totalQuestions}</p>{item.failedQuestions > 0 ? <p className="mt-0.5 text-xs text-danger">{item.failedQuestions} câu lỗi</p> : item.queuedQuestions > 0 ? <p className="mt-0.5 text-xs text-accent-light">{item.queuedQuestions} đang chấm</p> : null}</div><div><span className={`inline-flex rounded-full border px-2 py-1 text-xs ${statusClass(item.status)}`}>{statusLabel[item.status]}</span>{item.overallScore !== null && <p className="mt-1 text-xs font-semibold text-text-primary">Điểm {item.overallScore.toFixed(1)}</p>}</div><span className="text-xs text-text-secondary">{formatDate(item.updatedAt)}</span></button>)}
         {!loading && data.total > 0 && <Pagination page={data.page} totalPages={data.totalPages} total={data.total} limit={limit} onPageChange={setPage} onLimitChange={(next) => { setLimit(next); setPage(1); }} />}
       </div>
 
-      <MockInterviewDetailModal mockInterviewId={detailId} onClose={() => setDetailId(null)} onUpdated={load} />
     </div>
   );
 }

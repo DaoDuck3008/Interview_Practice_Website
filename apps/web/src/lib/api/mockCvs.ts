@@ -1,6 +1,17 @@
 import api, { type ApiResponse } from "./api";
-import type { MockInterviewStatus } from "./mockInterviews";
+import type {
+  MockInterviewStatus,
+  MockOverviewStatus,
+  MockQuestionAnswerStatus,
+  MockQuestionScoreStatus,
+} from "./mockInterviews";
+import type {
+  MockCvQuestionFocusArea,
+  MockCvQuestionSource,
+  MockCvReadiness,
+} from "./mockCvInterviews";
 import type { Paginated } from "./questions";
+import type { Score } from "./sessions";
 
 export type MockCvAnalysisStatus =
   | "PENDING"
@@ -188,5 +199,226 @@ export async function startMockCvInterview(
   const res = await api.post<ApiResponse<StartMockCvInterviewResponse>>(
     `/mock-cvs/${id}/start`,
   );
+  return res.data.data;
+}
+
+// ─── Admin: quản trị Mock CV ─────────────────────────────────────────────
+
+export type MockCvExtractionQuality = "HIGH" | "MEDIUM" | "LOW";
+export type AdminMockCvAttention = "all" | "failed" | "stale";
+
+export interface AdminMockCvQuery {
+  search?: string;
+  analysisStatus?: MockCvAnalysisStatus;
+  questionStatus?: MockCvQuestionGenerationStatus;
+  interviewStatus?: MockInterviewStatus;
+  attention?: AdminMockCvAttention;
+  order?: "asc" | "desc";
+  page?: number;
+  limit?: number;
+}
+
+export interface AdminMockCvAnalysis {
+  id: string;
+  status: MockCvAnalysisStatus;
+  extractionQuality: MockCvExtractionQuality | null;
+  detectedDomains: string[];
+  eligibilityReason: string | null;
+  analysisError: string | null;
+  lastRetryAt: string | null;
+  analysisAttempt: number;
+  analysisStartedAt: string | null;
+  questionGenerationStatus: MockCvQuestionGenerationStatus;
+  questionGenerationAttempt: number;
+  questionGenerationStartedAt: string | null;
+  questionGeneratedAt: string | null;
+  questionGenerationError: string | null;
+  requestedQuestionCount: number | null;
+  requestedDurationSeconds: number;
+  selectedBankQuestionCount: number | null;
+  generatedQuestionCount: number | null;
+  summary: string | null;
+  topicSlugs: string[];
+  technicalSkills: string[];
+  experienceSignals: string[];
+  strengths: string[];
+  gapsForTargetRole: string[];
+  interviewFocusAreas: string[];
+  claimsToVerify: string[];
+  projects: unknown;
+  promptVersion: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminMockCvListItem {
+  id: string;
+  targetRole: string;
+  fileName: string;
+  fileSize: number;
+  createdAt: string;
+  updatedAt: string;
+  user: { id: string; name: string; email: string };
+  analysis: AdminMockCvAnalysis | null;
+  interviews: Array<{
+    id: string;
+    status: MockInterviewStatus;
+    overallScore: number | null;
+    updatedAt: string;
+  }>;
+  _count: { questions: number; interviews: number };
+}
+
+export interface AdminMockCvStats {
+  total: number;
+  processing: number;
+  scoring: number;
+  attention: number;
+}
+
+export interface AdminMockCvPreparedQuestion {
+  id: string;
+  order: number;
+  source: MockCvQuestionSource;
+  focusArea: MockCvQuestionFocusArea | null;
+  content: string;
+  rationale: string | null;
+  createdAt: string;
+}
+
+export interface AdminMockCvInterviewQuestion {
+  id: string;
+  order: number;
+  source: MockCvQuestionSource;
+  focusArea: MockCvQuestionFocusArea | null;
+  content: string;
+  answerStatus: MockQuestionAnswerStatus;
+  scoreStatus: MockQuestionScoreStatus;
+  scoreError: string | null;
+  answeredAt: string | null;
+  skippedAt: string | null;
+  sessionId: string | null;
+  session: {
+    id: string;
+    audioUrl: string;
+    transcript: string;
+    duration: number;
+    createdAt: string;
+    score: Score | null;
+  } | null;
+}
+
+export interface AdminMockCvInterview {
+  id: string;
+  userId: string;
+  title: string;
+  status: MockInterviewStatus;
+  totalQuestions: number;
+  durationSeconds: number;
+  startedAt: string | null;
+  expiresAt: string | null;
+  submittedAt: string | null;
+  scoredAt: string | null;
+  lastScoringRetryAt: string | null;
+  averageTechnicalScore: number | null;
+  averageCompletenessScore: number | null;
+  averageClarityScore: number | null;
+  overallScore: number | null;
+  summary: string | null;
+  strengths: string[];
+  weaknesses: string[];
+  nextRecommendations: string[];
+  overviewStatus: MockOverviewStatus;
+  overviewError: string | null;
+  readiness: MockCvReadiness | null;
+  claimsToPrepareEvidence: string[];
+  createdAt: string;
+  updatedAt: string;
+  questions: AdminMockCvInterviewQuestion[];
+}
+
+export interface AdminMockCvDetail {
+  id: string;
+  userId: string;
+  targetRole: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  createdAt: string;
+  updatedAt: string;
+  user: { id: string; name: string; email: string };
+  analysis: AdminMockCvAnalysis | null;
+  questions: AdminMockCvPreparedQuestion[];
+  interviews: AdminMockCvInterview[];
+}
+
+export async function getMockCvsAdmin(
+  query: AdminMockCvQuery = {},
+): Promise<Paginated<AdminMockCvListItem>> {
+  const res = await api.get<ApiResponse<Paginated<AdminMockCvListItem>>>(
+    "/mock-cvs/admin",
+    { params: query },
+  );
+  return res.data.data;
+}
+
+export async function getMockCvAdminStats(): Promise<AdminMockCvStats> {
+  const res = await api.get<ApiResponse<AdminMockCvStats>>(
+    "/mock-cvs/admin/stats",
+  );
+  return res.data.data;
+}
+
+export async function getMockCvAdminDetail(
+  id: string,
+): Promise<AdminMockCvDetail> {
+  const res = await api.get<ApiResponse<AdminMockCvDetail>>(
+    `/mock-cvs/admin/${id}`,
+  );
+  return res.data.data;
+}
+
+export async function retryMockCvAnalysisAdmin(
+  id: string,
+): Promise<AdminMockCvDetail> {
+  const res = await api.post<ApiResponse<AdminMockCvDetail>>(
+    `/mock-cvs/admin/${id}/retry-analysis`,
+  );
+  return res.data.data;
+}
+
+export async function retryMockCvQuestionsAdmin(
+  id: string,
+): Promise<AdminMockCvDetail> {
+  const res = await api.post<ApiResponse<AdminMockCvDetail>>(
+    `/mock-cvs/admin/${id}/retry-questions`,
+  );
+  return res.data.data;
+}
+
+export async function retryMockCvInterviewScoringAdmin(
+  id: string,
+): Promise<AdminMockCvDetail> {
+  const res = await api.post<ApiResponse<AdminMockCvDetail>>(
+    `/mock-cvs/admin/interviews/${id}/retry-scoring`,
+  );
+  return res.data.data;
+}
+
+export async function hardDeleteMockCvInterviewAdmin(
+  id: string,
+): Promise<{ deleted: true; mockCvId: string; userId: string }> {
+  const res = await api.delete<
+    ApiResponse<{ deleted: true; mockCvId: string; userId: string }>
+  >(`/mock-cvs/admin/interviews/${id}`);
+  return res.data.data;
+}
+
+export async function hardDeleteMockCvAdmin(
+  id: string,
+): Promise<{ deleted: true; userId: string }> {
+  const res = await api.delete<
+    ApiResponse<{ deleted: true; userId: string }>
+  >(`/mock-cvs/admin/${id}`);
   return res.data.data;
 }
