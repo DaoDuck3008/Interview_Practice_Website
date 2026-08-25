@@ -16,9 +16,15 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { lockBillingUser } from '../../common/utils/billing-lock.util';
-import { getAiCreditCost, getReservationTtlMs } from './ai-credit-pricing';
+import { vnDayKey, vnStartOfDay } from '../../common/utils/vn-time.util';
+import {
+  FREE_DAILY_AI_CREDITS,
+  getAiCreditCost,
+  getReservationTtlMs,
+} from './ai-credit-pricing';
 
 type TransactionClient = Prisma.TransactionClient;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface OpenCreditCycleInput {
   userId: string;
@@ -26,6 +32,7 @@ export interface OpenCreditCycleInput {
   endsAt: Date;
   grantedCredits: number;
   source: CreditCycleSource;
+  sourceReference: string;
   subscriptionId?: string;
   planId?: string;
   planName?: string;
@@ -54,104 +61,73 @@ export class AiCreditsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getBalance(userId: string) {
-    const now = new Date();
-    const cycle = await this.prisma.creditCycle.findFirst({
-      where: { userId, activeKey: this.activeKey(userId), endsAt: { gt: now } },
-      select: {
-        id: true,
-        source: true,
-        planName: true,
-        startsAt: true,
-        endsAt: true,
-        grantedCredits: true,
-        usedCredits: true,
-        reservedCredits: true,
-      },
-    });
-
-    if (!cycle) {
-      return {
-        cycleId: null,
-        source: null,
-        planName: null,
-        granted: 0,
-        used: 0,
-        reserved: 0,
-        available: 0,
-        cycleStartsAt: null,
-        cycleEndsAt: null,
-      };
-    }
-
-    return {
-      cycleId: cycle.id,
-      source: cycle.source,
-      planName: cycle.planName,
-      granted: cycle.grantedCredits,
-      used: cycle.usedCredits,
-      reserved: cycle.reservedCredits,
-      available:
-        cycle.grantedCredits - cycle.usedCredits - cycle.reservedCredits,
-      cycleStartsAt: cycle.startsAt,
-      cycleEndsAt: cycle.endsAt,
-    };
+    const cycle = await this.getOrCreateActiveCycle(userId);
+    return this.toBalance(cycle);
   }
 
-  /** Mở cycle đang hiệu lực; Phase 3 sẽ gọi khi payment/grant hoàn tất. */
-  async openCycle(input: OpenCreditCycleInput) {
-    if (input.grantedCredits < 0) {
-      throw new BadRequestException('Credit được cấp không được âm.');
-    }
-    if (input.endsAt <= input.startsAt) {
-      throw new BadRequestException(
-        'Thời gian kết thúc cycle phải sau thời gian bắt đầu.',
-      );
-    }
-
-    const now = new Date();
-    if (input.startsAt > now) {
-      throw new BadRequestException('Chưa hỗ trợ mở cycle trong tương lai.');
-    }
-
+  /** Trả cycle paid đang hiệu lực, hoặc tạo trial cycle của ngày Việt Nam. */
+  async getOrCreateActiveCycle(userId: string) {
     return this.prisma.$transaction(async (tx) => {
-      await lockBillingUser(tx, input.userId);
-      const activeKey = this.activeKey(input.userId);
+      await lockBillingUser(tx, userId);
+      return this.getOrCreateActiveCycleInTransaction(tx, userId, new Date());
+    });
+  }
 
-      await tx.creditCycle.updateMany({
-        where: { activeKey, endsAt: { lte: now } },
-        data: { activeKey: null },
-      });
+  // ─── Cycle lifecycle ────────────────────────────────────────────────
 
-      const existing = await tx.creditCycle.findUnique({
-        where: { activeKey },
-      });
-      if (existing) {
-        if (
-          existing.subscriptionId === (input.subscriptionId ?? null) &&
-          existing.startsAt.getTime() === input.startsAt.getTime() &&
-          existing.endsAt.getTime() === input.endsAt.getTime()
-        ) {
-          return existing;
-        }
+  /* Hàm này được dùng khi hệ thống đã biết chính xác cần mở cycle free hay paid tier */
+  /** Dùng trong billing transaction đã giữ `billing:<userId>` lock. */
+  async openCycleInTransaction(
+    tx: TransactionClient,
+    input: OpenCreditCycleInput,
+    now = new Date(),
+  ) {
+    /* sourceReference nhằm chỉ xem cycle đã được sinh ra ở sự kiện nào
+        Nó đảm bảo cycle đã được cấp trước đó rồi
+    */
+    // Nếu tìm thấy cycle theo sourceReference thì trả luôn.
+    const bySource = await tx.creditCycle.findUnique({
+      where: { sourceReference: input.sourceReference },
+    });
+    if (bySource) return bySource;
+
+    // Nếu không tìm thấy => thì phải kiểm tra lại xem cycle đã có chưa từ đầu
+
+    // Vô hiệu hóa các cycle đã hết hạn trước đó để giải phóng activeKey hợp lệ
+    const activeKey = this.activeKey(input.userId);
+    await tx.creditCycle.updateMany({
+      where: { activeKey, endsAt: { lte: now } },
+      data: { activeKey: null },
+    });
+
+    const existing = await tx.creditCycle.findUnique({ where: { activeKey } });
+    if (existing) {
+      // User có thể dùng trial rồi mua gói trong cùng ngày. Cycle paid thay thế
+      // trial còn lại, nhưng không bao giờ ghi đè cycle paid/manual đang hiệu lực.
+      if (
+        existing.source === CreditCycleSource.FREE &&
+        input.source !== CreditCycleSource.FREE
+      ) {
+        await tx.creditCycle.update({
+          where: { id: existing.id },
+          data: { activeKey: null },
+        });
+      } else {
         throw creditException(
-          'CREDIT_RESERVATION_CONFLICT',
+          'CREDIT_CYCLE_CONFLICT',
           'Người dùng đã có một chu kỳ credit đang hiệu lực.',
           HttpStatus.CONFLICT,
         );
       }
-
-      return tx.creditCycle.create({
-        data: { ...input, activeKey },
-      });
-    });
+    }
+    return tx.creditCycle.create({ data: { ...input, activeKey } });
   }
 
-  async grantCycle(input: OpenCreditCycleInput) {
-    return this.openCycle(input);
-  }
+  // ─── Reservation lifecycle ───────────────────────────────────────────
 
   /** Giữ credit theo giá server-side trước khi gọi provider hoặc enqueue job. */
   async reserve(input: ReserveAiCreditsInput) {
+    // Lấy giá credits cần cho feature đó từ bảng giá credit.
     const credits = getAiCreditCost(input.feature);
     if (credits <= 0) {
       throw new BadRequestException('Tác vụ này không cần reserve AI credits.');
@@ -163,6 +139,8 @@ export class AiCreditsService {
       const existing = await tx.creditReservation.findUnique({
         where: { idempotencyKey: input.idempotencyKey },
       });
+
+      // Nếu có creditReservation đã exist nghĩa là tác vụ đó vốn đã được reserve rồi
       if (existing) {
         if (
           existing.userId === input.userId &&
@@ -181,14 +159,11 @@ export class AiCreditsService {
 
       const now = new Date();
       const activeKey = this.activeKey(input.userId);
-      const cycle = await tx.creditCycle.findUnique({ where: { activeKey } });
-      if (!cycle || cycle.endsAt <= now) {
-        throw creditException(
-          'AI_CREDITS_EXHAUSTED',
-          'Bạn chưa có AI credits đang hiệu lực.',
-          HttpStatus.PAYMENT_REQUIRED,
-        );
-      }
+      const cycle = await this.getOrCreateActiveCycleInTransaction(
+        tx,
+        input.userId,
+        now,
+      );
 
       // Update có điều kiện trên snapshot counter để không overspend nếu có
       // writer khác ngoài service này; advisory lock bảo vệ request cùng user.
@@ -348,6 +323,9 @@ export class AiCreditsService {
     });
   }
 
+  // ─── Vận hành ────────────────────────────────────────────────────────
+
+  /** Cron dọn dẹp các reservation đã hết hạn. */
   @Cron('*/5 * * * *')
   async expireReservations() {
     const expired = await this.prisma.creditReservation.findMany({
@@ -431,6 +409,95 @@ export class AiCreditsService {
             },
           ];
     });
+  }
+
+  // ─── Internal helpers ─────────────────────────────────────────────────
+
+  private toBalance(cycle: {
+    id: string;
+    source: CreditCycleSource;
+    planName: string | null;
+    startsAt: Date;
+    endsAt: Date;
+    grantedCredits: number;
+    usedCredits: number;
+    reservedCredits: number;
+  }) {
+    return {
+      cycleId: cycle.id,
+      source: cycle.source,
+      planName: cycle.planName,
+      granted: cycle.grantedCredits,
+      used: cycle.usedCredits,
+      reserved: cycle.reservedCredits,
+      available:
+        cycle.grantedCredits - cycle.usedCredits - cycle.reservedCredits,
+      cycleStartsAt: cycle.startsAt,
+      cycleEndsAt: cycle.endsAt,
+    };
+  }
+
+  /* Hàm này được dùng khi user cần credit, nhưng chưa biết họ thuộc free hay paid tier
+     Lấy hoặc tạo Cycle mới cho những người dùng Free tier (3 credits / ngày)
+     Đối với người dùng đã đăng ký rồi (có subscription) thì tạo cycle mới với credit theo plan */
+  private async getOrCreateActiveCycleInTransaction(
+    tx: TransactionClient,
+    userId: string,
+    now: Date,
+  ) {
+    // Vô hiệu hóa hết các cycle cũ đã hết hạn để tạo mới activeKey hợp lệ.
+    const activeKey = this.activeKey(userId);
+    await tx.creditCycle.updateMany({
+      where: { activeKey, endsAt: { lte: now } },
+      data: { activeKey: null },
+    });
+
+    // nếu có cycle đang active hợp lệ thì trả luôn
+    const active = await tx.creditCycle.findUnique({ where: { activeKey } });
+    if (active) return active;
+
+    // Nếu không thì kiểm tra subscription
+    const subscription = await tx.subscription.findUnique({
+      where: { userId },
+      include: { plan: true },
+    });
+    // Nếu có subscription hợp lệ (chưa hết hạn) thì gọi tới openCycleInTransaction để xử lý theo plan đã mua
+    if (
+      subscription &&
+      subscription.expiresAt &&
+      subscription.expiresAt > now
+    ) {
+      return this.openCycleInTransaction(
+        tx,
+        {
+          userId,
+          subscriptionId: subscription.id,
+          planId: subscription.planId,
+          planName: subscription.plan.name,
+          source: CreditCycleSource.SUBSCRIPTION,
+          sourceReference: `subscription:${subscription.id}:${subscription.startedAt.toISOString()}`,
+          startsAt: subscription.startedAt,
+          endsAt: subscription.expiresAt,
+          grantedCredits: subscription.plan.creditPerCycle,
+        },
+        now,
+      );
+    }
+
+    // Nếu ko có subscription => Nghĩa là người dùng free tier thì gọi openCycleInTransaction để tạo cycle Free tier
+    const startsAt = vnStartOfDay(now);
+    return this.openCycleInTransaction(
+      tx,
+      {
+        userId,
+        source: CreditCycleSource.FREE,
+        sourceReference: `free:${userId}:${vnDayKey(now)}`,
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + DAY_MS),
+        grantedCredits: FREE_DAILY_AI_CREDITS,
+      },
+      now,
+    );
   }
 
   private activeKey(userId: string) {

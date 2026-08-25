@@ -12,5 +12,5 @@ export async function lockBillingUser(
   tx: Prisma.TransactionClient,
   userId: string,
 ) {
-  await lockAdvisoryKey(tx, userId);
+  await lockAdvisoryKey(tx, `billing:${userId}`);
 }

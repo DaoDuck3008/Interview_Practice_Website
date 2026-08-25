@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -13,6 +14,7 @@ import {
   Prisma,
   Plan,
   Order,
+  CreditCycleSource,
 } from '@prisma/client';
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -27,6 +29,7 @@ import {
 } from '../../common/utils/vn-time.util';
 import { lockBillingUser } from '../../common/utils/billing-lock.util';
 import { AuditService } from '../audit/audit.service';
+import { AiCreditsService } from '../ai-credits/ai-credits.service';
 
 // Đơn hết hiệu lực (QR) sau 10 phút — chỉ để UX tạo lại; tiền về trễ vẫn được honor ở webhook.
 const ORDER_TTL_MS = 10 * 60 * 1000;
@@ -34,6 +37,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const CODE_PREFIX = 'IPW';
 // Chỉ xoá đơn PENDING đã quá hạn LÂU (giữ 2 ngày) để tiền về trễ vẫn còn đơn mà khớp webhook.
 const ORDER_CLEANUP_GRACE_MS = 2 * 24 * 60 * 60 * 1000;
+
+type OrderActivationResult =
+  | { kind: 'activated'; paidAt: Date; periodEnd: Date }
+  | { kind: 'manual_review' }
+  | null;
 
 @Injectable()
 export class PaymentsService {
@@ -45,6 +53,7 @@ export class PaymentsService {
     private sepay: SepayClient,
     private mail: MailService,
     private audit: AuditService,
+    private aiCredits: AiCreditsService,
   ) {}
 
   /** Tạo (hoặc tái dùng) đơn PENDING cho user + plan, trả về thông tin thanh toán + QR động. */
@@ -57,6 +66,15 @@ export class PaymentsService {
         where: { slug: planSlug, isActive: true },
       });
       if (!plan) throw new NotFoundException('Không tìm thấy gói');
+
+      const subscription = await tx.subscription.findUnique({
+        where: { userId },
+      });
+      if (subscription?.expiresAt && subscription.expiresAt > new Date()) {
+        throw new ConflictException(
+          'Gói hiện tại vẫn còn hiệu lực; bạn có thể mua lại sau khi hết hạn.',
+        );
+      }
 
       // Tái dùng đơn PENDING còn hạn để tránh tạo trùng khi user bấm lại hoặc gửi request song song.
       const existing = await tx.order.findFirst({
@@ -244,6 +262,26 @@ export class PaymentsService {
         },
       });
       return { success: true, ignored: 'already_processed' };
+    }
+
+    if (activated.kind === 'manual_review') {
+      this.logger.warn(
+        `Đơn ${order.id} đã nhận tiền khi user còn subscription hiệu lực; cần đối soát thủ công.`,
+      );
+      await this.audit.log({
+        actorType: AuditActorType.WEBHOOK,
+        action: AuditAction.PAYMENT_WEBHOOK_IGNORED,
+        entityType: 'Order',
+        entityId: order.id,
+        targetUserId: order.userId,
+        metadata: {
+          reason: 'active_subscription_manual_review',
+          amount,
+          txnId,
+          transferCode: order.transferCode,
+        },
+      });
+      return { success: true, ignored: 'manual_review' };
     }
 
     const { paidAt, periodEnd } = activated;
@@ -602,10 +640,31 @@ export class PaymentsService {
     order: Order & { plan: Plan },
     txnId: string,
     payload: any,
-  ): Promise<{ paidAt: Date; periodEnd: Date } | null> {
+  ): Promise<OrderActivationResult> {
     const now = new Date();
     let periodEnd = now;
     const activated = await this.prisma.$transaction(async (tx) => {
+      // Luôn lấy billing lock trước row lock của Order để mọi billing flow
+      // cùng một user có một thứ tự lock duy nhất.
+      await lockBillingUser(tx, order.userId);
+
+      const sub = await tx.subscription.findUnique({
+        where: { userId: order.userId },
+      });
+      if (sub?.expiresAt && sub.expiresAt > now) {
+        const flagged = await tx.order.updateMany({
+          where: { id: order.id, status: 'PENDING' },
+          data: {
+            status: 'FAILED',
+            paidAt: now,
+            providerTxnId: txnId || undefined,
+            rawPayload: payload as Prisma.InputJsonValue,
+            note: 'Thanh toán đến khi subscription còn hiệu lực; cần đối soát thủ công.',
+          },
+        });
+        return flagged.count > 0 ? 'manual_review' : null;
+      }
+
       const claimed = await tx.order.updateMany({
         where: { id: order.id, status: 'PENDING' },
         data: {
@@ -617,15 +676,8 @@ export class PaymentsService {
       });
       if (claimed.count === 0) return false;
 
-      await lockBillingUser(tx, order.userId);
-
-      const sub = await tx.subscription.findUnique({
-        where: { userId: order.userId },
-      });
-      // Còn hạn → cộng dồn; đã hết hạn (hoặc chưa có) → tính từ hôm nay.
-      const base = sub && sub.expiresAt > now ? sub.expiresAt : now;
       const expiresAt = new Date(
-        base.getTime() + order.plan.durationDays * DAY_MS,
+        now.getTime() + order.plan.durationDays * DAY_MS,
       );
       periodEnd = expiresAt;
 
@@ -636,6 +688,7 @@ export class PaymentsService {
           data: {
             planId: order.planId,
             status: 'ACTIVE',
+            startedAt: now,
             expiresAt,
             canceledAt: null,
             renewalReminderSentAt: null,
@@ -656,9 +709,21 @@ export class PaymentsService {
           periodEnd: expiresAt,
         },
       });
+      await this.aiCredits.openCycleInTransaction(tx, {
+        userId: order.userId,
+        subscriptionId,
+        planId: order.planId,
+        planName: order.plan.name,
+        source: CreditCycleSource.SUBSCRIPTION,
+        sourceReference: order.id,
+        startsAt: now,
+        endsAt: expiresAt,
+        grantedCredits: order.plan.creditPerCycle,
+      });
       return true;
     });
-    return activated ? { paidAt: now, periodEnd } : null;
+    if (activated === 'manual_review') return { kind: 'manual_review' };
+    return activated ? { kind: 'activated', paidAt: now, periodEnd } : null;
   }
 
   /**

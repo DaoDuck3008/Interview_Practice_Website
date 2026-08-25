@@ -720,6 +720,7 @@ model CreditCycle {
   plan           Plan?         @relation(fields: [planId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   source   CreditCycleSource
+  sourceReference String @unique // Order id hoặc grant id: idempotency bền vững khi payment/webhook lặp
   planName String?
   startsAt DateTime
   endsAt   DateTime

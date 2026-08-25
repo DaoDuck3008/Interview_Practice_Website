@@ -58,6 +58,11 @@ export default function PricingCards() {
       return;
     }
 
+    if (hasActiveSub) {
+      toast.info("Gói hiện tại vẫn còn hiệu lực. Bạn có thể mua lại sau khi hết hạn.");
+      return;
+    }
+
     setLoadingSlug(slug);
     try {
       const order = await createCheckout(slug);
@@ -89,9 +94,8 @@ export default function PricingCards() {
     : 0;
   const expiryStr = hasActiveSub ? formatDay(sub!.expiresAt) : "";
 
-  function buttonLabel(plan: Plan, isCurrent: boolean) {
-    if (!user || !hasActiveSub) return "Mua ngay";
-    return isCurrent ? "Gia hạn" : "Đổi gói";
+  function buttonLabel() {
+    return hasActiveSub ? "Đang có gói hiệu lực" : "Mua ngay";
   }
 
   if (!plans) {
@@ -116,9 +120,8 @@ export default function PricingCards() {
             Bạn đang dùng gói{" "}
             <span className="font-semibold text-white">{sub!.plan.name}</span>{" "}
             · còn <span className="font-semibold">{remainingDays}</span> ngày
-            (hết hạn {expiryStr}). Mua thêm hoặc đổi gói sẽ{" "}
-            <span className="font-semibold text-white">cộng dồn</span> ngày vào
-            thời hạn hiện tại.
+            (hết hạn {expiryStr}). Bạn có thể mua gói mới sau khi gói hiện tại
+            hết hạn.
           </p>
         </div>
       )}
@@ -194,13 +197,13 @@ export default function PricingCards() {
                 <button
                   type="button"
                   onClick={() => handleBuy(plan.slug)}
-                  disabled={loadingSlug !== null}
+                  disabled={loadingSlug !== null || hasActiveSub}
                   className="mt-auto inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.065] px-4 py-3 text-sm font-semibold text-[#f4f4f6] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[#c4b5fd]/45 hover:bg-white/[0.12] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {loadingSlug === plan.slug && (
                     <Loader2 size={15} className="animate-spin" />
                   )}
-                  {buttonLabel(plan, isCurrent)}
+                  {buttonLabel()}
                 </button>
               </div>
             </AnimateOnScroll>

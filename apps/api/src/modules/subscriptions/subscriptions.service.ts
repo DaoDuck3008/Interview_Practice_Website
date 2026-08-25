@@ -1,7 +1,17 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { AuditAction, AuditActorType, Prisma } from '@prisma/client';
+import {
+  AuditAction,
+  AuditActorType,
+  CreditCycleSource,
+  Prisma,
+} from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../cache/cache.service';
@@ -10,6 +20,7 @@ import { QuerySubscriptionDto } from './dto/query-subscription.dto';
 import { GrantSubscriptionDto } from './dto/grant-subscription.dto';
 import { AuditService } from '../audit/audit.service';
 import { lockBillingUser } from '../../common/utils/billing-lock.util';
+import { AiCreditsService } from '../ai-credits/ai-credits.service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const STATS_TTL = 60; // 1 phút — thẻ thống kê admin, chấp nhận trễ vài chục giây
@@ -27,6 +38,7 @@ export class SubscriptionsService {
     private mail: MailService,
     private cache: CacheService,
     private audit: AuditService,
+    private aiCredits: AiCreditsService,
   ) {}
 
   /**
@@ -127,8 +139,8 @@ export class SubscriptionsService {
     });
     if (!sub) return null;
 
-    // "Còn hiệu lực" = chưa hết hạn và chưa huỷ (cron hạ cấp chưa làm nên dựa vào expiresAt).
-    const isActive = sub.status !== 'CANCELED' && sub.expiresAt > new Date();
+    // Hủy chỉ chặn chu kỳ kế tiếp; quyền lợi hiện tại vẫn giữ đến expiresAt.
+    const isActive = sub.expiresAt > new Date();
 
     return {
       status: sub.status,
@@ -280,7 +292,7 @@ export class SubscriptionsService {
 
   /**
    * Cấp gói thủ công (admin / hỗ trợ KH) — không qua thanh toán.
-   * Tạo mới hoặc gia hạn (cộng dồn nếu còn hạn) subscription, đồng thời ghi 1 Order
+   * Tạo mới subscription, đồng thời ghi 1 Order
    * provider='manual' (amount 0) kèm lý do + admin thực hiện để truy vết.
    */
   async grantManual(dto: GrantSubscriptionDto, adminId: string) {
@@ -301,12 +313,12 @@ export class SubscriptionsService {
       const sub = await tx.subscription.findUnique({
         where: { userId: dto.userId },
       });
-      // Còn hạn VÀ chưa hủy thì cộng dồn; đã hủy / hết hạn (hoặc chưa có) thì tính từ hôm nay.
-      const base =
-        sub && sub.status !== 'CANCELED' && sub.expiresAt > now
-          ? sub.expiresAt
-          : now;
-      const expiresAt = new Date(base.getTime() + days * DAY_MS);
+      if (sub?.expiresAt && sub.expiresAt > now) {
+        throw new ConflictException(
+          'Gói hiện tại vẫn còn hiệu lực; không thể cấp chồng thời hạn.',
+        );
+      }
+      const expiresAt = new Date(now.getTime() + days * DAY_MS);
 
       // upsert theo userId (@unique) — an toàn khi 2 request cấp song song (tránh P2002).
       const subscription = await tx.subscription.upsert({
@@ -315,13 +327,14 @@ export class SubscriptionsService {
         update: {
           planId: plan.id,
           status: 'ACTIVE',
+          startedAt: now,
           expiresAt,
           canceledAt: null,
           renewalReminderSentAt: null, // chu kỳ mới → lại được nhắc khi sắp hết hạn
         },
       });
 
-      await tx.order.create({
+      const order = await tx.order.create({
         data: {
           userId: dto.userId,
           planId: plan.id,
@@ -338,6 +351,17 @@ export class SubscriptionsService {
           note: dto.note,
           grantedById: adminId,
         },
+      });
+      await this.aiCredits.openCycleInTransaction(tx, {
+        userId: dto.userId,
+        subscriptionId: subscription.id,
+        planId: plan.id,
+        planName: plan.name,
+        source: CreditCycleSource.MANUAL,
+        sourceReference: order.id,
+        startsAt: now,
+        endsAt: expiresAt,
+        grantedCredits: plan.creditPerCycle,
       });
 
       return tx.subscription.findUniqueOrThrow({

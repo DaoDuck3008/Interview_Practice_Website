@@ -11,6 +11,9 @@ export const AI_CREDIT_PRICING: Record<AiCreditFeature, number> = {
   MOCK_CV_OVERVIEW: 2,
 };
 
+/** Credit trial được cấp lại lúc 00:00 theo giờ Việt Nam. */
+export const FREE_DAILY_AI_CREDITS = 3;
+
 const AUDIO_RESERVATION_TTL_MS = 15 * 60 * 1000;
 const CV_RESERVATION_TTL_MS = 30 * 60 * 1000;
 
