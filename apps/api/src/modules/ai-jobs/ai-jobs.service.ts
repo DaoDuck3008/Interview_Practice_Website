@@ -16,6 +16,9 @@ import {
   type ScoreJobData,
 } from './ai-jobs.types';
 import { ConfigService } from '@nestjs/config';
+import { AiCreditFeature } from '@prisma/client';
+import { AiCreditsService } from '../ai-credits/ai-credits.service';
+import { aiCreditReservationKey } from '../ai-credits/ai-credit-pricing';
 
 // Giữ job lỗi 1 ngày trong tập "failed" của queue để debug, sau đó tự dọn.
 const REMOVE_ON_FAIL_AGE_SEC = 24 * 3600;
@@ -28,6 +31,7 @@ export class AiJobsService {
   constructor(
     @InjectQueue(AI_JOBS_QUEUE) private queue: Queue,
     private readonly config: ConfigService,
+    private readonly aiCredits: AiCreditsService,
   ) {
     this.isDev = this.config.get<string>('NODE_ENV') !== 'production';
     // Lỗi kết nối Redis phía Queue (producer) — khác lỗi job, vd Redis rớt kết nối.
@@ -36,9 +40,31 @@ export class AiJobsService {
     });
   }
 
-  enqueueScore(sessionId: string, userId: string): Promise<void> {
-    const data: ScoreJobData = { sessionId, userId };
-    return this.enqueue(JOB_SCORE, `score_${sessionId}`, data);
+  enqueueScore(
+    sessionId: string,
+    userId: string,
+    chargeOverview = true,
+  ): Promise<void> {
+    const data: ScoreJobData = { sessionId, userId, chargeOverview };
+    return this.enqueue(JOB_SCORE, `score_${sessionId}`, data).catch(
+      async (error) => {
+        try {
+          await this.aiCredits.releaseByIdempotencyKey(
+            aiCreditReservationKey(
+              AiCreditFeature.ANSWER_AUDIO,
+              'SESSION',
+              sessionId,
+            ),
+            'Không enqueue được job chấm điểm.',
+          );
+        } catch (releaseError) {
+          this.logger.error(
+            `Không release được audio credit sau lỗi enqueue score ${sessionId}: ${releaseError instanceof Error ? releaseError.message : String(releaseError)}`,
+          );
+        }
+        throw error;
+      },
+    );
   }
 
   enqueueImprove(sessionId: string, userId: string): Promise<void> {

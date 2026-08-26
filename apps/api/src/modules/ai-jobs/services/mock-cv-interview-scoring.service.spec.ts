@@ -5,6 +5,7 @@ import {
 } from '@prisma/client';
 import type { PrismaService } from '../../../prisma/prisma.service';
 import type { AiJobsService } from '../ai-jobs.service';
+import type { AiCreditsService } from '../../ai-credits/ai-credits.service';
 import { MockCvInterviewScoringService } from './mock-cv-interview-scoring.service';
 
 /** Bảo vệ CAS enqueue overview khi nhiều score job hoàn thành gần đồng thời. */
@@ -29,11 +30,16 @@ describe('MockCvInterviewScoringService', () => {
     const aiJobs = {
       enqueueMockCvInterviewOverview: jest.fn().mockResolvedValue(undefined),
     };
+    const aiCredits = {
+      reserve: jest.fn().mockResolvedValue(undefined),
+      releaseByIdempotencyKey: jest.fn().mockResolvedValue(undefined),
+    };
     const service = new MockCvInterviewScoringService(
       prisma as unknown as PrismaService,
       aiJobs as unknown as AiJobsService,
+      aiCredits as unknown as AiCreditsService,
     );
-    return { service, prisma, aiJobs };
+    return { service, prisma, aiJobs, aiCredits };
   }
 
   it('enqueue overview khi tất cả câu đã terminal', async () => {
@@ -72,13 +78,22 @@ describe('MockCvInterviewScoringService', () => {
   });
 
   it('chỉ worker thắng CAS mới enqueue overview', async () => {
-    const { service, prisma, aiJobs } = setup([
-      MockQuestionScoreStatus.SCORED,
-    ]);
+    const { service, prisma, aiJobs } = setup([MockQuestionScoreStatus.SCORED]);
     prisma.mockCvInterview.updateMany.mockResolvedValue({ count: 0 });
 
     await service.markSuccess('session-1');
 
     expect(aiJobs.enqueueMockCvInterviewOverview).not.toHaveBeenCalled();
+  });
+
+  it('admin retry không tạo reservation overview mới', async () => {
+    const { service, aiJobs, aiCredits } = setup([
+      MockQuestionScoreStatus.SCORED,
+    ]);
+
+    await service.markSuccess('session-1', false);
+
+    expect(aiCredits.reserve).not.toHaveBeenCalled();
+    expect(aiJobs.enqueueMockCvInterviewOverview).toHaveBeenCalledTimes(1);
   });
 });

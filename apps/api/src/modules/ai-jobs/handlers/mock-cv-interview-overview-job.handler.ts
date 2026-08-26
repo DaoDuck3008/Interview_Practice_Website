@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
+  AiCreditFeature,
   MockCvReadiness,
   MockInterviewStatus,
   MockOverviewStatus,
@@ -16,23 +17,30 @@ import {
 } from '../../mock-core/utils/mock-score.util';
 import { GENERIC_AI_JOB_FAILURE_MESSAGE } from '../ai-jobs.constants';
 import type { MockCvInterviewOverviewJobData } from '../ai-jobs.types';
+import { AiCreditsService } from '../../ai-credits/ai-credits.service';
+import { aiCreditReservationKey } from '../../ai-credits/ai-credit-pricing';
 
 /** Tổng hợp điểm đã có thành kết quả Mock CV; AI lỗi thì vẫn lưu fallback deterministic. */
 @Injectable()
 export class MockCvInterviewOverviewJobHandler {
-  private readonly logger = new Logger(
-    MockCvInterviewOverviewJobHandler.name,
-  );
+  private readonly logger = new Logger(MockCvInterviewOverviewJobHandler.name);
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly overviewService: MockCvInterviewOverviewService,
     private readonly websocket: WebsocketGateway,
+    private readonly aiCredits: AiCreditsService,
   ) {}
 
   /** Đọc snapshot + Score, gọi overview prompt và CAS kết quả vào đúng interview đang SUBMITTED. */
   async process(job: Job<MockCvInterviewOverviewJobData>): Promise<void> {
     const { mockCvInterviewId, userId } = job.data;
+    const creditKey = aiCreditReservationKey(
+      AiCreditFeature.MOCK_CV_OVERVIEW,
+      'MOCK_CV_INTERVIEW',
+      mockCvInterviewId,
+    );
+    await this.aiCredits.extendByIdempotencyKey(creditKey);
     const interview = await this.prisma.mockCvInterview.findFirst({
       where: {
         id: mockCvInterviewId,
@@ -99,8 +107,7 @@ export class MockCvInterviewOverviewJobHandler {
           question: question.content,
           focusArea: question.focusArea,
           technicalScore: question.session?.score?.technicalScore ?? null,
-          completenessScore:
-            question.session?.score?.completenessScore ?? null,
+          completenessScore: question.session?.score?.completenessScore ?? null,
           clarityScore: question.session?.score?.clarityScore ?? null,
           summary: question.session?.score?.summary ?? null,
           improvements: question.session?.score?.improvements ?? [],
@@ -128,6 +135,14 @@ export class MockCvInterviewOverviewJobHandler {
       },
     });
     if (updated.count === 0) return;
+    if (overviewStatus === MockOverviewStatus.GENERATED) {
+      await this.aiCredits.consumeByIdempotencyKey(creditKey);
+    } else {
+      await this.aiCredits.releaseByIdempotencyKey(
+        creditKey,
+        'DeepSeek overview lỗi; hệ thống chỉ lưu fallback.',
+      );
+    }
     this.websocket.emitToUser(userId, 'mock-cv-interview:scored', {
       mockCvInterviewId,
     });
@@ -135,6 +150,14 @@ export class MockCvInterviewOverviewJobHandler {
 
   /** Đánh dấu overview FAILED khi job gặp lỗi ngoài phần AI fallback, để user có thể retry. */
   async onFailed(job: Job<MockCvInterviewOverviewJobData>): Promise<void> {
+    await this.aiCredits.releaseByIdempotencyKey(
+      aiCreditReservationKey(
+        AiCreditFeature.MOCK_CV_OVERVIEW,
+        'MOCK_CV_INTERVIEW',
+        job.data.mockCvInterviewId,
+      ),
+      'Job overview Mock CV thất bại.',
+    );
     await this.prisma.mockCvInterview.updateMany({
       where: {
         id: job.data.mockCvInterviewId,

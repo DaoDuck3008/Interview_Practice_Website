@@ -260,7 +260,9 @@ export class MockCvAdminService {
 
   async retryAnalysis(id: string) {
     const owner = await this.getOwner(id);
-    await this.analysisService.retryAnalysis(id, owner.userId);
+    await this.analysisService.retryAnalysis(id, owner.userId, {
+      chargeUser: false,
+    });
     return this.getDetail(id);
   }
 
@@ -287,7 +289,9 @@ export class MockCvAdminService {
     if (!interview) {
       throw new NotFoundException('Mock CV Interview không tồn tại.');
     }
-    await this.interviewsService.retryScoring(interviewId, interview.userId);
+    await this.interviewsService.retryScoring(interviewId, interview.userId, {
+      chargeOverview: false,
+    });
     return this.getDetail(interview.mockCvId);
   }
 
@@ -484,8 +488,7 @@ export class MockCvAdminService {
           {
             analysis: {
               is: {
-                questionGenerationStatus:
-                  MockCvQuestionGenerationStatus.FAILED,
+                questionGenerationStatus: MockCvQuestionGenerationStatus.FAILED,
               },
             },
           },

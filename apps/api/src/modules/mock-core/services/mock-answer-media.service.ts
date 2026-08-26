@@ -1,11 +1,9 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
+import { AiCreditFeature } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { MAX_AUDIO_DURATION_SEC } from '../../../common/upload/audio.constants';
-import {
-  QuotaService,
-  type QuotaReservation,
-} from '../../quota/quota.service';
+import { AiCreditsService } from '../../ai-credits/ai-credits.service';
+import { aiCreditReservationKey } from '../../ai-credits/ai-credit-pricing';
 import { SpeechService } from '../../speech/speech.service';
 import { StorageService } from '../../storage/storage.service';
 
@@ -13,12 +11,12 @@ export interface PreparedMockAnswerMedia {
   audioUrl: string;
   transcript: string;
   duration: number;
-  reservation: QuotaReservation;
+  creditKey: string;
 }
 
 /**
- * Vai trò: dùng chung pipeline quota -> Whisper -> R2 và cleanup nếu chưa commit Session.
- * Phụ thuộc QuotaService, SpeechService, StorageService; MockInterviewsService chỉ giữ
+ * Vai trò: dùng chung pipeline credit reservation -> Whisper -> R2 và cleanup nếu chưa commit Session.
+ * Phụ thuộc AiCreditsService, SpeechService, StorageService; MockInterviewsService chỉ giữ
  * transaction Prisma đặc thù domain, MockCvInterviewsService sẽ tái sử dụng pipeline này.
  */
 @Injectable()
@@ -26,7 +24,7 @@ export class MockAnswerMediaService {
   private readonly logger = new Logger(MockAnswerMediaService.name);
 
   constructor(
-    private readonly quota: QuotaService,
+    private readonly aiCredits: AiCreditsService,
     private readonly speech: SpeechService,
     private readonly storage: StorageService,
   ) {}
@@ -39,9 +37,21 @@ export class MockAnswerMediaService {
     userId: string;
     file: Express.Multer.File;
     reportedDuration: number;
+    sessionId: string;
     logContext: string;
   }): Promise<PreparedMockAnswerMedia> {
-    const reservation = await this.quota.reserve(input.userId);
+    const creditKey = aiCreditReservationKey(
+      AiCreditFeature.ANSWER_AUDIO,
+      'SESSION',
+      input.sessionId,
+    );
+    await this.aiCredits.reserve({
+      userId: input.userId,
+      feature: AiCreditFeature.ANSWER_AUDIO,
+      referenceType: 'SESSION',
+      referenceId: input.sessionId,
+      idempotencyKey: creditKey,
+    });
     let audioUrl: string | undefined;
 
     try {
@@ -64,40 +74,16 @@ export class MockAnswerMediaService {
         audioUrl,
         transcript,
         duration: measuredDuration ?? input.reportedDuration,
-        reservation,
+        creditKey,
       };
     } catch (error) {
-      await this.cleanupResources(
-        { audioUrl, reservation },
-        input.logContext,
-      );
+      await this.cleanupResources({ audioUrl, creditKey }, input.logContext);
       throw error;
     }
   }
 
   /**
-   * Chuyển reservation PENDING thành CONSUMED trong cùng transaction tạo Session.
-   * Domain service gọi hàm này trước khi commit để Session và quota luôn nhất quán.
-   */
-  consumeInTransaction(
-    tx: Prisma.TransactionClient,
-    prepared: PreparedMockAnswerMedia,
-    sessionId: string,
-  ): Promise<void> {
-    return this.quota.consumeInTransaction(
-      tx,
-      prepared.reservation.id,
-      sessionId,
-    );
-  }
-
-  /** Xóa cache quota sau khi transaction lưu Session đã commit thành công. */
-  invalidateQuota(userId: string): Promise<void> {
-    return this.quota.invalidateStatus(userId);
-  }
-
-  /**
-   * Dọn audio và trả quota khi domain transaction thất bại sau bước prepare().
+   * Dọn audio và release credit khi domain transaction thất bại sau bước prepare().
    * Cleanup là best-effort và không che mất lỗi nghiệp vụ ban đầu.
    */
   async discard(
@@ -105,8 +91,16 @@ export class MockAnswerMediaService {
     logContext: string,
   ): Promise<void> {
     await this.cleanupResources(
-      { audioUrl: prepared.audioUrl, reservation: prepared.reservation },
+      { audioUrl: prepared.audioUrl, creditKey: prepared.creditKey },
       logContext,
+    );
+  }
+
+  /** Mock dài giữ reservation tới lúc auto-submit; audio thường vẫn dùng TTL ngắn mặc định. */
+  extendUntil(prepared: PreparedMockAnswerMedia, minimumExpiresAt: Date) {
+    return this.aiCredits.extendByIdempotencyKey(
+      prepared.creditKey,
+      minimumExpiresAt,
     );
   }
 
@@ -119,13 +113,13 @@ export class MockAnswerMediaService {
   }
 
   /**
-   * Chạy xóa R2 và hủy quota song song; từng lỗi cleanup được log riêng
+   * Chạy xóa R2 và release credit song song; từng lỗi cleanup được log riêng
    * để một tài nguyên lỗi không ngăn việc dọn tài nguyên còn lại.
    */
   private async cleanupResources(
     resources: {
       audioUrl: string | undefined;
-      reservation: QuotaReservation;
+      creditKey: string;
     },
     logContext: string,
   ): Promise<void> {
@@ -133,7 +127,10 @@ export class MockAnswerMediaService {
       resources.audioUrl
         ? this.storage.delete(this.storage.keyFromUrl(resources.audioUrl))
         : Promise.resolve(),
-      this.quota.cancel(resources.reservation),
+      this.aiCredits.releaseByIdempotencyKey(
+        resources.creditKey,
+        `Không tạo được câu trả lời mock (${logContext}).`,
+      ),
     ]);
     for (const result of results) {
       if (result.status === 'rejected') {

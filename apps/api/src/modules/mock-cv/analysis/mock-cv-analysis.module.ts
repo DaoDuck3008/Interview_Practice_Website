@@ -7,6 +7,7 @@ import { MockCvAdminService } from './mock-cv-admin.service';
 import { MockCvInterviewsModule } from '../interviews/mock-cv-interviews.module';
 import { MockInterviewsModule } from '../../mock-interviews/mock-interviews.module';
 import { CacheModule } from '../../../cache/cache.module';
+import { AiCreditsModule } from '../../ai-credits/ai-credits.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { CacheModule } from '../../../cache/cache.module';
     MockCvInterviewsModule,
     MockInterviewsModule,
     CacheModule,
+    AiCreditsModule,
   ],
   controllers: [MockCvAnalysisController],
   providers: [MockCvAnalysisService, MockCvAdminService],

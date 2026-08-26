@@ -65,6 +65,43 @@ export class AiCreditsService {
     return this.toBalance(cycle);
   }
 
+  /** Số liệu vận hành được aggregate tại DB, không tải lịch sử reservation lên bộ nhớ. */
+  async getAdminSummary() {
+    const now = new Date();
+    const reservationWindowStartsAt = new Date(now.getTime() - 30 * DAY_MS);
+    const [cycles, reservations] = await Promise.all([
+      this.prisma.creditCycle.aggregate({
+        where: { activeKey: { not: null }, endsAt: { gt: now } },
+        _count: { _all: true },
+        _sum: {
+          grantedCredits: true,
+          usedCredits: true,
+          reservedCredits: true,
+        },
+      }),
+      this.prisma.creditReservation.groupBy({
+        by: ['feature', 'status'],
+        where: { createdAt: { gte: reservationWindowStartsAt } },
+        _count: { _all: true },
+        _sum: { credits: true },
+      }),
+    ]);
+
+    return {
+      activeCycles: cycles._count._all,
+      grantedCredits: cycles._sum.grantedCredits ?? 0,
+      usedCredits: cycles._sum.usedCredits ?? 0,
+      reservedCredits: cycles._sum.reservedCredits ?? 0,
+      reservationWindowStartsAt,
+      reservations: reservations.map((item) => ({
+        feature: item.feature,
+        status: item.status,
+        count: item._count._all,
+        credits: item._sum.credits ?? 0,
+      })),
+    };
+  }
+
   /** Trả cycle paid đang hiệu lực, hoặc tạo trial cycle của ngày Việt Nam. */
   async getOrCreateActiveCycle(userId: string) {
     return this.prisma.$transaction(async (tx) => {
@@ -140,21 +177,28 @@ export class AiCreditsService {
         where: { idempotencyKey: input.idempotencyKey },
       });
 
-      // Nếu có creditReservation đã exist nghĩa là tác vụ đó vốn đã được reserve rồi
+      let reusableReservationId: string | null = null;
       if (existing) {
-        if (
+        const sameAction =
           existing.userId === input.userId &&
           existing.feature === input.feature &&
           existing.referenceType === input.referenceType &&
-          existing.referenceId === input.referenceId
+          existing.referenceId === input.referenceId;
+        if (!sameAction) {
+          throw creditException(
+            'CREDIT_RESERVATION_CONFLICT',
+            'Idempotency key đã thuộc về một thao tác khác.',
+            HttpStatus.CONFLICT,
+          );
+        }
+        if (
+          existing.status === CreditReservationStatus.PENDING ||
+          existing.status === CreditReservationStatus.CONSUMED
         ) {
+          this.logCreditEvent('reserve_idempotent', existing);
           return existing;
         }
-        throw creditException(
-          'CREDIT_RESERVATION_CONFLICT',
-          'Idempotency key đã thuộc về một thao tác khác.',
-          HttpStatus.CONFLICT,
-        );
+        reusableReservationId = existing.id;
       }
 
       const now = new Date();
@@ -181,6 +225,13 @@ export class AiCreditsService {
         data: { reservedCredits: { increment: credits } },
       });
       if (claimed.count === 0) {
+        this.logger.warn(
+          JSON.stringify({
+            event: 'ai_credit_insufficient',
+            feature: input.feature,
+            credits,
+          }),
+        );
         throw creditException(
           'AI_CREDITS_EXHAUSTED',
           'AI credits hiện không còn đủ cho tác vụ này.',
@@ -188,20 +239,33 @@ export class AiCreditsService {
         );
       }
 
-      return tx.creditReservation.create({
-        data: {
-          cycleId: cycle.id,
-          userId: input.userId,
-          feature: input.feature,
-          credits,
-          referenceType: input.referenceType,
-          referenceId: input.referenceId,
-          idempotencyKey: input.idempotencyKey,
-          expiresAt: new Date(
-            now.getTime() + getReservationTtlMs(input.feature),
-          ),
-        },
-      });
+      const data = {
+        cycleId: cycle.id,
+        userId: input.userId,
+        feature: input.feature,
+        credits,
+        referenceType: input.referenceType,
+        referenceId: input.referenceId,
+        idempotencyKey: input.idempotencyKey,
+        expiresAt: new Date(now.getTime() + getReservationTtlMs(input.feature)),
+      };
+      if (reusableReservationId) {
+        const reservation = await tx.creditReservation.update({
+          where: { id: reusableReservationId },
+          data: {
+            ...data,
+            status: CreditReservationStatus.PENDING,
+            consumedAt: null,
+            releasedAt: null,
+            failureReason: null,
+          },
+        });
+        this.logCreditEvent('reserve_reactivated', reservation);
+        return reservation;
+      }
+      const reservation = await tx.creditReservation.create({ data });
+      this.logCreditEvent('reserve', reservation);
+      return reservation;
     });
   }
 
@@ -255,8 +319,45 @@ export class AiCreditsService {
           usedCredits: { increment: reservation.credits },
         },
       });
+      this.logCreditEvent('consume', consumed);
       return consumed;
     });
+  }
+
+  /** Worker dùng reference đã biết thay vì phải mang reservationId trong payload queue. */
+  async consumeByIdempotencyKey(idempotencyKey: string) {
+    const reservation = await this.prisma.creditReservation.findUnique({
+      where: { idempotencyKey },
+      select: { id: true, status: true },
+    });
+    if (
+      !reservation ||
+      (reservation.status !== CreditReservationStatus.PENDING &&
+        reservation.status !== CreditReservationStatus.CONSUMED)
+    ) {
+      return null;
+    }
+    return this.consume(reservation.id);
+  }
+
+  async consumeByReference(
+    userId: string,
+    referenceType: string,
+    referenceId: string,
+  ) {
+    const reservation = await this.prisma.creditReservation.findFirst({
+      where: { userId, referenceType, referenceId },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, status: true },
+    });
+    if (
+      !reservation ||
+      (reservation.status !== CreditReservationStatus.PENDING &&
+        reservation.status !== CreditReservationStatus.CONSUMED)
+    ) {
+      return null;
+    }
+    return this.consume(reservation.id);
   }
 
   /** Release là idempotent; retry release không thay đổi balance lần thứ hai. */
@@ -281,8 +382,34 @@ export class AiCreditsService {
     });
   }
 
+  async releaseByIdempotencyKey(
+    idempotencyKey: string,
+    failureReason?: string,
+  ) {
+    const reservation = await this.prisma.creditReservation.findUnique({
+      where: { idempotencyKey },
+      select: { id: true },
+    });
+    if (!reservation) return null;
+    return this.release(reservation.id, failureReason);
+  }
+
+  async releaseByReference(
+    userId: string,
+    referenceType: string,
+    referenceId: string,
+    failureReason?: string,
+  ) {
+    const reservation = await this.prisma.creditReservation.findFirst({
+      where: { userId, referenceType, referenceId },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    });
+    return reservation ? this.release(reservation.id, failureReason) : null;
+  }
+
   /** Worker gọi khi đã bắt đầu để tránh queue delay làm reservation hết hạn. */
-  async extendReservation(reservationId: string) {
+  async extendReservation(reservationId: string, minimumExpiresAt?: Date) {
     return this.prisma.$transaction(async (tx) => {
       const reservation = await tx.creditReservation.findUnique({
         where: { id: reservationId },
@@ -311,16 +438,41 @@ export class AiCreditsService {
       const expiresAt = new Date(
         now.getTime() + getReservationTtlMs(reservation.feature),
       );
+      const targetExpiresAt = [
+        reservation.expiresAt,
+        expiresAt,
+        ...(minimumExpiresAt ? [minimumExpiresAt] : []),
+      ].reduce((latest, item) => (item > latest ? item : latest));
       return tx.creditReservation.update({
         where: { id: reservation.id },
-        data: {
-          expiresAt:
-            reservation.expiresAt > expiresAt
-              ? reservation.expiresAt
-              : expiresAt,
-        },
+        data: { expiresAt: targetExpiresAt },
       });
     });
+  }
+
+  async extendByIdempotencyKey(
+    idempotencyKey: string,
+    minimumExpiresAt?: Date,
+  ) {
+    const reservation = await this.prisma.creditReservation.findUnique({
+      where: { idempotencyKey },
+      select: { id: true },
+    });
+    if (!reservation) return null;
+    return this.extendReservation(reservation.id, minimumExpiresAt);
+  }
+
+  async extendByReference(
+    userId: string,
+    referenceType: string,
+    referenceId: string,
+  ) {
+    const reservation = await this.prisma.creditReservation.findFirst({
+      where: { userId, referenceType, referenceId },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    });
+    return reservation ? this.extendReservation(reservation.id) : null;
   }
 
   // ─── Vận hành ────────────────────────────────────────────────────────
@@ -511,6 +663,8 @@ export class AiCreditsService {
       cycleId: string;
       credits: number;
       status: CreditReservationStatus;
+      feature: AiCreditFeature;
+      createdAt: Date;
     },
     status: 'RELEASED' | 'EXPIRED',
     failureReason?: string,
@@ -529,6 +683,38 @@ export class AiCreditsService {
       where: { id: reservation.cycleId },
       data: { reservedCredits: { decrement: reservation.credits } },
     });
+    this.logCreditEvent(
+      status === CreditReservationStatus.EXPIRED ? 'expire' : 'release',
+      released,
+      failureReason,
+    );
     return released;
+  }
+
+  private logCreditEvent(
+    event: string,
+    reservation: {
+      id: string;
+      feature: AiCreditFeature;
+      credits: number;
+      status: CreditReservationStatus;
+      createdAt: Date;
+    },
+    reason?: string,
+  ) {
+    this.logger.log(
+      JSON.stringify({
+        event: `ai_credit_${event}`,
+        reservationId: reservation.id,
+        feature: reservation.feature,
+        credits: reservation.credits,
+        status: reservation.status,
+        reservationAgeMs: Math.max(
+          0,
+          Date.now() - reservation.createdAt.getTime(),
+        ),
+        ...(reason && { reason }),
+      }),
+    );
   }
 }

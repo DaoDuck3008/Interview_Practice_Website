@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  AiCreditFeature,
   MockInterviewStatus,
   MockOverviewStatus,
   MockQuestionScoreStatus,
@@ -15,6 +16,8 @@ import {
   topMockKeywords,
 } from '../../mock-core/utils/mock-score.util';
 import { GENERIC_AI_JOB_FAILURE_MESSAGE } from '../ai-jobs.constants';
+import { AiCreditsService } from '../../ai-credits/ai-credits.service';
+import { aiCreditReservationKey } from '../../ai-credits/ai-credit-pricing';
 
 /**
  * Quản lý trạng thái chấm từng câu và tổng hợp overview của Mock Interview thường.
@@ -27,9 +30,10 @@ export class MockInterviewScoringService {
     private readonly prisma: PrismaService,
     private readonly scoring: ScoringService,
     private readonly websocket: WebsocketGateway,
+    private readonly aiCredits: AiCreditsService,
   ) {}
 
-  async markSuccess(sessionId: string) {
+  async markSuccess(sessionId: string, chargeOverview = true) {
     const item = await this.prisma.mockInterviewQuestion.findUnique({
       where: { sessionId },
       select: { mockInterviewId: true },
@@ -40,10 +44,10 @@ export class MockInterviewScoringService {
       where: { sessionId },
       data: { scoreStatus: MockQuestionScoreStatus.SCORED, scoreError: null },
     });
-    await this.completeIfReady(item.mockInterviewId);
+    await this.completeIfReady(item.mockInterviewId, chargeOverview);
   }
 
-  async markFailure(sessionId: string, error: unknown) {
+  async markFailure(sessionId: string, error: unknown, chargeOverview = true) {
     const item = await this.prisma.mockInterviewQuestion.findUnique({
       where: { sessionId },
       select: { mockInterviewId: true },
@@ -60,10 +64,13 @@ export class MockInterviewScoringService {
         ),
       },
     });
-    await this.completeIfReady(item.mockInterviewId);
+    await this.completeIfReady(item.mockInterviewId, chargeOverview);
   }
 
-  private async completeIfReady(mockInterviewId: string) {
+  private async completeIfReady(
+    mockInterviewId: string,
+    chargeOverview: boolean,
+  ) {
     const mock = await this.prisma.mockInterview.findUnique({
       where: { id: mockInterviewId },
       include: {
@@ -140,7 +147,21 @@ export class MockInterviewScoringService {
       })),
     };
 
+    const creditKey = aiCreditReservationKey(
+      AiCreditFeature.MOCK_INTERVIEW_OVERVIEW,
+      'MOCK_INTERVIEW',
+      mockInterviewId,
+    );
     try {
+      if (chargeOverview) {
+        await this.aiCredits.reserve({
+          userId: mock.userId,
+          feature: AiCreditFeature.MOCK_INTERVIEW_OVERVIEW,
+          referenceType: 'MOCK_INTERVIEW',
+          referenceId: mockInterviewId,
+          idempotencyKey: creditKey,
+        });
+      }
       const overview = await this.scoring.mockInterviewOverview(overviewInput);
       await this.prisma.mockInterview.update({
         where: { id: mockInterviewId },
@@ -156,7 +177,12 @@ export class MockInterviewScoringService {
           overviewError: null,
         },
       });
+      await this.aiCredits.consumeByIdempotencyKey(creditKey);
     } catch (error) {
+      await this.aiCredits.releaseByIdempotencyKey(
+        creditKey,
+        'Không tạo được AI overview cho Mock Interview.',
+      );
       await this.prisma.mockInterview.update({
         where: { id: mockInterviewId },
         data: {

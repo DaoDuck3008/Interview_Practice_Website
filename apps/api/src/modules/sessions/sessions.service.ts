@@ -9,7 +9,9 @@ import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { SpeechService } from '../speech/speech.service';
-import { QuotaService } from '../quota/quota.service';
+import { AiCreditsService } from '../ai-credits/ai-credits.service';
+import { aiCreditReservationKey } from '../ai-credits/ai-credit-pricing';
+import { AiCreditFeature } from '@prisma/client';
 import { AiJobsService } from '../ai-jobs/ai-jobs.service';
 import { CacheService } from '../../cache/cache.service';
 import { MAX_AUDIO_DURATION_SEC } from '../../common/upload/audio.constants';
@@ -47,7 +49,7 @@ export class SessionsService {
     private prisma: PrismaService,
     private storage: StorageService,
     private speech: SpeechService,
-    private quota: QuotaService,
+    private aiCredits: AiCreditsService,
     private aiJobs: AiJobsService,
     private cache: CacheService,
   ) {}
@@ -265,8 +267,19 @@ export class SessionsService {
     });
     if (!question) throw new NotFoundException('Câu hỏi không tồn tại');
 
-    // Guard chỉ chặn sớm; reservation này mới bảo đảm nhiều request song song không cùng vượt quota trước Whisper.
-    const reservation = await this.quota.reserve(userId);
+    const sessionId = randomUUID();
+    const creditKey = aiCreditReservationKey(
+      AiCreditFeature.ANSWER_AUDIO,
+      'SESSION',
+      sessionId,
+    );
+    await this.aiCredits.reserve({
+      userId,
+      feature: AiCreditFeature.ANSWER_AUDIO,
+      referenceType: 'SESSION',
+      referenceId: sessionId,
+      idempotencyKey: creditKey,
+    });
     let audioUrl: string | undefined;
 
     try {
@@ -294,6 +307,7 @@ export class SessionsService {
       const session = await this.prisma.$transaction(async (tx) => {
         const created = await tx.session.create({
           data: {
+            id: sessionId,
             userId,
             questionId: dto.questionId,
             audioUrl: audioUrl!,
@@ -301,12 +315,10 @@ export class SessionsService {
             duration: measuredDuration ?? dto.duration,
           },
         });
-        await this.quota.consumeInTransaction(tx, reservation.id, created.id);
         return created;
       });
 
       await Promise.all([
-        this.quota.invalidateStatus(userId),
         this.cache.del(
           this.statsCacheKey(userId),
           this.heatmapCacheKey(userId),
@@ -321,9 +333,22 @@ export class SessionsService {
         createdAt: session.createdAt,
       };
     } catch (err) {
-      if (audioUrl)
-        await this.storage.delete(this.storage.keyFromUrl(audioUrl));
-      await this.quota.cancel(reservation);
+      const cleanup = await Promise.allSettled([
+        audioUrl
+          ? this.storage.delete(this.storage.keyFromUrl(audioUrl))
+          : Promise.resolve(),
+        this.aiCredits.releaseByIdempotencyKey(
+          creditKey,
+          'Không tạo được Session sau khi reserve audio credit.',
+        ),
+      ]);
+      for (const result of cleanup) {
+        if (result.status === 'rejected') {
+          this.logger.error(
+            `Không dọn được tài nguyên sau lỗi tạo Session: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`,
+          );
+        }
+      }
       throw err;
     }
   }
@@ -369,6 +394,13 @@ export class SessionsService {
     });
     if (!session) throw new NotFoundException('Session không tồn tại');
     if (session.score) {
+      await this.aiCredits.consumeByIdempotencyKey(
+        aiCreditReservationKey(
+          AiCreditFeature.ANSWER_AUDIO,
+          'SESSION',
+          sessionId,
+        ),
+      );
       return { status: 'ready' as const, data: session.score };
     }
 
@@ -404,6 +436,14 @@ export class SessionsService {
         session.id,
         session.audioUrl,
       );
+      await this.aiCredits.releaseByIdempotencyKey(
+        aiCreditReservationKey(
+          AiCreditFeature.ANSWER_AUDIO,
+          'SESSION',
+          session.id,
+        ),
+        'Audio không có transcript nên không gọi chấm điểm AI.',
+      );
       return { status: 'ready' as const, data: transientZeroScore(result) };
     }
 
@@ -427,10 +467,40 @@ export class SessionsService {
       );
     }
     if (session.improvement) {
+      await this.aiCredits.consumeByIdempotencyKey(
+        aiCreditReservationKey(
+          AiCreditFeature.ANSWER_IMPROVEMENT,
+          'SESSION_IMPROVEMENT',
+          sessionId,
+        ),
+      );
       return { status: 'ready' as const, data: session.improvement };
     }
 
-    await this.aiJobs.enqueueImprove(sessionId, userId);
+    await this.aiCredits.reserve({
+      userId,
+      feature: AiCreditFeature.ANSWER_IMPROVEMENT,
+      referenceType: 'SESSION_IMPROVEMENT',
+      referenceId: sessionId,
+      idempotencyKey: aiCreditReservationKey(
+        AiCreditFeature.ANSWER_IMPROVEMENT,
+        'SESSION_IMPROVEMENT',
+        sessionId,
+      ),
+    });
+    try {
+      await this.aiJobs.enqueueImprove(sessionId, userId);
+    } catch (error) {
+      await this.aiCredits.releaseByIdempotencyKey(
+        aiCreditReservationKey(
+          AiCreditFeature.ANSWER_IMPROVEMENT,
+          'SESSION_IMPROVEMENT',
+          sessionId,
+        ),
+        'Không enqueue được job cải thiện câu trả lời.',
+      );
+      throw error;
+    }
     return { status: 'queued' as const };
   }
 

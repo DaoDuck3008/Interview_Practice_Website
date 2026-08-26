@@ -5,13 +5,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { Job } from 'bullmq';
-import { Prisma } from '@prisma/client';
+import { AiCreditFeature, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { WebsocketGateway } from '../../../websocket/websocket.gateway';
 import { ImprovementService } from '../../scoring/improvement.service';
 import { SCORING_PROMPT_VERSION } from '../../scoring/prompts/scoring.prompt';
 import type { ImproveJobData } from '../ai-jobs.types';
 import { GENERIC_AI_JOB_FAILURE_MESSAGE } from '../ai-jobs.constants';
+import { AiCreditsService } from '../../ai-credits/ai-credits.service';
+import { aiCreditReservationKey } from '../../ai-credits/ai-credit-pricing';
 
 @Injectable()
 export class ImproveJobHandler {
@@ -22,11 +24,18 @@ export class ImproveJobHandler {
     private readonly prisma: PrismaService,
     private readonly improvement: ImprovementService,
     private readonly websocket: WebsocketGateway,
+    private readonly aiCredits: AiCreditsService,
   ) {}
 
   async process(job: Job<ImproveJobData>): Promise<void> {
     const { sessionId, userId } = job.data;
+    const creditKey = aiCreditReservationKey(
+      AiCreditFeature.ANSWER_IMPROVEMENT,
+      'SESSION_IMPROVEMENT',
+      sessionId,
+    );
     try {
+      await this.aiCredits.extendByIdempotencyKey(creditKey);
       const session = await this.prisma.session.findUnique({
         where: { id: sessionId },
         include: {
@@ -36,6 +45,10 @@ export class ImproveJobHandler {
         },
       });
       if (!session || !session.score) {
+        await this.aiCredits.releaseByIdempotencyKey(
+          creditKey,
+          'Session hoặc điểm chấm đã bị xóa trước khi cải thiện.',
+        );
         this.emitFailure(
           job.id,
           userId,
@@ -52,6 +65,7 @@ export class ImproveJobHandler {
         where: { sessionId },
       });
       if (existing) {
+        await this.aiCredits.consumeByIdempotencyKey(creditKey);
         this.websocket.emitToUser(userId, 'improve:ready', {
           sessionId,
           improvement: existing,
@@ -90,11 +104,16 @@ export class ImproveJobHandler {
       );
 
       const improvement = await this.createImprovement(sessionId, result);
+      await this.aiCredits.consumeByIdempotencyKey(creditKey);
       this.websocket.emitToUser(userId, 'improve:ready', {
         sessionId,
         improvement,
       });
     } catch (error) {
+      await this.aiCredits.releaseByIdempotencyKey(
+        creditKey,
+        'Job cải thiện câu trả lời thất bại.',
+      );
       this.emitFailure(job.id, userId, sessionId, error, true);
       throw error;
     }

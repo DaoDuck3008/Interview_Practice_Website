@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { Job } from 'bullmq';
+import { AiCreditFeature } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { WebsocketGateway } from '../../../websocket/websocket.gateway';
 import { ScoringService } from '../../scoring/scoring.service';
@@ -18,6 +19,8 @@ import type { ScoreJobData } from '../ai-jobs.types';
 import { GENERIC_AI_JOB_FAILURE_MESSAGE } from '../ai-jobs.constants';
 import { MockInterviewScoringService } from '../services/mock-interview-scoring.service';
 import { MockCvInterviewScoringService } from '../services/mock-cv-interview-scoring.service';
+import { AiCreditsService } from '../../ai-credits/ai-credits.service';
+import { aiCreditReservationKey } from '../../ai-credits/ai-credit-pricing';
 
 type MockScoreOwner = 'MOCK_INTERVIEW' | 'MOCK_CV_INTERVIEW' | null;
 
@@ -33,12 +36,20 @@ export class ScoreJobHandler {
     private readonly mockInterviewScoring: MockInterviewScoringService,
     private readonly mockCvInterviewScoring: MockCvInterviewScoringService,
     private readonly websocket: WebsocketGateway,
+    private readonly aiCredits: AiCreditsService,
   ) {}
 
   async process(job: Job<ScoreJobData>): Promise<void> {
     const { sessionId, userId } = job.data;
+    const chargeOverview = job.data.chargeOverview !== false;
+    const creditKey = aiCreditReservationKey(
+      AiCreditFeature.ANSWER_AUDIO,
+      'SESSION',
+      sessionId,
+    );
     let mockOwner: MockScoreOwner = null;
     try {
+      await this.aiCredits.extendByIdempotencyKey(creditKey);
       const session = await this.prisma.session.findUnique({
         where: { id: sessionId },
         include: {
@@ -48,6 +59,10 @@ export class ScoreJobHandler {
         },
       });
       if (!session) {
+        await this.aiCredits.releaseByIdempotencyKey(
+          creditKey,
+          'Session đã bị xóa trước khi chấm điểm.',
+        );
         const error = new NotFoundException(
           'Session không tồn tại (có thể đã bị xóa).',
         );
@@ -64,7 +79,8 @@ export class ScoreJobHandler {
         where: { sessionId },
       });
       if (existing) {
-        await this.markSuccess(sessionId, mockOwner);
+        await this.aiCredits.consumeByIdempotencyKey(creditKey);
+        await this.markSuccess(sessionId, mockOwner, chargeOverview);
         this.websocket.emitToUser(userId, 'score:ready', {
           sessionId,
           score: existing,
@@ -117,14 +133,23 @@ export class ScoreJobHandler {
           session.audioUrl,
         );
         score = transientZeroScore(result);
+        await this.aiCredits.releaseByIdempotencyKey(
+          creditKey,
+          'Audio không có transcript nên không gọi chấm điểm AI.',
+        );
       } else {
         score = await this.createScore(sessionId, result);
+        await this.aiCredits.consumeByIdempotencyKey(creditKey);
       }
 
-      await this.markSuccess(sessionId, mockOwner);
+      await this.markSuccess(sessionId, mockOwner, chargeOverview);
       this.websocket.emitToUser(userId, 'score:ready', { sessionId, score });
     } catch (error) {
-      await this.markFailure(sessionId, mockOwner, error);
+      await this.aiCredits.releaseByIdempotencyKey(
+        creditKey,
+        'Job chấm điểm thất bại.',
+      );
+      await this.markFailure(sessionId, mockOwner, error, chargeOverview);
       this.emitFailure(job.id, userId, sessionId, error, true);
       throw error;
     }
@@ -134,11 +159,12 @@ export class ScoreJobHandler {
   private async markSuccess(
     sessionId: string,
     owner: MockScoreOwner,
+    chargeOverview: boolean,
   ): Promise<void> {
     if (owner === 'MOCK_CV_INTERVIEW') {
-      await this.mockCvInterviewScoring.markSuccess(sessionId);
+      await this.mockCvInterviewScoring.markSuccess(sessionId, chargeOverview);
     } else if (owner === 'MOCK_INTERVIEW') {
-      await this.mockInterviewScoring.markSuccess(sessionId);
+      await this.mockInterviewScoring.markSuccess(sessionId, chargeOverview);
     }
   }
 
@@ -147,11 +173,20 @@ export class ScoreJobHandler {
     sessionId: string,
     owner: MockScoreOwner,
     error: unknown,
+    chargeOverview: boolean,
   ): Promise<void> {
     if (owner === 'MOCK_CV_INTERVIEW') {
-      await this.mockCvInterviewScoring.markFailure(sessionId, error);
+      await this.mockCvInterviewScoring.markFailure(
+        sessionId,
+        error,
+        chargeOverview,
+      );
     } else if (owner === 'MOCK_INTERVIEW') {
-      await this.mockInterviewScoring.markFailure(sessionId, error);
+      await this.mockInterviewScoring.markFailure(
+        sessionId,
+        error,
+        chargeOverview,
+      );
     }
   }
 

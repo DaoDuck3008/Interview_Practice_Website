@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  AiCreditFeature,
   MockCvReadiness,
   MockInterviewStatus,
   MockOverviewStatus,
@@ -24,6 +25,7 @@ import {
   MOCK_SCORING_STALE_MS,
 } from '../../mock-core/mock-core.constants';
 import { MockAnswerLockService } from '../../mock-core/services/mock-answer-lock.service';
+import { randomUUID } from 'crypto';
 import {
   MockAnswerMediaService,
   type PreparedMockAnswerMedia,
@@ -33,6 +35,8 @@ import {
   isMockScoringStale,
   mockScoringRetryWaitSeconds,
 } from '../../mock-core/utils/mock-retry.util';
+import { AiCreditsService } from '../../ai-credits/ai-credits.service';
+import { aiCreditReservationKey } from '../../ai-credits/ai-credit-pricing';
 
 const ROOM_SELECT = {
   id: true,
@@ -128,6 +132,7 @@ export class MockCvInterviewsService {
     private readonly answerLock: MockAnswerLockService,
     private readonly aiJobs: AiJobsService,
     private readonly cache: CacheService,
+    private readonly aiCredits: AiCreditsService,
   ) {}
 
   getOwned(id: string, userId: string) {
@@ -177,14 +182,27 @@ export class MockCvInterviewsService {
     );
     let prepared: PreparedMockAnswerMedia | undefined;
     let committed = false;
+    const sessionId = randomUUID();
     try {
       prepared = await this.answerMedia.prepare({
         userId,
         file,
         reportedDuration: duration,
+        sessionId,
         logContext: `câu trả lời Mock CV ${questionItemId}`,
       });
       const preparedMedia = prepared;
+      if (item.mockCvInterview.expiresAt) {
+        await this.answerMedia.extendUntil(
+          preparedMedia,
+          new Date(
+            item.mockCvInterview.expiresAt.getTime() +
+              MOCK_ANSWER_GRACE_MS +
+              MOCK_AUTO_SUBMIT_BUFFER_MS +
+              15 * 60 * 1000,
+          ),
+        );
+      }
 
       const session = await this.prisma.$transaction(async (tx) => {
         await lockAdvisoryKey(tx, this.advisoryLockKey(id));
@@ -205,6 +223,7 @@ export class MockCvInterviewsService {
 
         const created = await tx.session.create({
           data: {
+            id: sessionId,
             userId,
             questionId: fresh.mockCvQuestion?.bankQuestionId ?? null,
             audioUrl: preparedMedia.audioUrl,
@@ -220,18 +239,12 @@ export class MockCvInterviewsService {
             answeredAt: new Date(),
           },
         });
-        await this.answerMedia.consumeInTransaction(
-          tx,
-          preparedMedia,
-          created.id,
-        );
         return created;
       });
       committed = true;
 
       try {
         await Promise.all([
-          this.answerMedia.invalidateQuota(userId),
           this.cache.del(
             `sessions:me:stats:${userId}`,
             `sessions:me:heatmap:${userId}`,
@@ -349,7 +362,12 @@ export class MockCvInterviewsService {
   }
 
   /** Retry câu FAILED/QUEUED stale hoặc riêng overview lỗi; không chấm lại Session đã có Score. */
-  async retryScoring(id: string, userId: string) {
+  async retryScoring(
+    id: string,
+    userId: string,
+    options: { chargeOverview?: boolean } = {},
+  ) {
+    const chargeOverview = options.chargeOverview !== false;
     const now = new Date();
     const plan = await this.prisma.$transaction(async (tx) => {
       await lockAdvisoryKey(tx, this.advisoryLockKey(id));
@@ -469,9 +487,9 @@ export class MockCvInterviewsService {
     });
 
     if (plan.type === 'QUESTIONS') {
-      await this.enqueueScoreJobs(plan.targets, userId, id);
+      await this.enqueueScoreJobs(plan.targets, userId, id, chargeOverview);
     } else {
-      await this.enqueueOverview(id, userId);
+      await this.enqueueOverview(id, userId, chargeOverview);
     }
     return this.getOwned(id, userId);
   }
@@ -534,10 +552,11 @@ export class MockCvInterviewsService {
     questions: Array<{ sessionId: string }>,
     userId: string,
     interviewId: string,
+    chargeOverview = true,
   ) {
     const results = await Promise.allSettled(
       questions.map((question) =>
-        this.aiJobs.enqueueScore(question.sessionId, userId),
+        this.aiJobs.enqueueScore(question.sessionId, userId, chargeOverview),
       ),
     );
     const failed = results.filter((result) => result.status === 'rejected');
@@ -549,10 +568,34 @@ export class MockCvInterviewsService {
   }
 
   // Hàm dẩy overview job vào queue; nếu thất bại thì đánh dấu overviewStatus = FAILED để user biết.
-  private async enqueueOverview(interviewId: string, userId: string) {
+  private async enqueueOverview(
+    interviewId: string,
+    userId: string,
+    chargeOverview: boolean,
+  ) {
+    const creditKey = aiCreditReservationKey(
+      AiCreditFeature.MOCK_CV_OVERVIEW,
+      'MOCK_CV_INTERVIEW',
+      interviewId,
+    );
     try {
+      if (chargeOverview) {
+        await this.aiCredits.reserve({
+          userId,
+          feature: AiCreditFeature.MOCK_CV_OVERVIEW,
+          referenceType: 'MOCK_CV_INTERVIEW',
+          referenceId: interviewId,
+          idempotencyKey: creditKey,
+        });
+      }
       await this.aiJobs.enqueueMockCvInterviewOverview(interviewId, userId);
     } catch (error) {
+      if (chargeOverview) {
+        await this.aiCredits.releaseByIdempotencyKey(
+          creditKey,
+          'Không enqueue được overview Mock CV khi retry.',
+        );
+      }
       await this.prisma.mockCvInterview.updateMany({
         where: {
           id: interviewId,

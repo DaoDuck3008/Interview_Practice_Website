@@ -10,6 +10,11 @@ import {
   MOCK_CV_QUESTION_JOB_STALE_MS,
 } from '../../mock-cv/analysis/mock-cv.constants';
 import { AiJobsService } from '../ai-jobs.service';
+import { AiCreditsService } from '../../ai-credits/ai-credits.service';
+import {
+  aiCreditReservationKey,
+  cvAnalysisFeature,
+} from '../../ai-credits/ai-credit-pricing';
 
 export type MockCvQuestionPreparationResult =
   | 'READY'
@@ -19,19 +24,19 @@ export type MockCvQuestionPreparationResult =
 
 @Injectable()
 export class MockCvQuestionPreparationService {
-  private readonly logger = new Logger(
-    MockCvQuestionPreparationService.name,
-  );
+  private readonly logger = new Logger(MockCvQuestionPreparationService.name);
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly aiJobs: AiJobsService,
     private readonly websocket: WebsocketGateway,
+    private readonly aiCredits: AiCreditsService,
   ) {}
 
   async ensureQueued(
     analysisId: string,
     userId: string,
+    options: { chargeUserRetry?: boolean } = {},
   ): Promise<MockCvQuestionPreparationResult> {
     const analysis = await this.prisma.mockCvAnalysis.findFirst({
       where: { id: analysisId, mockCv: { is: { userId } } },
@@ -48,8 +53,7 @@ export class MockCvQuestionPreparationService {
       return 'BLOCKED';
     }
     if (
-      analysis.questionGenerationStatus ===
-      MockCvQuestionGenerationStatus.READY
+      analysis.questionGenerationStatus === MockCvQuestionGenerationStatus.READY
     ) {
       return 'READY';
     }
@@ -65,6 +69,20 @@ export class MockCvQuestionPreparationService {
 
     const requestedQuestionCount =
       analysis.requestedQuestionCount ?? DEFAULT_MOCK_CV_QUESTION_COUNT;
+    if (options.chargeUserRetry) {
+      const feature = cvAnalysisFeature(requestedQuestionCount);
+      await this.aiCredits.reserve({
+        userId,
+        feature,
+        referenceType: 'MOCK_CV_ANALYSIS',
+        referenceId: analysisId,
+        idempotencyKey: aiCreditReservationKey(
+          feature,
+          'MOCK_CV_ANALYSIS',
+          analysisId,
+        ),
+      });
+    }
     const claimed = await this.prisma.mockCvAnalysis.updateMany({
       where: {
         id: analysisId,
@@ -74,8 +92,7 @@ export class MockCvQuestionPreparationService {
           { questionGenerationStatus: MockCvQuestionGenerationStatus.PENDING },
           { questionGenerationStatus: MockCvQuestionGenerationStatus.FAILED },
           {
-            questionGenerationStatus:
-              MockCvQuestionGenerationStatus.GENERATING,
+            questionGenerationStatus: MockCvQuestionGenerationStatus.GENERATING,
             questionGenerationStartedAt: { lte: staleAt },
           },
         ],
@@ -88,7 +105,25 @@ export class MockCvQuestionPreparationService {
         requestedQuestionCount,
       },
     });
-    if (claimed.count === 0) return 'PREPARING';
+    if (claimed.count === 0) {
+      const current = await this.prisma.mockCvAnalysis.findUnique({
+        where: { id: analysisId },
+        select: { questionGenerationStatus: true },
+      });
+      if (
+        current?.questionGenerationStatus ===
+        MockCvQuestionGenerationStatus.READY
+      ) {
+        await this.aiCredits.releaseByReference(
+          userId,
+          'MOCK_CV_ANALYSIS',
+          analysisId,
+          'Bộ câu hỏi đã được hoàn tất bởi request song song.',
+        );
+        return 'READY';
+      }
+      return 'PREPARING';
+    }
 
     const current = await this.prisma.mockCvAnalysis.findUnique({
       where: { id: analysisId },
@@ -114,8 +149,7 @@ export class MockCvQuestionPreparationService {
       await this.prisma.mockCvAnalysis.updateMany({
         where: {
           id: analysisId,
-          questionGenerationStatus:
-            MockCvQuestionGenerationStatus.GENERATING,
+          questionGenerationStatus: MockCvQuestionGenerationStatus.GENERATING,
           questionGenerationAttempt: current.questionGenerationAttempt,
         },
         data: {
@@ -123,6 +157,12 @@ export class MockCvQuestionPreparationService {
           questionGenerationError: 'QUEUE_ENQUEUE_FAILED',
         },
       });
+      await this.aiCredits.releaseByReference(
+        userId,
+        'MOCK_CV_ANALYSIS',
+        analysisId,
+        'Không enqueue được job sinh câu hỏi Mock CV.',
+      );
       this.logger.error(
         `Không thể enqueue job sinh câu hỏi Mock CV ${analysisId}.`,
         error instanceof Error ? error.stack : undefined,

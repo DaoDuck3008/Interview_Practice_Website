@@ -31,3 +31,18 @@ export function getReservationTtlMs(feature: AiCreditFeature): number {
       return AUDIO_RESERVATION_TTL_MS;
   }
 }
+
+/** Khóa idempotency có namespace để các nghiệp vụ khác nhau không thể va chạm ID. */
+export function aiCreditReservationKey(
+  feature: AiCreditFeature,
+  referenceType: string,
+  referenceId: string,
+) {
+  return `${feature}:${referenceType}:${referenceId}`;
+}
+
+export function cvAnalysisFeature(questionCount: number): AiCreditFeature {
+  if (questionCount <= 10) return AiCreditFeature.CV_ANALYSIS_10;
+  if (questionCount <= 20) return AiCreditFeature.CV_ANALYSIS_20;
+  return AiCreditFeature.CV_ANALYSIS_30;
+}

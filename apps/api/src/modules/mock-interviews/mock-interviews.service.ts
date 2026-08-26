@@ -39,6 +39,7 @@ import {
   type MockInterviewAttentionFilter,
 } from './dto/query-admin-mock-interview.dto';
 import { MockInterviewJobsService } from './mock-interview-jobs.service';
+import { randomUUID } from 'crypto';
 import {
   MOCK_ANSWER_GRACE_MS,
   MOCK_AUTO_SUBMIT_BUFFER_MS,
@@ -263,7 +264,9 @@ export class MockInterviewsService {
           topicLinks: {
             orderBy: { order: 'asc' },
             select: {
-              topic: { select: { id: true, name: true, slug: true, iconUrl: true } },
+              topic: {
+                select: { id: true, name: true, slug: true, iconUrl: true },
+              },
             },
           },
           questions: {
@@ -282,7 +285,8 @@ export class MockInterviewsService {
         ...mock,
         topics: topicLinks.map((link) => link.topic),
         answeredQuestions: questions.filter(
-          (question) => question.answerStatus === MockQuestionAnswerStatus.ANSWERED,
+          (question) =>
+            question.answerStatus === MockQuestionAnswerStatus.ANSWERED,
         ).length,
         failedQuestions: questions.filter(
           (question) => question.scoreStatus === MockQuestionScoreStatus.FAILED,
@@ -308,13 +312,19 @@ export class MockInterviewsService {
       }),
       this.prisma.mockInterview.count({
         where: {
-          status: { in: [MockInterviewStatus.SUBMITTED, MockInterviewStatus.SCORING] },
+          status: {
+            in: [MockInterviewStatus.SUBMITTED, MockInterviewStatus.SCORING],
+          },
         },
       }),
       this.prisma.mockInterview.count({
         where: {
           OR: [
-            { questions: { some: { scoreStatus: MockQuestionScoreStatus.FAILED } } },
+            {
+              questions: {
+                some: { scoreStatus: MockQuestionScoreStatus.FAILED },
+              },
+            },
             {
               status: MockInterviewStatus.SCORING,
               updatedAt: { lte: staleAt },
@@ -362,10 +372,7 @@ export class MockInterviewsService {
       (mock.status === MockInterviewStatus.SUBMITTED ||
         mock.status === MockInterviewStatus.SCORING) &&
       mock.updatedAt.getTime() > staleAt;
-    if (
-      mock.status === MockInterviewStatus.IN_PROGRESS ||
-      processingRecently
-    ) {
+    if (mock.status === MockInterviewStatus.IN_PROGRESS || processingRecently) {
       throw new ConflictException(
         'Không thể xóa bài đang làm hoặc đang được AI xử lý.',
       );
@@ -510,16 +517,29 @@ export class MockInterviewsService {
 
     let prepared: PreparedMockAnswerMedia | undefined;
     let committed = false;
+    const sessionId = randomUUID();
     try {
-      // mock-core giữ pipeline quota/Whisper/R2; service này chỉ quản lý transaction của MockInterview.
+      // mock-core giữ pipeline credit/Whisper/R2; service này chỉ quản lý transaction của MockInterview.
       prepared = await this.answerMedia.prepare({
         userId,
         file,
         reportedDuration: duration,
+        sessionId,
         logContext: `câu trả lời mock ${questionItemId}`,
       });
       // Const cục bộ giúp transaction luôn giữ đúng media đã chuẩn bị của request này.
       const preparedMedia = prepared;
+      if (item.mockInterview.expiresAt) {
+        await this.answerMedia.extendUntil(
+          preparedMedia,
+          new Date(
+            item.mockInterview.expiresAt.getTime() +
+              MOCK_ANSWER_GRACE_MS +
+              MOCK_AUTO_SUBMIT_BUFFER_MS +
+              15 * 60 * 1000,
+          ),
+        );
+      }
 
       const session = await this.prisma.$transaction(async (tx) => {
         // Serialize phần ghi DB với submit(); không giữ lock trong lúc gọi Whisper.
@@ -542,6 +562,7 @@ export class MockInterviewsService {
 
         const created = await tx.session.create({
           data: {
+            id: sessionId,
             userId,
             questionId: item.questionId,
             audioUrl: preparedMedia.audioUrl,
@@ -559,12 +580,6 @@ export class MockInterviewsService {
           },
         });
 
-        await this.answerMedia.consumeInTransaction(
-          tx,
-          preparedMedia,
-          created.id,
-        );
-
         return created;
       });
       // Từ đây Session, câu trả lời và quota đã commit; không được rollback tài nguyên nếu cache gặp lỗi.
@@ -572,7 +587,6 @@ export class MockInterviewsService {
 
       try {
         await Promise.all([
-          this.answerMedia.invalidateQuota(userId),
           this.cache.del(
             `sessions:me:stats:${userId}`,
             `sessions:me:heatmap:${userId}`,
@@ -731,7 +745,7 @@ export class MockInterviewsService {
   /** Admin dùng cùng điều kiện retry với user, không bypass cooldown hay chấm lại câu đã có điểm. */
   async retryScoringAdmin(id: string) {
     const ownerId = await this.retryScoringTargets(id);
-    await this.enqueueScoreJobs(ownerId.targets, ownerId.userId, id);
+    await this.enqueueScoreJobs(ownerId.targets, ownerId.userId, id, false);
     return this.getAdminDetail(id);
   }
 
@@ -868,7 +882,8 @@ export class MockInterviewsService {
       ...(query.level && { level: query.level }),
       ...(query.status && { status: query.status }),
       ...(query.attention &&
-        query.attention !== 'all' && attention[query.attention]),
+        query.attention !== 'all' &&
+        attention[query.attention]),
     };
   }
 
@@ -876,10 +891,11 @@ export class MockInterviewsService {
     questions: Array<{ sessionId: string }>,
     userId: string,
     mockInterviewId: string,
+    chargeOverview = true,
   ) {
     const results = await Promise.allSettled(
       questions.map((question) =>
-        this.aiJobs.enqueueScore(question.sessionId, userId),
+        this.aiJobs.enqueueScore(question.sessionId, userId, chargeOverview),
       ),
     );
     const failed = results.filter((result) => result.status === 'rejected');
@@ -1008,9 +1024,7 @@ export class MockInterviewsService {
         isActive: true,
         topicId: { in: topicIds },
         ...(level ? { level } : {}),
-        ...(excludedIds.length > 0
-          ? { id: { notIn: excludedIds } }
-          : {}),
+        ...(excludedIds.length > 0 ? { id: { notIn: excludedIds } } : {}),
       },
       select: { id: true, topicId: true },
     });

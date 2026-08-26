@@ -15,6 +15,7 @@ import {
 import type { MockCvProfileJobData } from '../ai-jobs.types';
 import { mockCvErrorCode } from '../utils/mock-cv-job.utils';
 import { MockCvQuestionPreparationService } from '../services/mock-cv-question-preparation.service';
+import { AiCreditsService } from '../../ai-credits/ai-credits.service';
 
 @Injectable()
 export class MockCvProfileJobHandler {
@@ -27,6 +28,7 @@ export class MockCvProfileJobHandler {
     private readonly mockCvProfile: MockCvProfileService,
     private readonly questionPreparation: MockCvQuestionPreparationService,
     private readonly websocket: WebsocketGateway,
+    private readonly aiCredits: AiCreditsService,
     config: ConfigService,
   ) {
     this.isDev = config.get<string>('NODE_ENV') !== 'production';
@@ -65,6 +67,12 @@ export class MockCvProfileJobHandler {
       }
       return;
     }
+
+    await this.aiCredits.extendByReference(
+      userId,
+      'MOCK_CV_ANALYSIS',
+      analysisId,
+    );
 
     try {
       const availableTopics = await this.prisma.topic.findMany({
@@ -138,16 +146,31 @@ export class MockCvProfileJobHandler {
       });
       if (profile.status === MockCvAnalysisStatus.READY) {
         await this.questionPreparation.ensureQueued(analysisId, userId);
+      } else {
+        await this.aiCredits.releaseByReference(
+          userId,
+          'MOCK_CV_ANALYSIS',
+          analysisId,
+          `CV không đủ điều kiện để sinh câu hỏi: ${profile.status}.`,
+        );
       }
     } catch (error) {
       if (error instanceof MockCvNeedsReuploadError) {
-        await this.handleNeedsReupload(
+        const updated = await this.handleNeedsReupload(
           analysisId,
           attempt,
           analysis.mockCv.id,
           userId,
           error,
         );
+        if (updated) {
+          await this.aiCredits.releaseByReference(
+            userId,
+            'MOCK_CV_ANALYSIS',
+            analysisId,
+            'CV cần được tải lại nên chưa hoàn tất phân tích.',
+          );
+        }
         return;
       }
 
@@ -163,6 +186,13 @@ export class MockCvProfileJobHandler {
         },
       });
       if (failed.count === 0) return;
+
+      await this.aiCredits.releaseByReference(
+        userId,
+        'MOCK_CV_ANALYSIS',
+        analysisId,
+        'Job phân tích profile Mock CV thất bại.',
+      );
 
       if (job.id) this.handledFailureJobIds.add(job.id);
       this.logger.error(
@@ -193,6 +223,12 @@ export class MockCvProfileJobHandler {
       },
     });
     if (failed.count === 0) return;
+    await this.aiCredits.releaseByReference(
+      userId,
+      'MOCK_CV_ANALYSIS',
+      analysisId,
+      'Worker phân tích profile Mock CV thất bại.',
+    );
     this.emitFailure(userId, analysisId);
   }
 
@@ -237,13 +273,14 @@ export class MockCvProfileJobHandler {
       }
       return true;
     });
-    if (!updated) return;
+    if (!updated) return false;
 
     this.websocket.emitToUser(userId, 'mock-cv:analysis-updated', {
       mockCvId,
       analysisId,
       status: MockCvAnalysisStatus.NEEDS_REUPLOAD,
     });
+    return true;
   }
 
   private emitFailure(userId: string, analysisId: string, mockCvId?: string) {

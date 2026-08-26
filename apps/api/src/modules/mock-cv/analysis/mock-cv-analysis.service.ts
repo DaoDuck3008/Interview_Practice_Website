@@ -25,6 +25,11 @@ import {
 import { hasPdfMagic } from './mock-cv-profile.utils';
 import { CreateMockCvDto } from './dto/create-mock-cv.dto';
 import { QueryMockCvDto } from './dto/query-mock-cv.dto';
+import { AiCreditsService } from '../../ai-credits/ai-credits.service';
+import {
+  aiCreditReservationKey,
+  cvAnalysisFeature,
+} from '../../ai-credits/ai-credit-pricing';
 
 const PUBLIC_ANALYSIS_SELECT = {
   id: true,
@@ -83,6 +88,7 @@ export class MockCvAnalysisService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly aiJobs: AiJobsService,
+    private readonly aiCredits: AiCreditsService,
   ) {}
 
   // Tải CV lên storage và tạo bản ghi MockCv.
@@ -93,15 +99,30 @@ export class MockCvAnalysisService {
   ) {
     // Kiểm tra file có phải PDF hợp lệ trước khi upload lên storage
     this.assertPdf(file);
-    const key = `mock-cvs/${userId}/${randomUUID()}.pdf`;
-    await this.storage.uploadPrivate(key, file.buffer, 'application/pdf');
-
-    let mockCvId: string;
-    let analysisId: string;
+    const mockCvId = randomUUID();
+    const analysisId = randomUUID();
+    const feature = cvAnalysisFeature(dto.totalQuestions);
+    const creditKey = aiCreditReservationKey(
+      feature,
+      'MOCK_CV_ANALYSIS',
+      analysisId,
+    );
+    await this.aiCredits.reserve({
+      userId,
+      feature,
+      referenceType: 'MOCK_CV_ANALYSIS',
+      referenceId: analysisId,
+      idempotencyKey: creditKey,
+    });
+    const key = `mock-cvs/${userId}/${mockCvId}.pdf`;
+    let uploaded = false;
     try {
+      await this.storage.uploadPrivate(key, file.buffer, 'application/pdf');
+      uploaded = true;
       // Nested create tạo ra MockCvAnalysis theo các giá trị default đi kèm với MockCv
       const created = await this.prisma.mockCv.create({
         data: {
+          id: mockCvId,
           userId,
           targetRole: MOCK_CV_TARGET_ROLE_LABELS[dto.targetRoleCode],
           fileKey: key,
@@ -110,6 +131,7 @@ export class MockCvAnalysisService {
           fileSize: file.size,
           analysis: {
             create: {
+              id: analysisId,
               requestedQuestionCount: dto.totalQuestions,
               requestedDurationSeconds: dto.durationSeconds,
             },
@@ -120,10 +142,21 @@ export class MockCvAnalysisService {
       if (!created.analysis) {
         throw new Error('Không tạo được MockCvAnalysis đi kèm MockCv.');
       }
-      mockCvId = created.id;
-      analysisId = created.analysis.id;
     } catch (error) {
-      await this.storage.deletePrivate(key);
+      const cleanup = await Promise.allSettled([
+        uploaded ? this.storage.deletePrivate(key) : Promise.resolve(),
+        this.aiCredits.releaseByIdempotencyKey(
+          creditKey,
+          'Không tạo được Mock CV sau khi reserve credit.',
+        ),
+      ]);
+      for (const result of cleanup) {
+        if (result.status === 'rejected') {
+          this.logger.error(
+            `Không dọn được tài nguyên sau lỗi tạo Mock CV: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`,
+          );
+        }
+      }
       throw error;
     }
 
@@ -150,10 +183,7 @@ export class MockCvAnalysisService {
       this.prisma.mockCv.findMany({
         where,
         select: PUBLIC_MOCK_CV_SELECT,
-        orderBy: [
-          { updatedAt: sortDirection },
-          { id: sortDirection },
-        ],
+        orderBy: [{ updatedAt: sortDirection }, { id: sortDirection }],
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -178,7 +208,11 @@ export class MockCvAnalysisService {
     return this.toPublicResponse(mockCv);
   }
 
-  async retryAnalysis(id: string, userId: string) {
+  async retryAnalysis(
+    id: string,
+    userId: string,
+    options: { chargeUser?: boolean } = {},
+  ) {
     const mockCv = await this.prisma.mockCv.findFirst({
       where: { id, userId },
       select: {
@@ -188,6 +222,7 @@ export class MockCvAnalysisService {
             status: true,
             analysisStartedAt: true,
             lastRetryAt: true,
+            requestedQuestionCount: true,
           },
         },
       },
@@ -195,6 +230,22 @@ export class MockCvAnalysisService {
     if (!mockCv?.analysis) throw new NotFoundException('Không tìm thấy CV.');
 
     this.assertCanRetry(mockCv.analysis);
+    if (options.chargeUser !== false) {
+      const feature = cvAnalysisFeature(
+        mockCv.analysis.requestedQuestionCount ?? 10,
+      );
+      await this.aiCredits.reserve({
+        userId,
+        feature,
+        referenceType: 'MOCK_CV_ANALYSIS',
+        referenceId: mockCv.analysis.id,
+        idempotencyKey: aiCreditReservationKey(
+          feature,
+          'MOCK_CV_ANALYSIS',
+          mockCv.analysis.id,
+        ),
+      });
+    }
     const claimed = await this.claimAndEnqueue(
       mockCv.analysis.id,
       userId,
@@ -213,6 +264,7 @@ export class MockCvAnalysisService {
       where: { id, userId },
       select: {
         fileKey: true,
+        analysis: { select: { id: true } },
         interviews: {
           select: {
             status: true,
@@ -255,6 +307,15 @@ export class MockCvAnalysisService {
       }
       await tx.mockCv.delete({ where: { id } });
     });
+
+    if (mockCv.analysis) {
+      await this.aiCredits.releaseByReference(
+        userId,
+        'MOCK_CV_ANALYSIS',
+        mockCv.analysis.id,
+        'Người dùng đã xóa Mock CV trước khi hoàn tất.',
+      );
+    }
 
     await Promise.all([
       this.storage.deletePrivate(mockCv.fileKey),
@@ -372,6 +433,12 @@ export class MockCvAnalysisService {
           analysisError: 'QUEUE_ENQUEUE_FAILED',
         },
       });
+      await this.aiCredits.releaseByReference(
+        userId,
+        'MOCK_CV_ANALYSIS',
+        analysisId,
+        'Không enqueue được job phân tích Mock CV.',
+      );
       this.logger.error(
         `Không thể enqueue job phân tích Mock CV ${analysisId}.`,
         error instanceof Error ? error.stack : undefined,

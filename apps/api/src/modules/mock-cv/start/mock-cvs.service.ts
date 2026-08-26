@@ -76,9 +76,7 @@ export class MockCvsService {
       analysis.status === MockCvAnalysisStatus.NEEDS_REUPLOAD ||
       analysis.status === MockCvAnalysisStatus.FAILED
     ) {
-      throw new ConflictException(
-        'CV chưa sẵn sàng để bắt đầu phỏng vấn.',
-      );
+      throw new ConflictException('CV chưa sẵn sàng để bắt đầu phỏng vấn.');
     }
     if (analysis.status !== MockCvAnalysisStatus.READY) {
       return { status: 'PREPARING', mockCvId: id, analysisId: analysis.id };
@@ -90,6 +88,7 @@ export class MockCvsService {
       const preparation = await this.questionPreparation.ensureQueued(
         analysis.id,
         userId,
+        { chargeUserRetry: true },
       );
       if (preparation === 'FAILED') {
         throw new ConflictException(
@@ -100,8 +99,7 @@ export class MockCvsService {
         return this.createOrGetActiveInterview(
           id,
           userId,
-          analysis.requestedDurationSeconds ??
-            DEFAULT_MOCK_CV_DURATION_SECONDS,
+          analysis.requestedDurationSeconds ?? DEFAULT_MOCK_CV_DURATION_SECONDS,
         );
       }
 

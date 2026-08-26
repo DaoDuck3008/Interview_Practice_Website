@@ -19,6 +19,7 @@ import { MockCvInterviewOverviewService } from '../mock-cv/analysis/mock-cv-inte
 import { MockCvInterviewOverviewJobHandler } from './handlers/mock-cv-interview-overview-job.handler';
 import { MockCvInterviewScoringService } from './services/mock-cv-interview-scoring.service';
 import { MockCvQuestionPreparationService } from './services/mock-cv-question-preparation.service';
+import { AiCreditsModule } from '../ai-credits/ai-credits.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { MockCvQuestionPreparationService } from './services/mock-cv-question-pr
     ScoreModule,
     StorageModule,
     WebsocketModule,
+    AiCreditsModule,
   ],
   providers: [
     AiJobsService,

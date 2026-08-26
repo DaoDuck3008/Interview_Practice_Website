@@ -30,6 +30,12 @@ import { toastApiError } from "@/lib/utils/apiError";
 import { useStatusModal } from "@/components/ui/useStatusModal";
 import TextType from "@/components/ui/TextType";
 import { useSocket } from "@/hooks/useSocket";
+import {
+  getAiCreditBalance,
+  getAiCreditPricing,
+  type AiCreditBalance,
+  type AiCreditPricing,
+} from "@/lib/api/aiCredits";
 
 const PAGE_SIZE = 6;
 
@@ -50,6 +56,12 @@ export default function MockCvPage() {
   const [uploading, setUploading] = useState(false);
   const [retryingCvId, setRetryingCvId] = useState<string | null>(null);
   const [deletingCvId, setDeletingCvId] = useState<string | null>(null);
+  const [creditBalance, setCreditBalance] = useState<AiCreditBalance | null>(
+    null,
+  );
+  const [creditPricing, setCreditPricing] = useState<AiCreditPricing | null>(
+    null,
+  );
   const uploadLockRef = useRef(false);
   const loadRequestIdRef = useRef(0);
   const latestSearchRef = useRef("");
@@ -112,9 +124,26 @@ export default function MockCvPage() {
     [debouncedSearch, page, sortOrder],
   );
 
+  const loadCreditInfo = useCallback(async () => {
+    const [balanceResult, pricingResult] = await Promise.allSettled([
+      getAiCreditBalance(),
+      getAiCreditPricing(),
+    ]);
+    if (balanceResult.status === "fulfilled") {
+      setCreditBalance(balanceResult.value);
+    }
+    if (pricingResult.status === "fulfilled") {
+      setCreditPricing(pricingResult.value);
+    }
+  }, []);
+
   useEffect(() => {
     queueMicrotask(() => void loadCvs());
   }, [loadCvs]);
+
+  useEffect(() => {
+    queueMicrotask(() => void loadCreditInfo());
+  }, [loadCreditInfo]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -131,7 +160,10 @@ export default function MockCvPage() {
 
   useEffect(() => {
     if (!socket) return;
-    const refresh = () => void loadCvs(true);
+    const refresh = () => {
+      void loadCvs(true);
+      void loadCreditInfo();
+    };
     socket.on("mock-cv:analysis-updated", refresh);
     socket.on("mock-cv:questions-updated", refresh);
     socket.on("mock-cv-interview:scored", refresh);
@@ -144,7 +176,7 @@ export default function MockCvPage() {
       socket.off("mock-cv-interview:failed", refresh);
       socket.off("connect", refresh);
     };
-  }, [loadCvs, socket]);
+  }, [loadCreditInfo, loadCvs, socket]);
 
   const shouldShowPagination = total > PAGE_SIZE;
 
@@ -170,7 +202,7 @@ export default function MockCvPage() {
     try {
       await retryMockCvAnalysis(cv.id);
       toast.success("Đã bắt đầu chuẩn bị lại CV.");
-      await loadCvs(true);
+      await Promise.all([loadCvs(true), loadCreditInfo()]);
     } catch (error) {
       toastApiError(error, "Không thể chuẩn bị lại CV. Vui lòng thử sau.");
     } finally {
@@ -256,6 +288,8 @@ export default function MockCvPage() {
           <MockCvHeroUploadCard
             submitting={uploading}
             onSubmit={handleUpload}
+            creditBalance={creditBalance}
+            creditPricing={creditPricing}
           />
         </div>
       </section>
@@ -477,9 +511,7 @@ function EmptyState({
       <span className="grid size-11 place-items-center rounded-full border border-accent-light/20 bg-accent/10 text-accent-light">
         <Icon size={20} />
       </span>
-      <h3 className="mt-3 font-semibold text-white">
-        {title}
-      </h3>
+      <h3 className="mt-3 font-semibold text-white">{title}</h3>
       <p className="mt-1 max-w-md text-sm leading-6 text-text-secondary">
         {description}
       </p>

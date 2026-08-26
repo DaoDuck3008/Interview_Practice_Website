@@ -4,7 +4,7 @@ import { SessionsController } from './sessions.controller';
 import { StorageModule } from '../storage/storage.module';
 import { SpeechModule } from '../speech/speech.module';
 import { AiJobsModule } from '../ai-jobs/ai-jobs.module';
-import { QuotaModule } from '../quota/quota.module';
+import { AiCreditsModule } from '../ai-credits/ai-credits.module';
 import { ConcurrencyModule } from '../../common/concurrency/concurrency.module';
 import { CacheModule } from '../../cache/cache.module';
 
@@ -13,7 +13,7 @@ import { CacheModule } from '../../cache/cache.module';
     StorageModule,
     SpeechModule,
     AiJobsModule,
-    QuotaModule,
+    AiCreditsModule,
     ConcurrencyModule,
     CacheModule,
   ],

@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useState, type FormEvent } from "react";
+import Link from "next/link";
 import {
   BriefcaseBusiness,
   ChevronDown,
   Clock3,
+  Coins,
   FileCheck2,
   FileQuestion,
   FileText,
@@ -22,26 +24,34 @@ import {
   type CreateMockCvInput,
   type MockCvTargetRoleCode,
 } from "@/lib/api/mockCvs";
+import {
+  getMockCvAnalysisCost,
+  type AiCreditBalance,
+  type AiCreditPricing,
+} from "@/lib/api/aiCredits";
+import { formatNumber } from "@/lib/utils/format";
 
 const MAX_CV_SIZE = 5 * 1024 * 1024;
 
 export default function MockCvHeroUploadCard({
   submitting,
   onSubmit,
+  creditBalance,
+  creditPricing,
 }: {
   submitting: boolean;
   onSubmit: (input: CreateMockCvInput) => Promise<boolean>;
+  creditBalance: AiCreditBalance | null;
+  creditPricing: AiCreditPricing | null;
 }) {
   const [targetRoleCode, setTargetRoleCode] = useState<
     MockCvTargetRoleCode | ""
   >("");
   const [file, setFile] = useState<File | null>(null);
-  const [totalQuestions, setTotalQuestions] = useState<
-    (typeof MOCK_CV_QUESTION_OPTIONS)[number]
-  >(10);
-  const [durationSeconds, setDurationSeconds] = useState<
-    (typeof MOCK_CV_DURATION_OPTIONS)[number]["value"]
-  >(900);
+  const [totalQuestions, setTotalQuestions] =
+    useState<(typeof MOCK_CV_QUESTION_OPTIONS)[number]>(10);
+  const [durationSeconds, setDurationSeconds] =
+    useState<(typeof MOCK_CV_DURATION_OPTIONS)[number]["value"]>(900);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     setFile(acceptedFiles[0] ?? null);
@@ -66,7 +76,13 @@ export default function MockCvHeroUploadCard({
         : rejection
           ? "File CV không hợp lệ."
           : null;
-  const canSubmit = !!targetRoleCode && !!file && !submitting;
+  const creditCost = getMockCvAnalysisCost(totalQuestions, creditPricing);
+  const hasEnoughCredits =
+    creditCost === null ||
+    creditBalance === null ||
+    creditBalance.available >= creditCost;
+  const canSubmit =
+    !!targetRoleCode && !!file && !submitting && hasEnoughCredits;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -172,21 +188,23 @@ export default function MockCvHeroUploadCard({
                 value={totalQuestions}
                 onChange={(event) =>
                   setTotalQuestions(
-                    Number(event.target.value) as (typeof MOCK_CV_QUESTION_OPTIONS)[number],
+                    Number(
+                      event.target.value,
+                    ) as (typeof MOCK_CV_QUESTION_OPTIONS)[number],
                   )
                 }
                 disabled={submitting}
                 className="h-12 w-full cursor-pointer appearance-none rounded-2xl border border-white/12 bg-white/[0.06] pl-11 pr-11 text-sm font-semibold text-text-primary outline-none transition-all duration-300 hover:bg-white/[0.08] focus:border-violet-300/55 focus:bg-white/[0.085] focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
-              {MOCK_CV_QUESTION_OPTIONS.map((value) => (
-                <option
-                  key={value}
-                  value={value}
-                  className="bg-elevated text-text-primary"
-                >
-                  {value} câu hỏi
-                </option>
-              ))}
+                {MOCK_CV_QUESTION_OPTIONS.map((value) => (
+                  <option
+                    key={value}
+                    value={value}
+                    className="bg-elevated text-text-primary"
+                  >
+                    {value} câu hỏi
+                  </option>
+                ))}
               </select>
               <ChevronDown
                 size={17}
@@ -211,21 +229,23 @@ export default function MockCvHeroUploadCard({
                 value={durationSeconds}
                 onChange={(event) =>
                   setDurationSeconds(
-                    Number(event.target.value) as (typeof MOCK_CV_DURATION_OPTIONS)[number]["value"],
+                    Number(
+                      event.target.value,
+                    ) as (typeof MOCK_CV_DURATION_OPTIONS)[number]["value"],
                   )
                 }
                 disabled={submitting}
                 className="h-12 w-full cursor-pointer appearance-none rounded-2xl border border-white/12 bg-white/[0.06] pl-11 pr-11 text-sm font-semibold text-text-primary outline-none transition-all duration-300 hover:bg-white/[0.08] focus:border-violet-300/55 focus:bg-white/[0.085] focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
-              {MOCK_CV_DURATION_OPTIONS.map((option) => (
-                <option
-                  key={option.value}
-                  value={option.value}
-                  className="bg-elevated text-text-primary"
-                >
-                  {option.label}
-                </option>
-              ))}
+                {MOCK_CV_DURATION_OPTIONS.map((option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                    className="bg-elevated text-text-primary"
+                  >
+                    {option.label}
+                  </option>
+                ))}
               </select>
               <ChevronDown
                 size={17}
@@ -326,6 +346,34 @@ export default function MockCvHeroUploadCard({
           )}
         </div>
 
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.045] px-3 py-2.5">
+          <span className="inline-flex items-center gap-2 text-xs font-semibold text-violet-100">
+            <Coins size={15} className="text-violet-300" />
+            {creditCost === null
+              ? "Đang tải chi phí phân tích"
+              : `${formatNumber(creditCost)} AI credits cho ${totalQuestions} câu`}
+          </span>
+          {creditBalance && (
+            <span
+              className={`text-xs font-semibold ${
+                hasEnoughCredits ? "text-white/55" : "text-danger"
+              }`}
+            >
+              Hiện có {formatNumber(creditBalance.available)}
+            </span>
+          )}
+        </div>
+
+        {!hasEnoughCredits && (
+          <p className="text-xs font-medium leading-5 text-danger">
+            Bạn chưa đủ credits cho cấu hình này. Hãy chọn ít câu hơn hoặc{" "}
+            <Link href="/pricing" className="underline underline-offset-2">
+              xem gói phù hợp
+            </Link>
+            .
+          </p>
+        )}
+
         <button
           type="submit"
           disabled={!canSubmit}
@@ -344,9 +392,7 @@ export default function MockCvHeroUploadCard({
           <span className="grid size-14 place-items-center rounded-full border border-white/15 bg-white/[0.08] text-violet-200 shadow-[0_18px_48px_rgba(2,6,23,0.42)]">
             <LoaderCircle size={27} className="animate-spin" />
           </span>
-          <p className="mt-4 font-black text-white">
-            Đang tải CV
-          </p>
+          <p className="mt-4 font-black text-white">Đang tải CV</p>
           <p className="mt-1 max-w-xs text-sm leading-6 text-white/60">
             Sau khi tải xong, bạn sẽ được chuyển sang màn hình chuẩn bị.
           </p>

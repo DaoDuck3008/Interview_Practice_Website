@@ -19,12 +19,11 @@ import type {
 import type { MockCvQuestionGenerationJobData } from '../ai-jobs.types';
 import { MockCvQuestionBankService } from '../services/mock-cv-question-bank.service';
 import { mockCvErrorCode } from '../utils/mock-cv-job.utils';
+import { AiCreditsService } from '../../ai-credits/ai-credits.service';
 
 @Injectable()
 export class MockCvQuestionGenerationJobHandler {
-  private readonly logger = new Logger(
-    MockCvQuestionGenerationJobHandler.name,
-  );
+  private readonly logger = new Logger(MockCvQuestionGenerationJobHandler.name);
   private readonly handledFailureJobIds = new Set<string>();
   private readonly isDev: boolean;
 
@@ -33,6 +32,7 @@ export class MockCvQuestionGenerationJobHandler {
     private readonly generator: MockCvQuestionGenerationService,
     private readonly questionBank: MockCvQuestionBankService,
     private readonly websocket: WebsocketGateway,
+    private readonly aiCredits: AiCreditsService,
     config: ConfigService,
   ) {
     this.isDev = config.get<string>('NODE_ENV') !== 'production';
@@ -83,6 +83,12 @@ export class MockCvQuestionGenerationJobHandler {
       }
       return;
     }
+
+    await this.aiCredits.extendByReference(
+      userId,
+      'MOCK_CV_ANALYSIS',
+      analysisId,
+    );
 
     try {
       const topics = analysis.topicSlugs.length
@@ -140,8 +146,7 @@ export class MockCvQuestionGenerationJobHandler {
           where: {
             id: analysisId,
             status: MockCvAnalysisStatus.READY,
-            questionGenerationStatus:
-              MockCvQuestionGenerationStatus.GENERATING,
+            questionGenerationStatus: MockCvQuestionGenerationStatus.GENERATING,
             questionGenerationAttempt: attempt,
           },
           data: {
@@ -174,6 +179,11 @@ export class MockCvQuestionGenerationJobHandler {
         return true;
       });
       if (!stored) return;
+      await this.aiCredits.consumeByReference(
+        userId,
+        'MOCK_CV_ANALYSIS',
+        analysisId,
+      );
 
       this.websocket.emitToUser(userId, 'mock-cv:questions-updated', {
         mockCvId: analysis.mockCvId,
@@ -185,8 +195,7 @@ export class MockCvQuestionGenerationJobHandler {
         where: {
           id: analysisId,
           status: MockCvAnalysisStatus.READY,
-          questionGenerationStatus:
-            MockCvQuestionGenerationStatus.GENERATING,
+          questionGenerationStatus: MockCvQuestionGenerationStatus.GENERATING,
           questionGenerationAttempt: attempt,
         },
         data: {
@@ -195,6 +204,12 @@ export class MockCvQuestionGenerationJobHandler {
         },
       });
       if (failed.count === 0) return;
+      await this.aiCredits.releaseByReference(
+        userId,
+        'MOCK_CV_ANALYSIS',
+        analysisId,
+        'Job sinh câu hỏi Mock CV thất bại.',
+      );
 
       if (job.id) this.handledFailureJobIds.add(job.id);
       this.logger.error(
@@ -226,6 +241,12 @@ export class MockCvQuestionGenerationJobHandler {
       },
     });
     if (failed.count === 0) return;
+    await this.aiCredits.releaseByReference(
+      userId,
+      'MOCK_CV_ANALYSIS',
+      analysisId,
+      'Worker sinh câu hỏi Mock CV thất bại.',
+    );
     this.emitFailure(userId, analysisId);
   }
 
