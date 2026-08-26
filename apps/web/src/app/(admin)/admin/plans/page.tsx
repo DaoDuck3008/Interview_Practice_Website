@@ -7,7 +7,6 @@ import {
   Trash2,
   Loader2,
   Power,
-  Infinity as InfinityIcon,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import {
@@ -35,22 +34,14 @@ function onBlur(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) {
   e.currentTarget.style.boxShadow = "none";
 }
 
-function quotaLabel(p: AdminPlan) {
-  if (p.isUnlimited) return "Không giới hạn";
-  const parts: string[] = [];
-  if (p.dailyScoreLimit != null) parts.push(`${p.dailyScoreLimit}/ngày`);
-  return parts.length ? parts.join(" · ") : "—";
-}
-
 interface FormState {
   slug: string;
   name: string;
   description: string;
   priceVnd: string;
   durationDays: string;
+  creditPerCycle: string;
   sortOrder: string;
-  isUnlimited: boolean;
-  dailyScoreLimit: string;
   isActive: boolean;
 }
 
@@ -60,9 +51,8 @@ const EMPTY_FORM: FormState = {
   description: "",
   priceVnd: "",
   durationDays: "",
+  creditPerCycle: "",
   sortOrder: "0",
-  isUnlimited: false,
-  dailyScoreLimit: "",
   isActive: true,
 };
 
@@ -115,10 +105,8 @@ export default function AdminPlansPage() {
       description: p.description ?? "",
       priceVnd: String(p.priceVnd),
       durationDays: String(p.durationDays),
+      creditPerCycle: String(p.creditPerCycle),
       sortOrder: String(p.sortOrder),
-      isUnlimited: p.isUnlimited,
-      dailyScoreLimit:
-        p.dailyScoreLimit != null ? String(p.dailyScoreLimit) : "",
       isActive: p.isActive,
     });
     setError("");
@@ -141,12 +129,17 @@ export default function AdminPlansPage() {
     }
     const priceVnd = Number(form.priceVnd);
     const durationDays = Number(form.durationDays);
+    const creditPerCycle = Number(form.creditPerCycle);
     if (!Number.isInteger(priceVnd) || priceVnd < 0) {
       setError("Giá phải là số nguyên ≥ 0.");
       return;
     }
     if (!Number.isInteger(durationDays) || durationDays < 1) {
       setError("Kỳ hạn phải là số nguyên ≥ 1 ngày.");
+      return;
+    }
+    if (!Number.isInteger(creditPerCycle) || creditPerCycle < 0) {
+      setError("Credit mỗi chu kỳ phải là số nguyên ≥ 0.");
       return;
     }
 
@@ -156,13 +149,8 @@ export default function AdminPlansPage() {
       description: form.description.trim() || null,
       priceVnd,
       durationDays,
+      creditPerCycle,
       sortOrder: Number(form.sortOrder) || 0,
-      isUnlimited: form.isUnlimited,
-      dailyScoreLimit: form.isUnlimited
-        ? null
-        : form.dailyScoreLimit.trim()
-          ? Number(form.dailyScoreLimit)
-          : null,
       isActive: form.isActive,
     };
 
@@ -260,7 +248,7 @@ export default function AdminPlansPage() {
           <span>Tên / Slug</span>
           <span className="text-right">Giá</span>
           <span className="text-right">Kỳ hạn</span>
-          <span>Lượt chấm</span>
+          <span>AI credits</span>
           <span className="w-24 text-center">Trạng thái</span>
           <span className="w-28 text-right">Thao tác</span>
         </div>
@@ -300,13 +288,9 @@ export default function AdminPlansPage() {
                 </span>
 
                 <span className="text-sm text-[#9898aa] inline-flex items-center gap-1.5 min-w-0">
-                  {p.isUnlimited && (
-                    <InfinityIcon
-                      size={14}
-                      className="text-[#8b5cf6] flex-shrink-0"
-                    />
-                  )}
-                  <span className="truncate">{quotaLabel(p)}</span>
+                  <span className="truncate">
+                    {p.creditPerCycle} / chu kỳ
+                  </span>
                 </span>
 
                 {/* Status badge */}
@@ -483,43 +467,21 @@ export default function AdminPlansPage() {
             </div>
           </div>
 
-          {/* Quota */}
-          <div className="rounded-lg border border-[#1c1c28] p-4 flex flex-col gap-4">
-            <label className="flex items-center gap-2.5 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={form.isUnlimited}
-                onChange={(e) => set("isUnlimited", e.target.checked)}
-                className="w-4 h-4 accent-[#7c3aed] cursor-pointer"
-              />
-              <span className="text-sm text-[#f4f4f6]">
-                Không giới hạn lượt chấm
-              </span>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-[#9898aa]">
+              AI credits / chu kỳ
             </label>
-
-            {!form.isUnlimited && (
-              <div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-[#9898aa]">
-                    Giới hạn / ngày{" "}
-                    <span className="text-[#3d3d54] normal-case">
-                      (trống = ∞)
-                    </span>
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={form.dailyScoreLimit}
-                    onChange={(e) => set("dailyScoreLimit", e.target.value)}
-                    placeholder="—"
-                    className={inputClass}
-                    style={inputStyle}
-                    onFocus={onFocus}
-                    onBlur={onBlur}
-                  />
-                </div>
-              </div>
-            )}
+            <input
+              type="number"
+              min={0}
+              value={form.creditPerCycle}
+              onChange={(e) => set("creditPerCycle", e.target.value)}
+              placeholder="150"
+              className={inputClass}
+              style={inputStyle}
+              onFocus={onFocus}
+              onBlur={onBlur}
+            />
           </div>
 
           <label className="flex items-center gap-2.5 cursor-pointer select-none">

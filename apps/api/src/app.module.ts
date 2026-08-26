@@ -18,7 +18,6 @@ import { SessionsModule } from './modules/sessions/sessions.module';
 import { PlansModule } from './modules/plans/plans.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
-import { QuotaModule } from './modules/quota/quota.module';
 import { SupportModule } from './modules/support/support.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
 import { AuditModule } from './modules/audit/audit.module';
@@ -75,7 +74,6 @@ import { AiCreditsModule } from './modules/ai-credits/ai-credits.module';
     PlansModule,
     PaymentsModule,
     SubscriptionsModule,
-    QuotaModule,
     SupportModule,
     WebsocketModule,
     FavoritesModule,

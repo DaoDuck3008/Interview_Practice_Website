@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useAuthStore } from "@/stores/auth.store";
-import { usePracticeCountStore } from "@/stores/practiceCount.store";
+import { useAiCreditsStore } from "@/stores/aiCredits.store";
 import { useFavoritesStore } from "@/stores/favorites.store";
 import { refreshApi } from "@/lib/api/auth";
 
@@ -15,7 +15,8 @@ export default function AuthHydrator({
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const setHydrated = useAuthStore((s) => s.setHydrated);
   const hasSession = useAuthStore((s) => s.hasSession);
-  const refreshPracticeCount = usePracticeCountStore((s) => s.refresh);
+  const refreshAiCredits = useAiCreditsStore((s) => s.refresh);
+  const resetAiCredits = useAiCreditsStore((s) => s.reset);
   const fetchFavorites = useFavoritesStore((s) => s.fetchAll);
   const resetFavorites = useFavoritesStore((s) => s.reset);
 
@@ -31,10 +32,11 @@ export default function AuthHydrator({
         const { accessToken, user } = await refreshApi();
 
         setAuth(accessToken, user);
-        refreshPracticeCount();
+        void refreshAiCredits().catch(() => undefined);
         fetchFavorites();
       } catch {
         clearAuth();
+        resetAiCredits();
         resetFavorites();
       } finally {
         // đánh dấu đã hydrate xong
@@ -47,7 +49,8 @@ export default function AuthHydrator({
     clearAuth,
     fetchFavorites,
     hasSession,
-    refreshPracticeCount,
+    refreshAiCredits,
+    resetAiCredits,
     resetFavorites,
     setAuth,
     setHydrated,

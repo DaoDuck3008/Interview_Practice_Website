@@ -159,10 +159,9 @@ async function main() {
         durationDays: p.durationDays,
         creditPerCycle: p.creditPerCycle,
         sortOrder: p.sortOrder,
-        isUnlimited: true,
         isActive: true,
       },
-      create: { ...p, isUnlimited: true },
+      create: p,
     });
     console.log(`  [plan] ${p.name} — ${p.priceVnd.toLocaleString('vi-VN')}đ`);
   }

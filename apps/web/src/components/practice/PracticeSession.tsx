@@ -21,12 +21,10 @@ import {
   getSession,
 } from "@/lib/api/sessions";
 import type { Score, Improvement, Session } from "@/lib/api/sessions";
-import { quotaDescriptor } from "@/lib/api/quota";
 import { formatTime } from "@/lib/utils/format";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { audioFileNameFromBlob } from "@/lib/audioFile";
-import { useQuota } from "@/hooks/useQuota";
-import { usePracticeCountStore } from "@/stores/practiceCount.store";
+import { useAiCredits } from "@/hooks/useAiCredits";
 import { waitForScoreResult, waitForImproveResult } from "@/lib/ws/jobs";
 import TranscriptPanel from "@/components/practice/TranscriptPanel";
 import AnswerEvaluation from "@/components/practice/AnswerEvaluation";
@@ -58,10 +56,12 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
   const [improvementError, setImprovementError] = useState("");
   const [isImproving, setIsImproving] = useState(false);
 
-  const { status: quotaStatus, refresh: refreshQuota } = useQuota();
-  const quota = quotaDescriptor(quotaStatus);
-  const outOfQuota = quota !== null && quota.remaining <= 0;
-  const refreshPracticeCount = usePracticeCountStore((s) => s.refresh);
+  const { balance, pricing, refresh: refreshCredits } = useAiCredits();
+  const answerAudioCost = pricing?.ANSWER_AUDIO ?? null;
+  const outOfCredits =
+    balance !== null &&
+    answerAudioCost !== null &&
+    balance.available < answerAudioCost;
 
   const applyScore = useCallback(
     (session: Session, score: Score) => {
@@ -105,10 +105,8 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
         setSessionId(createdSession.id);
         setTranscript(createdSession.transcript);
         setTranscriptError("");
-        refreshQuota(); // đã tốn 1 lượt — cập nhật số còn lại
-        refreshPracticeCount(); // cập nhật số câu đã luyện hôm nay hiển thị ở Header
       } catch (err) {
-        // Ưu tiên message tiếng Việt từ backend (vd: hết hạn mức trong ngày)
+        // Ưu tiên message tiếng Việt từ backend (ví dụ: không đủ AI credits).
         const serverMsg = axios.isAxiosError(err)
           ? (err.response?.data?.message as string | undefined)
           : undefined;
@@ -157,13 +155,13 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
         );
         onSessionSaved?.(createdSession);
       }
+      void refreshCredits();
       setPhase("evaluated");
     },
     [
       questionId,
       onSessionSaved,
-      refreshQuota,
-      refreshPracticeCount,
+      refreshCredits,
       applyScore,
     ],
   );
@@ -226,8 +224,9 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
         serverMsg ?? "Không thể tạo bản cải thiện — vui lòng thử lại.",
       );
     }
+    void refreshCredits();
     setIsImproving(false);
-  }, [sessionId, applyImprovement]);
+  }, [sessionId, applyImprovement, refreshCredits]);
 
   const handleReset = useCallback(() => {
     resetRecorder();
@@ -265,7 +264,7 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
         {/* IDLE */}
         {recorderStatus === "idle" && phase === "idle" && (
           <div className="flex flex-col items-center gap-3 py-6">
-            {outOfQuota ? (
+            {outOfCredits ? (
               <>
                 <div
                   className="w-20 h-20 rounded-full flex items-center justify-center opacity-40"
@@ -275,7 +274,7 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
                 </div>
                 <div className="flex flex-col items-center gap-1.5 text-center max-w-xs">
                   <p className="text-sm text-[#f59e0b]">
-                    Bạn đã dùng hết lượt luyện tập {quota?.period}.
+                    Bạn không còn đủ AI credits để chấm câu trả lời này.
                   </p>
                   <Link
                     href="/pricing"
@@ -307,9 +306,10 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
                 <p className="text-sm text-[#606072] font-mono">
                   Nhấn để bắt đầu ghi âm
                 </p>
-                {quota && (
+                {balance && answerAudioCost !== null && (
                   <p className="text-xs text-[#606072]">
-                    Còn {quota.remaining}/{quota.limit} lượt {quota.period}
+                    Hiện có {balance.available} AI credits · tác vụ này cần{" "}
+                    {answerAudioCost}
                   </p>
                 )}
               </>

@@ -7,6 +7,7 @@ export interface Plan {
   description: string | null;
   priceVnd: number;
   durationDays: number;
+  creditPerCycle: number;
 }
 
 const FALLBACK_PLANS: Plan[] = [
@@ -17,6 +18,7 @@ const FALLBACK_PLANS: Plan[] = [
     description: "Dùng thử toàn bộ tính năng trong 1 tuần.",
     priceVnd: 50000,
     durationDays: 7,
+    creditPerCycle: 35,
   },
   {
     id: "pro-1m",
@@ -25,6 +27,7 @@ const FALLBACK_PLANS: Plan[] = [
     description: "Phù hợp ôn luyện trước kỳ phỏng vấn.",
     priceVnd: 89000,
     durationDays: 30,
+    creditPerCycle: 150,
   },
   {
     id: "pro-3m",
@@ -33,6 +36,7 @@ const FALLBACK_PLANS: Plan[] = [
     description: "Tiết kiệm nhất — chỉ ~85.000đ mỗi tháng.",
     priceVnd: 255000,
     durationDays: 90,
+    creditPerCycle: 500,
   },
 ];
 
@@ -48,7 +52,7 @@ export async function getPlans(): Promise<Plan[]> {
 
 // ─── Admin ───────────────────────────────────────────
 
-/** Gói đầy đủ (admin) — gồm quota, trạng thái và số lượng đã dùng. */
+/** Gói đầy đủ (admin) — gồm credit, trạng thái và số lượng đã dùng. */
 export interface AdminPlan {
   id: string;
   slug: string;
@@ -56,8 +60,7 @@ export interface AdminPlan {
   description: string | null;
   priceVnd: number;
   durationDays: number;
-  isUnlimited: boolean;
-  dailyScoreLimit: number | null;
+  creditPerCycle: number;
   isActive: boolean;
   sortOrder: number;
   createdAt: string;
@@ -72,8 +75,7 @@ export interface PlanInput {
   description?: string | null;
   priceVnd: number;
   durationDays: number;
-  isUnlimited?: boolean;
-  dailyScoreLimit?: number | null;
+  creditPerCycle?: number;
   isActive?: boolean;
   sortOrder?: number;
 }

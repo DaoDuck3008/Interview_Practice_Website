@@ -178,12 +178,6 @@ enum MockCvQuestionFocusArea {
   CLAIM_VERIFICATION
 }
 
-enum UsageStatus {
-  PENDING
-  CONSUMED
-  CANCELED
-}
-
 enum AiCreditFeature {
   ANSWER_AUDIO
   ANSWER_IMPROVEMENT
@@ -222,19 +216,18 @@ model User {
   avatarUrl     String? //         Ảnh đại diện (lấy từ Google "picture")
   createdAt     DateTime @default(now())
 
-  sessions         Session[]
-  subscription     Subscription? // 1–1: mỗi user tối đa 1 subscription
-  orders           Order[]
-  grantedOrders    Order[]           @relation("OrderGrantedBy") // các đơn admin này cấp thủ công
-  usageLogs        UsageLog[]
-  creditCycles     CreditCycle[]
+  sessions           Session[]
+  subscription       Subscription? // 1–1: mỗi user tối đa 1 subscription
+  orders             Order[]
+  grantedOrders      Order[]             @relation("OrderGrantedBy") // các đơn admin này cấp thủ công
+  creditCycles       CreditCycle[]
   creditReservations CreditReservation[]
-  reviewedScores   Score[]           @relation("ScoreReviewedBy") // các Score admin này đã review/chấm lại thủ công
-  supportMessages  SupportMessage[] // hội thoại hỗ trợ (1 thread liên tục / user, cả tin user gửi lẫn admin trả lời)
-  favorites        Favorite[]
-  mockInterviews   MockInterview[]
-  mockCvs          MockCv[]
-  mockCvInterviews MockCvInterview[]
+  reviewedScores     Score[]             @relation("ScoreReviewedBy") // các Score admin này đã review/chấm lại thủ công
+  supportMessages    SupportMessage[] // hội thoại hỗ trợ (1 thread liên tục / user, cả tin user gửi lẫn admin trả lời)
+  favorites          Favorite[]
+  mockInterviews     MockInterview[]
+  mockCvs            MockCv[]
+  mockCvInterviews   MockCvInterview[]
 }
 
 model Topic {
@@ -438,7 +431,7 @@ model MockCvAnalysis {
   questionGenerationError     String?
   questionPromptVersion       String?
   requestedQuestionCount      Int?
-  requestedDurationSeconds    Int      @default(900)
+  requestedDurationSeconds    Int                            @default(900)
   selectedBankQuestionCount   Int?
   generatedQuestionCount      Int?
 
@@ -615,10 +608,8 @@ model Plan {
   priceVnd     Int //                VND, số nguyên
   durationDays Int //                kỳ hạn tính theo ngày: 7 / 30 / 90 (cộng vào expiresAt khi kích hoạt)
 
-  isUnlimited      Boolean @default(false) // true = không giới hạn lượt
-  dailyScoreLimit  Int? //                    null = không giới hạn theo ngày
-  creditPerCycle   Int     @default(0) // credit cấp theo chu kỳ subscription; snapshot vào CreditCycle
-  limits           Json? //                   mở rộng các limit khác sau này
+  creditPerCycle Int   @default(0) // credit cấp theo chu kỳ subscription; snapshot vào CreditCycle
+  limits         Json? //                   mở rộng các limit khác sau này
 
   isActive  Boolean  @default(true)
   sortOrder Int      @default(0) // thứ tự hiển thị ở trang Pricing
@@ -649,7 +640,7 @@ model Subscription {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  orders Order[] // các đơn đã tạo/gia hạn sub này
+  orders       Order[] // các đơn đã tạo/gia hạn sub này
   creditCycles CreditCycle[]
 
   @@index([status, expiresAt]) // job hạ cấp: tìm ACTIVE & expiresAt < now
@@ -690,22 +681,6 @@ model Order {
   @@index([subscriptionId]) // admin: lịch sử đơn theo 1 subscription
 }
 
-// 1 dòng = 1 lượt luyện tập; PENDING được tạo trước Whisper, CONSUMED sau khi thao tác thành công.
-model UsageLog {
-  id     String @id @default(uuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-
-  sessionId String? //  tham chiếu lỏng (không FK — session có thể bị xóa ở nhánh điểm 0)
-  // PENDING giữ chỗ quota trước khi gọi dịch vụ tốn phí; reservation hết hạn sẽ không còn được tính.
-  status    UsageStatus @default(CONSUMED)
-  expiresAt DateTime?
-  createdAt DateTime    @default(now())
-
-  @@index([userId, createdAt]) // COUNT lượt dùng theo kỳ (ngày/tháng)
-  @@index([userId, status, expiresAt])
-}
-
 // Số dư theo chu kỳ là nguồn sự thật cho AI credits. activeKey chỉ có giá trị
 // với cycle đang hiệu lực, nên unique constraint đảm bảo tối đa một cycle active/user.
 model CreditCycle {
@@ -719,11 +694,11 @@ model CreditCycle {
   planId         String?
   plan           Plan?         @relation(fields: [planId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
-  source   CreditCycleSource
-  sourceReference String @unique // Order id hoặc grant id: idempotency bền vững khi payment/webhook lặp
-  planName String?
-  startsAt DateTime
-  endsAt   DateTime
+  source          CreditCycleSource
+  sourceReference String            @unique // Order id hoặc grant id: idempotency bền vững khi payment/webhook lặp
+  planName        String?
+  startsAt        DateTime
+  endsAt          DateTime
 
   grantedCredits  Int
   usedCredits     Int @default(0)
@@ -763,8 +738,8 @@ model CreditReservation {
   consumedAt    DateTime?
   releasedAt    DateTime?
   failureReason String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@unique([cycleId, feature, referenceType, referenceId])
   @@index([status, expiresAt])

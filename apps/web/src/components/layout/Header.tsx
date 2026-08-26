@@ -13,7 +13,8 @@ import {
   Bookmark,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
-import { usePracticeCountStore } from "@/stores/practiceCount.store";
+import { useAiCredits } from "@/hooks/useAiCredits";
+import { useAiCreditsStore } from "@/stores/aiCredits.store";
 import { useFavoritesStore } from "@/stores/favorites.store";
 import { logoutApi } from "@/lib/api/auth";
 import { usePathname, useRouter } from "next/navigation";
@@ -21,37 +22,24 @@ import FavoritesDrawer from "./FavoritesDrawer";
 import HeaderMenuModal from "./HeaderMenuModal";
 import Avatar from "@/components/ui/Avatar";
 
-// Mốc số câu đã luyện hôm nay -> màu + lời động viên (min giảm dần, khớp mốc đầu tiên đạt được).
-const COUNT_TIERS: { min: number; color: string; message: string }[] = [
-  {
-    min: 4,
-    color: "#8b5cf6",
-    message: "Xuất sắc! Bạn đang rất chăm chỉ hôm nay.",
-  },
-  { min: 2, color: "#22c55e", message: "Đang vào phong độ!" },
-  { min: 1, color: "#3b82f6", message: "Khởi động tốt!" },
-  { min: 0, color: "#606072", message: "Luyện câu đầu tiên hôm nay nào!" },
-];
-
-function PracticeCountBadge() {
-  const count = usePracticeCountStore((s) => s.count);
-  const tier = COUNT_TIERS.find((t) => count >= t.min)!;
+function AiCreditBadge({ refreshKey }: { refreshKey: string }) {
+  const { balance, loading } = useAiCredits(refreshKey);
+  const available = balance?.available;
 
   return (
     <div
-      title={tier.message}
-      className="flex flex-shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5"
-      style={{
-        border: `1px solid ${tier.color}33`,
-        background: `${tier.color}14`,
-      }}
+      title={
+        available === undefined
+          ? loading
+            ? "Đang tải số dư AI credits"
+            : "Chưa tải được số dư AI credits"
+          : `${available} AI credits khả dụng`
+      }
+      className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-accent-light/20 bg-accent/10 px-3 py-1.5"
     >
-      <Zap size={13} style={{ color: tier.color }} />
-      <span
-        className="text-xs font-bold font-mono tabular-nums"
-        style={{ color: tier.color }}
-      >
-        {count}
+      <Zap size={13} className="text-accent-light" />
+      <span className="text-xs font-bold tabular-nums text-accent-light">
+        {loading && available === undefined ? "…" : (available ?? "—")}
       </span>
     </div>
   );
@@ -86,6 +74,7 @@ function UserDropdown({
 }) {
   const [open, setOpen] = useState(false);
   const clearAuth = useAuthStore((s) => s.clearAuth);
+  const resetAiCredits = useAiCreditsStore((s) => s.reset);
   const resetFavorites = useFavoritesStore((s) => s.reset);
   const router = useRouter();
   const ref = useRef<HTMLDivElement>(null);
@@ -106,6 +95,7 @@ function UserDropdown({
       await logoutApi();
     } catch {}
     clearAuth();
+    resetAiCredits();
     resetFavorites();
     router.push("/login");
   }
@@ -183,6 +173,7 @@ export default function Header() {
   const user = useAuthStore((s) => s.user);
   const hydrated = useAuthStore((s) => s.hydrated);
   const clearAuth = useAuthStore((s) => s.clearAuth);
+  const resetAiCredits = useAiCreditsStore((s) => s.reset);
   const resetFavorites = useFavoritesStore((s) => s.reset);
 
   async function mobileLogout() {
@@ -191,6 +182,7 @@ export default function Header() {
       await logoutApi();
     } catch {}
     clearAuth();
+    resetAiCredits();
     resetFavorites();
   }
 
@@ -252,7 +244,7 @@ export default function Header() {
           {hydrated &&
             (user ? (
               <>
-                <PracticeCountBadge />
+                <AiCreditBadge refreshKey={pathname} />
                 <button
                   onClick={() => setFavDrawerOpen(true)}
                   className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-[#cbd5e1] transition-all duration-300 hover:border-violet-300/25 hover:bg-white/[0.1] hover:text-white"

@@ -5,14 +5,13 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import axios from "axios";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
-import { useQuota } from "@/hooks/useQuota";
+import { useAiCredits } from "@/hooks/useAiCredits";
 import type {
   InterviewAnswerUpload,
   InterviewSessionView,
 } from "@/lib/interview-core/types";
 import { audioFileNameFromBlob } from "@/lib/audioFile";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
-import { usePracticeCountStore } from "@/stores/practiceCount.store";
 import { useAuthStore } from "@/stores/auth.store";
 import StatusModal from "@/components/ui/StatusModal";
 import { MockQuestionArticle } from "./MockRoomShell";
@@ -52,8 +51,7 @@ export default function InterviewRoomSession({
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const hydrated = useAuthStore((s) => s.hydrated);
-  const { refresh: refreshQuota } = useQuota();
-  const refreshPracticeCount = usePracticeCountStore((s) => s.refresh);
+  const { refresh: refreshCredits } = useAiCredits();
 
   const [mock, setMock] = useState<InterviewSessionView | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -244,8 +242,7 @@ export default function InterviewRoomSession({
             : current,
         );
         setUploadState(hasNextQuestion ? "idle" : "done");
-        refreshQuota();
-        refreshPracticeCount();
+        void refreshCredits();
       } catch (err) {
         const serverMsg = axios.isAxiosError(err)
           ? (err.response?.data?.message as string | undefined)
@@ -259,8 +256,7 @@ export default function InterviewRoomSession({
       activeQuestion,
       answerQuestion,
       mock,
-      refreshPracticeCount,
-      refreshQuota,
+      refreshCredits,
     ],
   );
 

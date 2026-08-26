@@ -125,8 +125,6 @@ export class PlansService {
       priceVnd: dto.priceVnd,
       durationDays: dto.durationDays,
       creditPerCycle: dto.creditPerCycle,
-      isUnlimited: dto.isUnlimited,
-      dailyScoreLimit: dto.dailyScoreLimit,
       limits: dto.limits as Prisma.InputJsonValue | undefined,
       isActive: dto.isActive,
       sortOrder: dto.sortOrder,

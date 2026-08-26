@@ -98,7 +98,7 @@ export const THROTTLE_REFRESH = throttleProfile(
   { limit: 30, ttl: 10 * MINUTE_MS, blockDuration: 2 * MINUTE_MS },
 );
 
-// Upload/audio tốn bandwidth/storage và có thể kéo theo Groq/R2. QuotaGuard và
+// Upload/audio tốn bandwidth/storage và có thể kéo theo Groq/R2. Credit reservation và
 // ConcurrencyInterceptor bảo vệ nghiệp vụ theo user; hai cửa sổ này bảo vệ hạ tầng theo IP.
 export const THROTTLE_HEAVY_UPLOAD = throttleProfile(
   'heavy-upload',
@@ -106,7 +106,7 @@ export const THROTTLE_HEAVY_UPLOAD = throttleProfile(
   { limit: 15, ttl: 10 * MINUTE_MS, blockDuration: 2 * MINUTE_MS },
 );
 
-// Score/improve/mockInterview đưa job AI vào queue. QuotaGuard kiểm soát hạn mức nghiệp vụ,
+// Score/improve/mockInterview đưa job AI vào queue. Credit reservation kiểm soát hạn mức,
 // AiJobsService dedup job theo session và service trả cache khi đã có kết quả.
 // Hai cửa sổ còn lại chặn spam click/script theo IP.
 export const THROTTLE_AI_ACTION = throttleProfile(
