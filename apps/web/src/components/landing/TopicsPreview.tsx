@@ -16,7 +16,7 @@ export default async function TopicsPreview() {
             <Link
               key={`${topic.id}-${i}`}
               href={`/learning/${topic.slug}/questions`}
-              className="group inline-flex h-12 min-w-max items-center gap-2 rounded-full border border-white/15 bg-white/[0.075] px-4 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_12px_34px_rgba(91,33,182,0.18)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-[#c4b5fd]/60 hover:bg-white/[0.13]"
+              className="group inline-flex h-12 min-w-max items-center gap-2 rounded-full border border-white/15 bg-[#171b30] px-4 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_12px_34px_rgba(91,33,182,0.18)] transition-[transform,background-color,border-color] duration-300 hover:-translate-y-0.5 hover:border-[#c4b5fd]/60 hover:bg-[#222842]"
             >
               {topic.iconUrl ? (
                 <Image

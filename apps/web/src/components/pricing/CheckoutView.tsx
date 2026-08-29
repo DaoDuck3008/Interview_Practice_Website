@@ -16,8 +16,8 @@ import { getOrder, type CheckoutOrder } from "@/lib/api/payments";
 import { formatVnd } from "@/lib/utils/format";
 
 const panel =
-  "rounded-2xl border border-white/10 backdrop-blur-xl p-6 md:p-8";
-const panelBg = { background: "rgba(255,255,255,0.05)" } as const;
+  "rounded-2xl border border-[#c4b5fd]/16 p-6 md:p-8";
+const panelBg = { background: "rgba(10,12,21,0.94)" } as const;
 
 function CopyRow({
   label,

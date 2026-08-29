@@ -30,6 +30,14 @@ export default function PracticeHistoryList() {
     });
   }, [page]);
 
+  const historyItems =
+    data?.items.filter(
+      (
+        item,
+      ): item is HistoryItem & { question: NonNullable<HistoryItem["question"]> } =>
+        item.question !== null,
+    ) ?? [];
+
   return (
     <div className={cardClass} style={cardBg}>
       <h3 className="text-lg font-bold text-[var(--color-text-primary)]">
@@ -37,13 +45,13 @@ export default function PracticeHistoryList() {
       </h3>
 
       <div className={`mt-4 ${loading ? "opacity-50" : ""}`}>
-        {!data || data.items.length === 0 ? (
+        {!data || historyItems.length === 0 ? (
           <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">
             {loading ? "Đang tải…" : "Bạn chưa có buổi luyện tập nào."}
           </p>
         ) : (
           <ul className="flex flex-col divide-y divide-white/10">
-            {data.items.map((item) => (
+            {historyItems.map((item) => (
               <li key={item.id}>
                 <Link
                   href={getPracticeQuestionHref(

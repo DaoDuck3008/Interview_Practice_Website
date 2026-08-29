@@ -31,7 +31,7 @@ export default function QuestionBankShowcase() {
           <FlyInOnView delay={120} direction="left">
             <Link
               href="/learning/javascript/questions"
-              className="mt-8 inline-flex h-12 w-fit items-center justify-center gap-2 rounded-full border border-white/20 bg-white/[0.13] px-6 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_0_30px_rgba(167,139,250,0.24)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#ddd6fe]/65 hover:bg-white/[0.18] active:scale-[0.98]"
+              className="mt-8 inline-flex h-12 w-fit items-center justify-center gap-2 rounded-full border border-white/20 bg-[#26223f] px-6 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_0_30px_rgba(167,139,250,0.24)] transition-[transform,background-color,border-color] duration-300 hover:-translate-y-1 hover:border-[#ddd6fe]/65 hover:bg-[#342d58] active:scale-[0.98]"
             >
               Khám phá câu hỏi
               <ArrowRight size={15} />

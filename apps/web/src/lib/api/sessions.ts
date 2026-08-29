@@ -271,7 +271,7 @@ export interface HistoryItem {
     content: string;
     level: Level;
     topic: { name: string; slug: string };
-  };
+  } | null;
   score: {
     technicalScore: number;
     completenessScore: number;

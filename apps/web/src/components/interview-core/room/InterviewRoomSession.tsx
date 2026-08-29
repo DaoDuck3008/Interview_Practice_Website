@@ -388,7 +388,7 @@ export default function InterviewRoomSession({
 
   return (
     <>
-      <div className="lg:pr-[21.5rem]">
+      <div className="performance-page lg:pr-[21.5rem]">
         <section
           key={activeQuestion.id}
           className="eval-enter mx-auto flex min-h-[calc(100dvh-10rem)] max-w-5xl flex-col justify-center py-3 md:py-5"

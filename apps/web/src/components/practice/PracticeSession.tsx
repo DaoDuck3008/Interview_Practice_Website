@@ -253,7 +253,7 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
 
   return (
     <div
-      className="flex flex-col divide-y divide-white/[0.07] overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.055] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl"
+      className="flex flex-col divide-y divide-white/[0.07] overflow-hidden rounded-[24px] border border-[#c4b5fd]/16 bg-[#1b2248]/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
       style={{
         boxShadow:
           "inset 0 1px 0 rgba(255,255,255,0.08), 0 18px 48px rgba(2,6,23,0.18)",

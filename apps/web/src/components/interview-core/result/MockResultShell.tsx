@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 // Shell nền riêng cho trang /mock-interviews/[id]/result, đồng bộ với phòng mock.
 export function MockResultShell({ children }: { children: ReactNode }) {
   return (
-    <main className="relative min-h-[calc(100dvh-3.5rem)] overflow-hidden rounded-3xl bg-base/30 px-3 py-4 text-white md:px-6 md:py-6 lg:px-8">
+    <main className="performance-page relative min-h-[calc(100dvh-3.5rem)] overflow-hidden rounded-3xl bg-base/30 px-3 py-4 text-white md:px-6 md:py-6 lg:px-8">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-10%,rgba(139,92,246,0.1),transparent_26%),radial-gradient(circle_at_12%_18%,rgba(124,58,237,0.1),transparent_32%)]" />
       <div className="relative z-10">{children}</div>
     </main>
@@ -22,7 +22,7 @@ export function ResultGlassPanel({
   return (
     <section
       className={[
-        "relative rounded-[1.75rem] border border-white/10  shadow-[0_18px_70px_rgba(2,6,23,0.4)] backdrop-blur-2xl",
+        "relative rounded-[1.75rem] border border-[#c4b5fd]/16 bg-[#1b2248]/90 shadow-[0_14px_38px_rgba(2,6,23,0.3)]",
         className,
       ].join(" ")}
     >

@@ -170,10 +170,8 @@ export default function MockCvProcessing({ id }: { id: string }) {
   }
 
   return (
-    <main className="mx-auto flex min-h-[calc(100vh-7rem)] w-full max-w-5xl items-center py-6 sm:py-10">
-      <section className="relative w-full overflow-hidden rounded-[2rem] border border-white/10 bg-surface/80 p-4 shadow-[0_28px_100px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl sm:p-7 lg:p-10">
-        <div className="pointer-events-none absolute -right-24 -top-28 size-80 rounded-full bg-accent/15 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-28 -left-20 size-72 rounded-full bg-accent-light/10 blur-3xl" />
+    <main className="performance-page mx-auto flex min-h-[calc(100vh-7rem)] w-full max-w-5xl items-center py-6 sm:py-10">
+      <section className="relative w-full overflow-hidden rounded-[2rem] border border-[#c4b5fd]/16 bg-[#171d3d]/90 p-4 shadow-[0_18px_48px_rgba(2,6,23,0.3),inset_0_1px_0_rgba(255,255,255,0.08)] sm:p-7 lg:p-10">
 
         <div className="relative">
           <div className="flex flex-wrap items-center justify-between gap-3">

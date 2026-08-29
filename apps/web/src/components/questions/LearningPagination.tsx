@@ -39,7 +39,7 @@ export default function LearningPagination({
       <button
         onClick={() => onPageChange(page - 1)}
         disabled={page <= 1}
-        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-[#cbd5e1] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[#c4b5fd]/35 hover:bg-white/[0.12] hover:text-white disabled:pointer-events-none disabled:opacity-25"
+        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-[#1a2033] text-[#cbd5e1] transition-[transform,background-color,border-color,color] duration-200 hover:-translate-y-0.5 hover:border-[#c4b5fd]/35 hover:bg-[#252d46] hover:text-white disabled:pointer-events-none disabled:opacity-25"
         aria-label="Trang trước"
       >
         <ChevronLeft size={15} />
@@ -58,10 +58,10 @@ export default function LearningPagination({
           <button
             key={p}
             onClick={() => onPageChange(p)}
-            className={`h-9 w-9 cursor-pointer rounded-full border text-sm font-semibold backdrop-blur-xl transition-all duration-200 ${
+            className={`h-9 w-9 cursor-pointer rounded-full border text-sm font-semibold transition-[transform,background-color,border-color,color] duration-200 ${
               p === page
-                ? "border-[#c4b5fd]/35 bg-[rgba(124,58,237,0.24)] text-white shadow-[0_0_22px_rgba(124,58,237,0.16)]"
-                : "border-white/10 bg-white/[0.045] text-[#cbd5e1] hover:-translate-y-0.5 hover:bg-white/[0.11] hover:text-white"
+                ? "border-[#c4b5fd]/35 bg-[#5930a8] text-white shadow-[0_0_22px_rgba(124,58,237,0.16)]"
+                : "border-white/10 bg-[#171d2e] text-[#cbd5e1] hover:-translate-y-0.5 hover:bg-[#252d46] hover:text-white"
             }`}
           >
             {p}
@@ -73,7 +73,7 @@ export default function LearningPagination({
       <button
         onClick={() => onPageChange(page + 1)}
         disabled={page >= totalPages}
-        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-[#cbd5e1] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[#c4b5fd]/35 hover:bg-white/[0.12] hover:text-white disabled:pointer-events-none disabled:opacity-25"
+        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-[#1a2033] text-[#cbd5e1] transition-[transform,background-color,border-color,color] duration-200 hover:-translate-y-0.5 hover:border-[#c4b5fd]/35 hover:bg-[#252d46] hover:text-white disabled:pointer-events-none disabled:opacity-25"
         aria-label="Trang sau"
       >
         <ChevronRight size={15} />

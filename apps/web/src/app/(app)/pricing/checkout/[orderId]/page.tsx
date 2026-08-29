@@ -14,7 +14,7 @@ export default async function CheckoutPage({
 }) {
   const { orderId } = await params;
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 md:py-12">
+    <div className="performance-page mx-auto max-w-3xl px-4 py-8 md:py-12">
       <CheckoutView orderId={orderId} />
     </div>
   );

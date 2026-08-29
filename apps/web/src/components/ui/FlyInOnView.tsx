@@ -33,10 +33,10 @@ export function FlyInOnView({
   return (
     <span
       ref={ref}
-      className={`inline-flex transition-[opacity,transform,filter] duration-700 ease-out ${
+      className={`inline-flex transition-[opacity,transform] duration-500 ease-out ${
         inView
-          ? "translate-x-0 translate-y-0 opacity-100 blur-0"
-          : `${DIRECTION_CLASSES[direction]} opacity-0 blur-sm`
+          ? "translate-x-0 translate-y-0 opacity-100"
+          : `${DIRECTION_CLASSES[direction]} opacity-0`
       } ${className}`}
       style={delay ? { transitionDelay: `${delay}ms` } : undefined}
     >

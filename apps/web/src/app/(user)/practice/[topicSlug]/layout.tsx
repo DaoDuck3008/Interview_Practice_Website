@@ -18,7 +18,7 @@ export default async function PracticeLayout({
 
   return (
     <div
-      className="relative flex h-screen flex-col overflow-hidden"
+      className="performance-page relative flex h-screen flex-col overflow-hidden"
       style={{ background: "#0f172a" }}
     >
       <div

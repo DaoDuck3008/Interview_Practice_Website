@@ -159,10 +159,8 @@ export default function PracticeSidebar({
           md:static md:inset-auto md:z-auto md:w-[320px] md:max-w-none md:flex-shrink-0 md:translate-x-0 md:rounded-2xl
           ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
         style={{
-          background: "rgba(15, 23, 42, 0.56)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          border: "1px solid rgba(255,255,255,0.13)",
+          background: "rgba(20, 25, 56, 0.9)",
+          border: "1px solid rgba(196,181,253,0.18)",
           boxShadow:
             "inset 0 1px 0 rgba(255,255,255,0.1), 0 24px 70px rgba(2,6,23,0.24)",
         }}

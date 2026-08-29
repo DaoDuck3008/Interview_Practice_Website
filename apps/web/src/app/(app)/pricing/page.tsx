@@ -11,10 +11,10 @@ export const metadata = createSeoMetadata({
 
 export default function PricingPage() {
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-96px)] max-w-6xl flex-col px-4 py-4 md:py-6">
+    <div className="performance-page mx-auto flex min-h-[calc(100vh-96px)] max-w-6xl flex-col px-4 py-4 md:py-6">
       <AnimateOnScroll variant="fade-up">
         <div className="mx-auto mb-10 max-w-2xl text-center md:mb-12">
-          <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.055] px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-[#c4b5fd] backdrop-blur-xl">
+          <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-[#c4b5fd]/18 bg-[#10111a] px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-[#c4b5fd]">
             <Sparkles size={14} />
             Bảng giá
           </span>

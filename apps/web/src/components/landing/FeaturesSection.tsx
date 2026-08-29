@@ -64,21 +64,15 @@ export default function FeaturesSection() {
       id="tinh-nang"
       className="relative isolate overflow-hidden bg-[#0f172a] py-14 text-white shadow-[0_22px_90px_rgba(2,6,23,0.34)]"
     >
-      {FEATURES.map((feature) => (
-        <Image
-          key={feature.id}
-          src={feature.image}
-          alt=""
-          fill
-          sizes="100vw"
-          className={`pointer-events-none object-cover object-center transition-[opacity,transform,filter] duration-700 ${
-            feature.id === active.id
-              ? "scale-100 opacity-100 blur-0"
-              : "scale-[1.015] opacity-0 blur-sm"
-          }`}
-          aria-hidden="true"
-        />
-      ))}
+      <Image
+        key={active.id}
+        src={active.image}
+        alt=""
+        fill
+        sizes="100vw"
+        className="pointer-events-none object-cover object-center"
+        aria-hidden="true"
+      />
 
       <div className="relative z-10 mx-auto min-h-[620px] max-w-7xl px-4 sm:px-6">
         <div className="flex min-h-[620px] max-w-xl flex-col justify-center py-8">
@@ -107,17 +101,17 @@ export default function FeaturesSection() {
                     type="button"
                     onClick={() => setActiveId(feature.id)}
                     aria-pressed={selected}
-                    className={`group relative flex h-14 w-full items-center gap-3 overflow-hidden rounded-full border px-3.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_44px_rgba(91,33,182,0.16)] backdrop-blur-xl transition-all duration-500 active:scale-[0.985] ${
+                    className={`group relative flex h-14 w-full items-center gap-3 overflow-hidden rounded-full border px-3.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_44px_rgba(91,33,182,0.16)] transition-[transform,background-color,border-color,box-shadow] duration-300 active:scale-[0.985] ${
                       selected
-                        ? "translate-x-1 scale-[1.015] border-[#ddd6fe]/70 bg-white/[0.17] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_18px_52px_rgba(124,58,237,0.25)]"
-                        : "border-white/15 bg-white/[0.075] text-white hover:translate-x-1 hover:border-white/30 hover:bg-white/[0.12]"
+                        ? "translate-x-1 scale-[1.015] border-[#ddd6fe]/70 bg-[#292447]/95 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_18px_52px_rgba(124,58,237,0.25)]"
+                        : "border-white/15 bg-[#161b30]/92 text-white hover:translate-x-1 hover:border-white/30 hover:bg-[#202641]"
                     }`}
                   >
                     {selected ? (
                       <span className="feature-tab-progress pointer-events-none absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-[#ddd6fe] to-transparent" />
                     ) : null}
                     <span
-                      className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-all duration-500 group-hover:scale-110 ${
+                      className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-[transform,background-color,border-color,box-shadow] duration-300 group-hover:scale-110 ${
                         selected
                           ? "border-[#ddd6fe]/60 bg-white/[0.18] text-white shadow-[0_0_24px_rgba(196,181,253,0.28)]"
                           : "border-white/15 bg-white/[0.08] text-[#efe7ff]"
@@ -137,7 +131,7 @@ export default function FeaturesSection() {
           <FlyInOnView delay={320} direction="left">
             <Link
               href={active.href}
-              className="mt-7 inline-flex h-11 w-fit items-center justify-center gap-2 rounded-full border border-white/20 bg-white/[0.13] px-5 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_0_28px_rgba(167,139,250,0.24)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#ddd6fe]/65 hover:bg-white/[0.18] active:scale-[0.98]"
+              className="mt-7 inline-flex h-11 w-fit items-center justify-center gap-2 rounded-full border border-white/20 bg-[#26223f] px-5 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_0_28px_rgba(167,139,250,0.24)] transition-[transform,background-color,border-color] duration-300 hover:-translate-y-1 hover:border-[#ddd6fe]/65 hover:bg-[#342d58] active:scale-[0.98]"
             >
               {active.cta}
               <ArrowRight size={15} />

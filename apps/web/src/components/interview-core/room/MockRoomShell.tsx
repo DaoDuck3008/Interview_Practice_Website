@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 // Card glass chính bao quanh câu hỏi và recorder của phòng mock interview.
 export function MockQuestionArticle({ children }: { children: ReactNode }) {
   return (
-    <article className="overflow-hidden rounded-[1.75rem] border border-white/15 bg-white/[0.05] shadow-[0_18px_70px_rgba(15,23,42,0.34)] backdrop-blur-2xl">
+    <article className="overflow-hidden rounded-[1.75rem] border border-[#c4b5fd]/18 bg-[#1b2248]/92 shadow-[0_14px_38px_rgba(15,23,42,0.3)]">
       {children}
     </article>
   );

@@ -155,7 +155,7 @@ export default function MockInterviewsLanding() {
   }
 
   return (
-    <main className="mx-2 py-3 text-white sm:mx-3 sm:py-5 md:py-8">
+    <main className="performance-page mx-2 py-3 text-white sm:mx-3 sm:py-5 md:py-8">
       <section
         className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0f172a] shadow-[0_24px_90px_rgba(0,0,0,0.42)]"
         style={{ minHeight: "clamp(620px, 82vh, 860px)" }}

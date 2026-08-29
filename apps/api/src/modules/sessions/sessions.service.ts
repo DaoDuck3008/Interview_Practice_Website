@@ -112,7 +112,7 @@ export class SessionsService {
   async getMyHistory(userId: string, query: QueryHistoryDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 10;
-    const where = { userId };
+    const where = { userId, questionId: { not: null } };
 
     const [items, total] = await this.prisma.$transaction([
       this.prisma.session.findMany({

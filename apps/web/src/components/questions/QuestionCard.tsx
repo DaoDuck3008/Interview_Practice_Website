@@ -248,13 +248,17 @@ export default function QuestionCard({
 
   return (
     <article
-      className="group overflow-hidden rounded-[24px] border backdrop-blur-2xl transition-all duration-300 hover:-translate-y-0.5"
+      className="question-card group overflow-hidden rounded-[24px] border transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5"
       style={{
-        borderColor: open ? "rgba(196,181,253,0.28)" : "rgba(255,255,255,0.11)",
-        background: open ? "rgba(48, 25, 98, 0.80)" : "rgba(9, 14, 29, 0.40)",
+        borderColor: open
+          ? "rgba(196,181,253,0.34)"
+          : "rgba(196,181,253,0.18)",
+        background: open
+          ? "rgba(61, 42, 116, 0.92)"
+          : "rgba(28, 33, 72, 0.9)",
         boxShadow: open
-          ? "inset 0 1px 0 rgba(255,255,255,0.12), 0 22px 54px rgba(76,29,149,0.16)"
-          : "inset 0 1px 0 rgba(255,255,255,0.08), 0 14px 40px rgba(2,6,23,0.18)",
+          ? "inset 0 1px 0 rgba(255,255,255,0.12), 0 12px 30px rgba(76,29,149,0.16)"
+          : "inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 20px rgba(2,6,23,0.16)",
       }}
     >
       <div className="flex w-full items-start gap-3 px-4 py-3.5 text-left sm:gap-4 sm:px-5">
@@ -287,7 +291,7 @@ export default function QuestionCard({
             <button
               type="button"
               onClick={handleToggleFavorite}
-              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/[0.055] transition-all duration-200 hover:bg-white/[0.11]"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/[0.055] transition-[background-color,color] duration-200 hover:bg-white/[0.11]"
               style={{ color: isFavorited ? "#fbbf24" : "#606072" }}
               title={isFavorited ? "Bỏ lưu" : "Lưu câu hỏi"}
             >
@@ -301,7 +305,7 @@ export default function QuestionCard({
           {topicSlug && (
             <Link
               href={getDetailHref()}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.055] text-[#94a3b8] transition-all duration-200 hover:border-[#c4b5fd]/40 hover:bg-white/[0.11] hover:text-[#c4b5fd]"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.055] text-[#94a3b8] transition-[background-color,border-color,color] duration-200 hover:border-[#c4b5fd]/40 hover:bg-white/[0.11] hover:text-[#c4b5fd]"
               title="Xem chi tiết"
               aria-label="Xem chi tiết"
             >
@@ -312,7 +316,7 @@ export default function QuestionCard({
           <button
             type="button"
             onClick={handleToggleOpen}
-            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/[0.055] text-[#94a3b8] transition-all duration-200 hover:bg-white/[0.11] hover:text-[#c4b5fd]"
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/[0.055] text-[#94a3b8] transition-[background-color,color] duration-200 hover:bg-white/[0.11] hover:text-[#c4b5fd]"
             title={open ? "Thu gọn" : "Mở đáp án"}
             aria-label={open ? "Thu gọn" : "Mở đáp án"}
           >
@@ -352,14 +356,14 @@ export default function QuestionCard({
             <div className="mt-4 flex flex-col gap-2 border-t border-white/[0.06] pt-4 sm:flex-row sm:justify-end">
               <Link
                 href={getDetailHref()}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-[#e9d5ff] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[#c4b5fd]/35 hover:bg-white/[0.11] sm:w-auto"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-[#1c2338] px-4 py-2 text-sm font-semibold text-[#e9d5ff] transition-[transform,background-color,border-color] duration-200 hover:-translate-y-0.5 hover:border-[#c4b5fd]/35 hover:bg-[#272f4b] sm:w-auto"
               >
                 Xem chi tiết
                 <BookOpen size={14} />
               </Link>
               <Link
                 href={getPracticeQuestionHref(topicSlug, question)}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#c4b5fd]/30 bg-[#7c3aed]/20 px-4 py-2 text-sm font-semibold text-[#f4f4f6] shadow-[0_0_22px_rgba(124,58,237,0.12)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[#ddd6fe]/55 hover:bg-[rgba(139,92,246,0.24)] sm:w-auto"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#c4b5fd]/30 bg-[#5930a8] px-4 py-2 text-sm font-semibold text-[#f4f4f6] shadow-[0_0_22px_rgba(124,58,237,0.12)] transition-[transform,background-color,border-color] duration-200 hover:-translate-y-0.5 hover:border-[#ddd6fe]/55 hover:bg-[#6a3bc4] sm:w-auto"
               >
                 Luyện tập
                 <ArrowUpRight size={14} />

@@ -111,7 +111,10 @@ export default function QuestionBrowser({
 
   useEffect(() => {
     function handleScroll() {
-      setShowBackToTop(window.scrollY > 480);
+      const shouldShow = window.scrollY > 480;
+      setShowBackToTop((visible) =>
+        visible === shouldShow ? visible : shouldShow,
+      );
     }
 
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -141,7 +144,7 @@ export default function QuestionBrowser({
               <Link
                 key={topic.id}
                 href={buildHref({ slug: topic.slug, page: 1 })}
-                className="flex h-8 flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border pl-1.5 pr-3 text-[13px] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.12]"
+                className="flex h-8 flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border pl-1.5 pr-3 text-[13px] transition-[transform,background-color] duration-200 hover:-translate-y-0.5 hover:bg-white/[0.12]"
                 style={{
                   background: active
                     ? "rgba(124,58,237,0.24)"
@@ -173,10 +176,10 @@ export default function QuestionBrowser({
         </div>
 
         <div
-          className="mb-2 overflow-hidden rounded-[28px] backdrop-blur-2xl"
+          className="mb-2 overflow-hidden rounded-[28px]"
           style={{
-            background: "rgba(15, 23, 42, 0.56)",
-            border: "1px solid rgba(255,255,255,0.13)",
+            background: "rgba(20, 25, 56, 0.88)",
+            border: "1px solid rgba(196,181,253,0.18)",
             boxShadow:
               "inset 0 1px 0 rgba(255,255,255,0.12), 0 22px 60px rgba(2,6,23,0.26)",
           }}
@@ -244,7 +247,7 @@ export default function QuestionBrowser({
                 onChange={(e) =>
                   navigate({ sort: e.target.value as SortMode, page: 1 })
                 }
-                className="h-9 cursor-pointer appearance-none rounded-full border border-white/10 bg-[#262639] pl-4 pr-9 text-sm font-semibold text-white outline-none backdrop-blur-xl transition-colors hover:bg-[#262639]/80"
+                className="h-9 cursor-pointer appearance-none rounded-full border border-white/10 bg-[#262639] pl-4 pr-9 text-sm font-semibold text-white outline-none transition-colors hover:bg-[#302f4a]"
               >
                 {SORT_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -273,7 +276,7 @@ export default function QuestionBrowser({
                     navigate({ level: lvl.value as Level | "ALL", page: 1 })
                   }
                   className={[
-                    "flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border px-4 py-2 text-[13px] font-semibold backdrop-blur-xl transition-all duration-200",
+                    "flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border px-4 py-2 text-[13px] font-semibold transition-[transform,background-color,border-color] duration-200",
                     active
                       ? "border-[#c4b5fd]/35 bg-[rgba(124,58,237,0.24)] text-[#f4f4f6] shadow-[0_0_22px_rgba(124,58,237,0.16)]"
                       : "border-white/[0.08] bg-white/[0.045] text-[#cbd5e1] hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white",
@@ -371,7 +374,7 @@ export default function QuestionBrowser({
 
         {items.length === 0 ? (
           <div className="flex items-center justify-center py-24">
-            <div className="max-w-xl rounded-[28px] border border-white/10 bg-white/[0.06] px-6 py-5 text-center text-sm text-[#cbd5e1] backdrop-blur-xl">
+            <div className="max-w-xl rounded-[28px] border border-white/10 bg-[#151b2d] px-6 py-5 text-center text-sm text-[#cbd5e1]">
               <p className="font-semibold text-[#f4f4f6]">
                 {initialSearch
                   ? `Không tìm thấy kết quả cho "${initialSearch}".`
@@ -439,7 +442,7 @@ export default function QuestionBrowser({
           onClick={scrollToTop}
           aria-label="Lên đầu trang"
           title="Lên đầu trang"
-          className="fixed bottom-36 right-4 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-[#0f172a]/60 text-[#d4d4e0] shadow-[0_18px_44px_rgba(2,6,23,0.34)] backdrop-blur-2xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[#c4b5fd]/50 hover:bg-white/[0.1] hover:text-white"
+          className="fixed bottom-36 right-4 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-[#171d31] text-[#d4d4e0] shadow-[0_18px_44px_rgba(2,6,23,0.34)] transition-[transform,background-color,border-color,color] duration-200 hover:-translate-y-0.5 hover:border-[#c4b5fd]/50 hover:bg-[#232b46] hover:text-white"
         >
           <ArrowUp size={18} />
         </button>

@@ -58,10 +58,8 @@ export default function TopicsSidebar({
     <aside
       className="sticky hidden h-full max-h-[calc(150dvh)] w-60 flex-shrink-0 flex-col overflow-hidden rounded-[28px] md:flex"
       style={{
-        background: "rgba(15, 23, 42, 0.56)",
-        backdropFilter: "blur(22px)",
-        WebkitBackdropFilter: "blur(22px)",
-        border: "1px solid rgba(255,255,255,0.13)",
+        background: "rgba(20, 25, 56, 0.88)",
+        border: "1px solid rgba(196,181,253,0.18)",
         boxShadow:
           "inset 0 1px 0 rgba(255,255,255,0.12), 0 22px 60px rgba(2,6,23,0.32)",
       }}

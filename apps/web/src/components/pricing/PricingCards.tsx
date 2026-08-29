@@ -25,7 +25,7 @@ const FEATURES = [
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const cardClass =
-  "pricing-card-push-in group relative flex h-full flex-col rounded-[28px] border p-7 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_24px_70px_rgba(2,6,23,0.22)] backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1";
+  "pricing-card-push-in group relative flex h-full flex-col rounded-[28px] border p-7 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_14px_38px_rgba(2,6,23,0.2)] transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-1";
 
 export default function PricingCards() {
   const router = useRouter();
@@ -59,7 +59,9 @@ export default function PricingCards() {
     }
 
     if (hasActiveSub) {
-      toast.info("Gói hiện tại vẫn còn hiệu lực. Bạn có thể mua lại sau khi hết hạn.");
+      toast.info(
+        "Gói hiện tại vẫn còn hiệu lực. Bạn có thể mua lại sau khi hết hạn.",
+      );
       return;
     }
 
@@ -68,10 +70,7 @@ export default function PricingCards() {
       const order = await createCheckout(slug);
       router.push(`/pricing/checkout/${order.id}`);
     } catch (error) {
-      toastApiError(
-        error,
-        "Không tạo được đơn thanh toán. Vui lòng thử lại.",
-      );
+      toastApiError(error, "Không tạo được đơn thanh toán. Vui lòng thử lại.");
       setLoadingSlug(null);
     }
   }
@@ -104,7 +103,7 @@ export default function PricingCards() {
         {[0, 1, 2].map((i) => (
           <div
             key={i}
-            className={`${cardClass} skeleton-pulse min-h-[420px] border-white/10 bg-white/[0.055]`}
+            className={`${cardClass} skeleton-pulse min-h-[420px] border-[#c4b5fd]/16 bg-[#0b0d16]`}
           />
         ))}
       </div>
@@ -114,14 +113,14 @@ export default function PricingCards() {
   return (
     <div>
       {hasActiveSub && (
-        <div className="mb-8 flex items-start gap-3 rounded-[24px] border border-[#c4b5fd]/25 bg-[#0f172a]/34 p-4 text-sm text-[#cbd5e1] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-2xl">
+        <div className="mb-8 flex items-start gap-3 rounded-[24px] border border-[#c4b5fd]/25 bg-[#0d0f19]/35 p-4 text-sm text-[#cbd5e1] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
           <Info size={18} className="mt-0.5 flex-shrink-0 text-[#c4b5fd]" />
           <p>
             Bạn đang dùng gói{" "}
-            <span className="font-semibold text-white">{sub!.plan.name}</span>{" "}
-            · còn <span className="font-semibold">{remainingDays}</span> ngày
-            (hết hạn {expiryStr}). Bạn có thể mua gói mới sau khi gói hiện tại
-            hết hạn.
+            <span className="font-semibold text-white">{sub!.plan.name}</span> ·
+            còn <span className="font-semibold">{remainingDays}</span> ngày (hết
+            hạn {expiryStr}). Bạn có thể mua gói mới sau khi gói hiện tại hết
+            hạn.
           </p>
         </div>
       )}
@@ -143,18 +142,18 @@ export default function PricingCards() {
                 }`}
                 style={{
                   background: popular
-                    ? "linear-gradient(180deg, rgba(124,58,237,0.22), rgba(15,23,42,0.24))"
-                    : "rgba(15, 23, 42, 0.28)",
+                    ? "rgba(30, 21, 52, 0.66)"
+                    : "rgba(10, 12, 21, 0.44)",
                   animationDelay: `${i * 110}ms`,
                 }}
               >
                 {isCurrent ? (
-                  <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full border border-[#22c55e]/35 bg-[#0f172a]/80 px-3 py-1 text-[11px] font-semibold text-[#86efac] backdrop-blur-xl">
+                  <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full border border-[#22c55e]/35 bg-[#0f111b] px-3 py-1 text-[11px] font-semibold text-[#86efac]">
                     <BadgeCheck size={12} />
                     Đang sử dụng
                   </span>
                 ) : popular ? (
-                  <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full border border-[#c4b5fd]/35 bg-[#7c3aed]/55 px-3 py-1 text-[11px] font-semibold text-white shadow-[0_0_24px_rgba(124,58,237,0.24)] backdrop-blur-xl">
+                  <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full border border-[#c4b5fd]/35 bg-[#5930a8] px-3 py-1 text-[11px] font-semibold text-white shadow-[0_0_18px_rgba(124,58,237,0.2)]">
                     <Sparkles size={11} />
                     Tiết kiệm nhất
                   </span>
@@ -198,7 +197,7 @@ export default function PricingCards() {
                   type="button"
                   onClick={() => handleBuy(plan.slug)}
                   disabled={loadingSlug !== null || hasActiveSub}
-                  className="mt-auto inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.065] px-4 py-3 text-sm font-semibold text-[#f4f4f6] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[#c4b5fd]/45 hover:bg-white/[0.12] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-auto inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-white/15 bg-[#171925] px-4 py-3 text-sm font-semibold text-[#f4f4f6] transition-[transform,background-color,border-color] duration-200 hover:-translate-y-0.5 hover:border-[#c4b5fd]/45 hover:bg-[#242035] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {loadingSlug === plan.slug && (
                     <Loader2 size={15} className="animate-spin" />
