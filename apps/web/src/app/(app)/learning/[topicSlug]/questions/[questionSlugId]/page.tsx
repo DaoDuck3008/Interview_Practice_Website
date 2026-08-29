@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
+import { cache } from "react";
 import LearningQuestionDetail from "@/components/questions/LearningQuestionDetail";
 import { getQuestion, getQuestionsPublic } from "@/lib/api/questions";
 import {
@@ -23,6 +24,9 @@ const DEFAULT_METADATA = createSeoMetadata({
   description:
     "Xem câu hỏi phỏng vấn IT, đáp án tóm tắt, đáp án chi tiết và các câu hỏi liên quan để ôn tập hiệu quả.",
 });
+
+// Chia sẻ kết quả giữa metadata và nội dung của cùng một lượt render, tránh gọi API chi tiết hai lần.
+const getQuestionForPage = cache(getQuestion);
 
 function truncateSeoText(text: string, maxLength: number) {
   const normalized = text.replace(/\s+/g, " ").trim();
@@ -51,7 +55,7 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   const { topicSlug, questionSlugId } = await params;
   const { id: questionId } = parseQuestionSlugId(questionSlugId);
-  const question = await getQuestion(questionId);
+  const question = await getQuestionForPage(questionId);
 
   if (!question) return DEFAULT_METADATA;
 
@@ -78,7 +82,7 @@ export default async function LearningQuestionDetailPage({
   const { topicSlug, questionSlugId } = await params;
   const { returnTo } = await searchParams;
   const { id: questionId } = parseQuestionSlugId(questionSlugId);
-  const question = await getQuestion(questionId);
+  const question = await getQuestionForPage(questionId);
 
   if (!question) notFound();
 

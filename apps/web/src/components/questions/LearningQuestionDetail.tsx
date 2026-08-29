@@ -45,7 +45,7 @@ const markdownComponents: React.ComponentProps<
   ),
   li: ({ children }) => <li>{children}</li>,
   blockquote: ({ children }) => (
-    <blockquote className="my-5 rounded-2xl border border-[#c4b5fd]/20 bg-white/[0.055] px-4 py-3 text-[#ddd6fe] backdrop-blur-xl">
+    <blockquote className="my-5 rounded-2xl border border-[#c4b5fd]/20 bg-[#171c37]/90 px-4 py-3 text-[#ddd6fe]">
       {children}
     </blockquote>
   ),
@@ -145,19 +145,19 @@ export default function LearningQuestionDetail({
   const answerKeywords = question.answerKeywords ?? [];
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-5 md:px-6 md:py-7 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-      <article className="min-w-0 overflow-hidden rounded-[30px] border border-white/[0.13] bg-[#0f172a]/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_24px_70px_rgba(2,6,23,0.28)] backdrop-blur-2xl">
+    <main className="performance-page mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-5 md:px-6 md:py-7 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+      <article className="min-w-0 overflow-hidden rounded-[30px] border border-white/[0.13] bg-[#10162d]/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_20px_50px_rgba(2,6,23,0.24)]">
         <div className="border-b border-white/[0.08] px-4 py-5 sm:px-6">
           {/* Keep the detail page visually tied to the learning list shell. */}
           <nav className="flex flex-wrap items-center gap-2 text-xs text-[#94a3b8]">
             <Link
               href={backHref}
-              className="rounded-full border border-white/10 bg-white/[0.055] px-3 py-1.5 font-semibold transition-colors hover:bg-white/[0.11] hover:text-white"
+              className="rounded-full border border-white/10 bg-[#1a203d] px-3 py-1.5 font-semibold transition-colors hover:bg-[#242b4d] hover:text-white"
             >
               Câu hỏi
             </Link>
             <span className="text-[#64748b]">/</span>
-            <span className="rounded-full border border-white/10 bg-white/[0.045] px-3 py-1.5 font-semibold text-[#ddd6fe]">
+            <span className="rounded-full border border-white/10 bg-[#151a34] px-3 py-1.5 font-semibold text-[#ddd6fe]">
               {topicName}
             </span>
           </nav>
@@ -185,7 +185,7 @@ export default function LearningQuestionDetail({
               {answerKeywords.map((keyword) => (
                 <span
                   key={keyword}
-                  className="rounded-full border border-white/10 bg-white/[0.055] px-3 py-1 text-xs font-semibold text-[#cbd5e1] backdrop-blur-xl"
+                  className="rounded-full border border-white/10 bg-[#171c37] px-3 py-1 text-xs font-semibold text-[#cbd5e1]"
                 >
                   {keyword}
                 </span>
@@ -196,7 +196,7 @@ export default function LearningQuestionDetail({
 
         <div className="px-4 py-5 sm:px-6 sm:py-6">
           {question.answerKeySummary && (
-            <section className="mb-6 rounded-[24px] border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
+            <section className="mb-6 rounded-[24px] border border-white/10 bg-[#171c37]/90 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
               <div className="mb-2 flex items-center gap-2 text-sm font-bold text-[#f4f4f6]">
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#c4b5fd]/25 bg-[#7c3aed]/15 text-[#c4b5fd]">
                   <BookOpen size={16} />
@@ -232,14 +232,14 @@ export default function LearningQuestionDetail({
           <div className="mt-8 flex flex-col gap-3 border-t border-white/[0.08] pt-5 sm:flex-row">
             <Link
               href={backHref}
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-semibold text-[#e9d5ff] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[#c4b5fd]/35 hover:bg-white/[0.11] hover:text-white"
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-[#1a203d] px-4 py-3 text-sm font-semibold text-[#e9d5ff] transition-[transform,background-color,border-color,color] duration-200 hover:-translate-y-0.5 hover:border-[#c4b5fd]/35 hover:bg-[#242b4d] hover:text-white"
             >
               <ArrowLeft size={16} />
               Quay lại danh sách
             </Link>
             <Link
               href={practiceHref}
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-[#c4b5fd]/30 bg-[#7c3aed]/25 px-4 py-3 text-sm font-bold text-white shadow-[0_0_24px_rgba(124,58,237,0.18)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[#ddd6fe]/55 hover:bg-[rgba(139,92,246,0.3)]"
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-[#c4b5fd]/30 bg-[#5a38a3] px-4 py-3 text-sm font-bold text-white shadow-[0_10px_24px_rgba(76,45,145,0.2)] transition-[transform,background-color,border-color] duration-200 hover:-translate-y-0.5 hover:border-[#ddd6fe]/55 hover:bg-[#6a47bb]"
             >
               <Mic size={16} />
               Luyện tập câu này

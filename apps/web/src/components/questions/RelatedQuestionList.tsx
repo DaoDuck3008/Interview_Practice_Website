@@ -28,7 +28,7 @@ export default function RelatedQuestionList({
     .slice(0, 5);
 
   return (
-    <section className="overflow-hidden rounded-[26px] border border-white/[0.12] bg-[#0f172a]/52 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_18px_48px_rgba(2,6,23,0.22)] backdrop-blur-2xl">
+    <section className="overflow-hidden rounded-[26px] border border-white/[0.12] bg-[#10162d]/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_16px_42px_rgba(2,6,23,0.2)]">
       <div className="border-b border-white/[0.08] px-4 py-4">
         <h2 className="text-sm font-bold text-[#f4f4f6]">{title}</h2>
         {description && (
@@ -52,7 +52,7 @@ export default function RelatedQuestionList({
               <Link
                 key={question.id}
                 href={detailHref}
-                className="group flex items-start gap-3 px-4 py-3 transition-all duration-200 hover:bg-white/[0.07]"
+                className="group flex items-start gap-3 px-4 py-3 transition-[background-color] duration-200 hover:bg-[#1a203d]"
               >
                 <span
                   className={`mt-0.5 shrink-0 self-start rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${levelStyle.className}`}

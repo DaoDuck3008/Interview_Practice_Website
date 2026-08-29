@@ -10,7 +10,7 @@ export default function LoadingLearningQuestionDetail() {
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-5 md:px-6 md:py-7 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
       {/* Detail skeleton keeps navigation between list and detail visually steady. */}
-      <article className="min-w-0 overflow-hidden rounded-[30px] border border-white/[0.13] bg-[#0f172a]/55 backdrop-blur-2xl">
+      <article className="min-w-0 overflow-hidden rounded-[30px] border border-white/[0.13] bg-[#10162d]/95">
         <div className="border-b border-white/[0.08] px-4 py-5 sm:px-6">
           <div className="flex gap-2">
             <SkeletonPill className="h-8 w-24" />
@@ -48,7 +48,7 @@ export default function LoadingLearningQuestionDetail() {
       </article>
 
       <aside className="flex flex-col gap-3 lg:sticky lg:top-24">
-        <div className="rounded-[26px] border border-white/[0.12] bg-[#0f172a]/52 p-4 backdrop-blur-2xl">
+        <div className="rounded-[26px] border border-white/[0.12] bg-[#10162d]/95 p-4">
           <SkeletonPill className="h-5 w-28" />
           <SkeletonPill className="mt-2 h-3 w-full rounded-xl" />
           <div className="mt-5 space-y-3">

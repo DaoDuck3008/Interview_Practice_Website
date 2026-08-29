@@ -251,13 +251,13 @@ export default function QuestionCard({
       className="question-card group overflow-hidden rounded-[24px] border transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5"
       style={{
         borderColor: open
-          ? "rgba(196,181,253,0.34)"
+          ? "rgba(196,181,253,0.42)"
           : "rgba(196,181,253,0.18)",
         background: open
-          ? "rgba(61, 42, 116, 0.92)"
+          ? "rgba(42, 32, 82, 0.98)"
           : "rgba(28, 33, 72, 0.9)",
         boxShadow: open
-          ? "inset 0 1px 0 rgba(255,255,255,0.12), 0 12px 30px rgba(76,29,149,0.16)"
+          ? "inset 0 1px 0 rgba(255,255,255,0.1), 0 10px 26px rgba(15,10,35,0.28)"
           : "inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 20px rgba(2,6,23,0.16)",
       }}
     >
