@@ -13,7 +13,6 @@ import {
   X,
 } from "lucide-react";
 import axios from "axios";
-import Link from "next/link";
 import {
   createSession,
   scoreSession,
@@ -24,7 +23,6 @@ import type { Score, Improvement, Session } from "@/lib/api/sessions";
 import { formatTime } from "@/lib/utils/format";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { audioFileNameFromBlob } from "@/lib/audioFile";
-import { useAiCredits } from "@/hooks/useAiCredits";
 import { waitForScoreResult, waitForImproveResult } from "@/lib/ws/jobs";
 import TranscriptPanel from "@/components/practice/TranscriptPanel";
 import AnswerEvaluation from "@/components/practice/AnswerEvaluation";
@@ -55,16 +53,6 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
   const [improvement, setImprovement] = useState<Improvement | null>(null);
   const [improvementError, setImprovementError] = useState("");
   const [isImproving, setIsImproving] = useState(false);
-
-  const { balance, pricing, refreshBalance } = useAiCredits({
-    loadBalance: true,
-    loadPricing: true,
-  });
-  const answerAudioCost = pricing?.ANSWER_AUDIO ?? null;
-  const outOfCredits =
-    balance !== null &&
-    answerAudioCost !== null &&
-    balance.available < answerAudioCost;
 
   const applyScore = useCallback(
     (session: Session, score: Score) => {
@@ -158,13 +146,11 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
         );
         onSessionSaved?.(createdSession);
       }
-      void refreshBalance().catch(() => undefined);
       setPhase("evaluated");
     },
     [
       questionId,
       onSessionSaved,
-      refreshBalance,
       applyScore,
     ],
   );
@@ -227,9 +213,8 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
         serverMsg ?? "Không thể tạo bản cải thiện — vui lòng thử lại.",
       );
     }
-    void refreshBalance().catch(() => undefined);
     setIsImproving(false);
-  }, [sessionId, applyImprovement, refreshBalance]);
+  }, [sessionId, applyImprovement]);
 
   const handleReset = useCallback(() => {
     resetRecorder();
@@ -267,56 +252,24 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
         {/* IDLE */}
         {recorderStatus === "idle" && phase === "idle" && (
           <div className="flex flex-col items-center gap-3 py-6">
-            {outOfCredits ? (
-              <>
-                <div
-                  className="w-20 h-20 rounded-full flex items-center justify-center opacity-40"
-                  style={{ background: "#13131c", border: "1px solid #1c1c28" }}
-                >
-                  <Mic size={30} className="text-[#606072]" />
-                </div>
-                <div className="flex flex-col items-center gap-1.5 text-center max-w-xs">
-                  <p className="text-sm text-[#f59e0b]">
-                    Bạn không còn đủ AI credits để chấm câu trả lời này.
-                  </p>
-                  <Link
-                    href="/pricing"
-                    className="text-sm font-medium text-[#8b5cf6] hover:underline"
-                  >
-                    Nâng cấp gói để luyện nhiều hơn →
-                  </Link>
-                </div>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => {
-                    new Audio("/sounds/record_start.mp3")
-                      .play()
-                      .catch(() => {});
-                    startRecorder();
-                  }}
-                  className="w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
-                  style={{
-                    background: "#7c3aed",
-                    boxShadow:
-                      "0 0 40px rgba(124,58,237,0.45), 0 0 80px rgba(124,58,237,0.15)",
-                  }}
-                  aria-label="Bắt đầu ghi âm"
-                >
-                  <Mic size={30} className="text-white" />
-                </button>
-                <p className="text-sm text-[#606072] font-mono">
-                  Nhấn để bắt đầu ghi âm
-                </p>
-                {balance && answerAudioCost !== null && (
-                  <p className="text-xs text-[#606072]">
-                    Hiện có {balance.available} AI credits · tác vụ này cần{" "}
-                    {answerAudioCost}
-                  </p>
-                )}
-              </>
-            )}
+            <button
+              onClick={() => {
+                new Audio("/sounds/record_start.mp3").play().catch(() => {});
+                startRecorder();
+              }}
+              className="w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
+              style={{
+                background: "#7c3aed",
+                boxShadow:
+                  "0 0 40px rgba(124,58,237,0.45), 0 0 80px rgba(124,58,237,0.15)",
+              }}
+              aria-label="Bắt đầu ghi âm"
+            >
+              <Mic size={30} className="text-white" />
+            </button>
+            <p className="text-sm text-[#606072] font-mono">
+              Nhấn để bắt đầu ghi âm
+            </p>
           </div>
         )}
 

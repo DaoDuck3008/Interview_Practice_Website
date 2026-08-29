@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import axios from "axios";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
-import { useAiCredits } from "@/hooks/useAiCredits";
 import type {
   InterviewAnswerUpload,
   InterviewSessionView,
@@ -51,7 +50,6 @@ export default function InterviewRoomSession({
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const hydrated = useAuthStore((s) => s.hydrated);
-  const { refreshBalance } = useAiCredits();
 
   const [mock, setMock] = useState<InterviewSessionView | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -242,7 +240,6 @@ export default function InterviewRoomSession({
             : current,
         );
         setUploadState(hasNextQuestion ? "idle" : "done");
-        void refreshBalance().catch(() => undefined);
       } catch (err) {
         const serverMsg = axios.isAxiosError(err)
           ? (err.response?.data?.message as string | undefined)
@@ -256,7 +253,6 @@ export default function InterviewRoomSession({
       activeQuestion,
       answerQuestion,
       mock,
-      refreshBalance,
     ],
   );
 
