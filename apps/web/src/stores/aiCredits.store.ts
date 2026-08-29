@@ -9,44 +9,78 @@ import {
 interface AiCreditsStore {
   balance: AiCreditBalance | null;
   pricing: AiCreditPricing | null;
-  loading: boolean;
-  refresh(): Promise<void>;
+  balanceLoading: boolean;
+  pricingLoading: boolean;
+  ensureBalance(): Promise<void>;
+  refreshBalance(): Promise<void>;
+  ensurePricing(): Promise<void>;
   reset(): void;
 }
 
-let refreshPromise: Promise<void> | null = null;
-let refreshGeneration = 0;
+let balanceRequest: Promise<void> | null = null;
+let pricingRequest: Promise<void> | null = null;
+let requestGeneration = 0;
 
-export const useAiCreditsStore = create<AiCreditsStore>()((set) => ({
+export const useAiCreditsStore = create<AiCreditsStore>()((set, get) => ({
   balance: null,
   pricing: null,
-  loading: false,
+  balanceLoading: false,
+  pricingLoading: false,
 
-  refresh: async () => {
-    if (refreshPromise) return refreshPromise;
+  ensureBalance: async () => {
+    if (get().balance) return;
+    return get().refreshBalance();
+  },
 
-    const generation = refreshGeneration;
-    set({ loading: true });
-    const request = Promise.all([
-      getAiCreditBalance(),
-      getAiCreditPricing(),
-    ])
-      .then(([balance, pricing]) => {
-        if (generation === refreshGeneration) set({ balance, pricing });
+  refreshBalance: async () => {
+    if (balanceRequest) return balanceRequest;
+
+    const generation = requestGeneration;
+    set({ balanceLoading: true });
+    const request = getAiCreditBalance()
+      .then((balance) => {
+        if (generation === requestGeneration) set({ balance });
       })
       .finally(() => {
-        if (refreshPromise === request) {
-          set({ loading: false });
-          refreshPromise = null;
+        if (balanceRequest === request) {
+          set({ balanceLoading: false });
+          balanceRequest = null;
         }
       });
-    refreshPromise = request;
+    balanceRequest = request;
+    return request;
+  },
+
+  ensurePricing: async () => {
+    if (get().pricing || pricingRequest) {
+      return pricingRequest ?? Promise.resolve();
+    }
+
+    const generation = requestGeneration;
+    set({ pricingLoading: true });
+    const request = getAiCreditPricing()
+      .then((pricing) => {
+        if (generation === requestGeneration) set({ pricing });
+      })
+      .finally(() => {
+        if (pricingRequest === request) {
+          set({ pricingLoading: false });
+          pricingRequest = null;
+        }
+      });
+    pricingRequest = request;
     return request;
   },
 
   reset: () => {
-    refreshGeneration += 1;
-    refreshPromise = null;
-    set({ balance: null, pricing: null, loading: false });
+    requestGeneration += 1;
+    balanceRequest = null;
+    pricingRequest = null;
+    set({
+      balance: null,
+      pricing: null,
+      balanceLoading: false,
+      pricingLoading: false,
+    });
   },
 }));

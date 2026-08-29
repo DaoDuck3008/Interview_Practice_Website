@@ -9,11 +9,9 @@ import {
   ChevronDown,
   LayoutDashboard,
   CreditCard,
-  Zap,
   Bookmark,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
-import { useAiCredits } from "@/hooks/useAiCredits";
 import { useAiCreditsStore } from "@/stores/aiCredits.store";
 import { useFavoritesStore } from "@/stores/favorites.store";
 import { logoutApi } from "@/lib/api/auth";
@@ -21,29 +19,6 @@ import { usePathname, useRouter } from "next/navigation";
 import FavoritesDrawer from "./FavoritesDrawer";
 import HeaderMenuModal from "./HeaderMenuModal";
 import Avatar from "@/components/ui/Avatar";
-
-function AiCreditBadge({ refreshKey }: { refreshKey: string }) {
-  const { balance, loading } = useAiCredits(refreshKey);
-  const available = balance?.available;
-
-  return (
-    <div
-      title={
-        available === undefined
-          ? loading
-            ? "Đang tải số dư AI credits"
-            : "Chưa tải được số dư AI credits"
-          : `${available} AI credits khả dụng`
-      }
-      className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-accent-light/20 bg-accent/10 px-3 py-1.5"
-    >
-      <Zap size={13} className="text-accent-light" />
-      <span className="text-xs font-bold tabular-nums text-accent-light">
-        {loading && available === undefined ? "…" : (available ?? "—")}
-      </span>
-    </div>
-  );
-}
 
 const NAV_LINKS = [
   { href: "/learning/javascript/questions", label: "Câu Hỏi" },
@@ -193,9 +168,7 @@ export default function Header() {
   }, []);
 
   return (
-    <header
-      className="sticky left-0 right-0 top-3 z-50 px-3 transition-all duration-300 sm:px-5"
-    >
+    <header className="sticky left-0 right-0 top-3 z-50 px-3 transition-all duration-300 sm:px-5">
       <nav
         className={`mx-auto flex h-16 max-w-7xl items-center justify-between rounded-full border px-3 pr-2 shadow-[0_18px_65px_rgba(2,6,23,0.28)] backdrop-blur-2xl transition-all duration-300 sm:px-4 sm:pr-3 ${
           scrolled
@@ -244,7 +217,6 @@ export default function Header() {
           {hydrated &&
             (user ? (
               <>
-                <AiCreditBadge refreshKey={pathname} />
                 <button
                   onClick={() => setFavDrawerOpen(true)}
                   className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-[#cbd5e1] transition-all duration-300 hover:border-violet-300/25 hover:bg-white/[0.1] hover:text-white"
@@ -289,10 +261,7 @@ export default function Header() {
         </button>
       </nav>
 
-      <HeaderMenuModal
-        open={menuOpen}
-        onClose={() => setMenuOpen(false)}
-      >
+      <HeaderMenuModal open={menuOpen} onClose={() => setMenuOpen(false)}>
         <nav aria-label="Điều hướng trên thiết bị nhỏ">
           <ul className="flex flex-col gap-2">
             {NAV_LINKS.map((link) => {

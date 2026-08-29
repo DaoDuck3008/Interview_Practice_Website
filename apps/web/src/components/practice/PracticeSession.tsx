@@ -56,7 +56,10 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
   const [improvementError, setImprovementError] = useState("");
   const [isImproving, setIsImproving] = useState(false);
 
-  const { balance, pricing, refresh: refreshCredits } = useAiCredits();
+  const { balance, pricing, refreshBalance } = useAiCredits({
+    loadBalance: true,
+    loadPricing: true,
+  });
   const answerAudioCost = pricing?.ANSWER_AUDIO ?? null;
   const outOfCredits =
     balance !== null &&
@@ -155,13 +158,13 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
         );
         onSessionSaved?.(createdSession);
       }
-      void refreshCredits();
+      void refreshBalance().catch(() => undefined);
       setPhase("evaluated");
     },
     [
       questionId,
       onSessionSaved,
-      refreshCredits,
+      refreshBalance,
       applyScore,
     ],
   );
@@ -224,9 +227,9 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
         serverMsg ?? "Không thể tạo bản cải thiện — vui lòng thử lại.",
       );
     }
-    void refreshCredits();
+    void refreshBalance().catch(() => undefined);
     setIsImproving(false);
-  }, [sessionId, applyImprovement, refreshCredits]);
+  }, [sessionId, applyImprovement, refreshBalance]);
 
   const handleReset = useCallback(() => {
     resetRecorder();

@@ -30,12 +30,7 @@ import { toastApiError } from "@/lib/utils/apiError";
 import { useStatusModal } from "@/components/ui/useStatusModal";
 import TextType from "@/components/ui/TextType";
 import { useSocket } from "@/hooks/useSocket";
-import {
-  getAiCreditBalance,
-  getAiCreditPricing,
-  type AiCreditBalance,
-  type AiCreditPricing,
-} from "@/lib/api/aiCredits";
+import { useAiCredits } from "@/hooks/useAiCredits";
 
 const PAGE_SIZE = 6;
 
@@ -56,12 +51,11 @@ export default function MockCvPage() {
   const [uploading, setUploading] = useState(false);
   const [retryingCvId, setRetryingCvId] = useState<string | null>(null);
   const [deletingCvId, setDeletingCvId] = useState<string | null>(null);
-  const [creditBalance, setCreditBalance] = useState<AiCreditBalance | null>(
-    null,
-  );
-  const [creditPricing, setCreditPricing] = useState<AiCreditPricing | null>(
-    null,
-  );
+  const {
+    balance: creditBalance,
+    pricing: creditPricing,
+    refreshBalance,
+  } = useAiCredits({ loadBalance: true, loadPricing: true });
   const uploadLockRef = useRef(false);
   const loadRequestIdRef = useRef(0);
   const latestSearchRef = useRef("");
@@ -124,26 +118,9 @@ export default function MockCvPage() {
     [debouncedSearch, page, sortOrder],
   );
 
-  const loadCreditInfo = useCallback(async () => {
-    const [balanceResult, pricingResult] = await Promise.allSettled([
-      getAiCreditBalance(),
-      getAiCreditPricing(),
-    ]);
-    if (balanceResult.status === "fulfilled") {
-      setCreditBalance(balanceResult.value);
-    }
-    if (pricingResult.status === "fulfilled") {
-      setCreditPricing(pricingResult.value);
-    }
-  }, []);
-
   useEffect(() => {
     queueMicrotask(() => void loadCvs());
   }, [loadCvs]);
-
-  useEffect(() => {
-    queueMicrotask(() => void loadCreditInfo());
-  }, [loadCreditInfo]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -162,7 +139,7 @@ export default function MockCvPage() {
     if (!socket) return;
     const refresh = () => {
       void loadCvs(true);
-      void loadCreditInfo();
+      void refreshBalance().catch(() => undefined);
     };
     socket.on("mock-cv:analysis-updated", refresh);
     socket.on("mock-cv:questions-updated", refresh);
@@ -176,7 +153,7 @@ export default function MockCvPage() {
       socket.off("mock-cv-interview:failed", refresh);
       socket.off("connect", refresh);
     };
-  }, [loadCreditInfo, loadCvs, socket]);
+  }, [loadCvs, refreshBalance, socket]);
 
   const shouldShowPagination = total > PAGE_SIZE;
 
@@ -202,7 +179,10 @@ export default function MockCvPage() {
     try {
       await retryMockCvAnalysis(cv.id);
       toast.success("Đã bắt đầu chuẩn bị lại CV.");
-      await Promise.all([loadCvs(true), loadCreditInfo()]);
+      await Promise.all([
+        loadCvs(true),
+        refreshBalance().catch(() => undefined),
+      ]);
     } catch (error) {
       toastApiError(error, "Không thể chuẩn bị lại CV. Vui lòng thử sau.");
     } finally {

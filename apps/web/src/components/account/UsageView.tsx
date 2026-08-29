@@ -1,25 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CalendarClock, Gauge, LockKeyhole, Sparkles } from "lucide-react";
-import { getAiCreditBalance, type AiCreditBalance } from "@/lib/api/aiCredits";
+import { useAiCredits } from "@/hooks/useAiCredits";
 import { formatDate, formatNumber } from "@/lib/utils/format";
 
 const cardClass = "rounded-2xl border border-border bg-surface p-6 md:p-8";
 
 export default function UsageView() {
-  const [balance, setBalance] = useState<AiCreditBalance | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { balance, balanceLoading } = useAiCredits({ loadBalance: true });
 
-  useEffect(() => {
-    getAiCreditBalance()
-      .then(setBalance)
-      .catch(() => setBalance(null))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) {
+  if (balanceLoading && !balance) {
     return (
       <div className="flex flex-1 flex-col gap-6">
         <div className={`${cardClass} h-28 animate-pulse`} />

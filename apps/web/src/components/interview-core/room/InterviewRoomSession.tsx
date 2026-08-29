@@ -51,7 +51,7 @@ export default function InterviewRoomSession({
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const hydrated = useAuthStore((s) => s.hydrated);
-  const { refresh: refreshCredits } = useAiCredits();
+  const { refreshBalance } = useAiCredits();
 
   const [mock, setMock] = useState<InterviewSessionView | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -242,7 +242,7 @@ export default function InterviewRoomSession({
             : current,
         );
         setUploadState(hasNextQuestion ? "idle" : "done");
-        void refreshCredits();
+        void refreshBalance().catch(() => undefined);
       } catch (err) {
         const serverMsg = axios.isAxiosError(err)
           ? (err.response?.data?.message as string | undefined)
@@ -256,7 +256,7 @@ export default function InterviewRoomSession({
       activeQuestion,
       answerQuestion,
       mock,
-      refreshCredits,
+      refreshBalance,
     ],
   );
 
