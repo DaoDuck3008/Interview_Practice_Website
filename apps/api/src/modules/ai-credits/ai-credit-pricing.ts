@@ -46,3 +46,12 @@ export function cvAnalysisFeature(questionCount: number): AiCreditFeature {
   if (questionCount <= 20) return AiCreditFeature.CV_ANALYSIS_20;
   return AiCreditFeature.CV_ANALYSIS_30;
 }
+
+/** Tổng credit tối đa để hoàn thành một bài Mock CV nếu trả lời tất cả câu hỏi. */
+export function mockCvTotalCreditCost(questionCount: number) {
+  return (
+    getAiCreditCost(cvAnalysisFeature(questionCount)) +
+    questionCount * getAiCreditCost(AiCreditFeature.ANSWER_AUDIO) +
+    getAiCreditCost(AiCreditFeature.MOCK_CV_OVERVIEW)
+  );
+}

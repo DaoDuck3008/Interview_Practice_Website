@@ -29,6 +29,7 @@ import { AiCreditsService } from '../../ai-credits/ai-credits.service';
 import {
   aiCreditReservationKey,
   cvAnalysisFeature,
+  mockCvTotalCreditCost,
 } from '../../ai-credits/ai-credit-pricing';
 
 const PUBLIC_ANALYSIS_SELECT = {
@@ -102,6 +103,10 @@ export class MockCvAnalysisService {
     const mockCvId = randomUUID();
     const analysisId = randomUUID();
     const feature = cvAnalysisFeature(dto.totalQuestions);
+    await this.aiCredits.assertAvailable(
+      userId,
+      mockCvTotalCreditCost(dto.totalQuestions),
+    );
     const creditKey = aiCreditReservationKey(
       feature,
       'MOCK_CV_ANALYSIS',
@@ -231,9 +236,12 @@ export class MockCvAnalysisService {
 
     this.assertCanRetry(mockCv.analysis);
     if (options.chargeUser !== false) {
-      const feature = cvAnalysisFeature(
-        mockCv.analysis.requestedQuestionCount ?? 10,
+      const totalQuestions = mockCv.analysis.requestedQuestionCount ?? 10;
+      await this.aiCredits.assertAvailable(
+        userId,
+        mockCvTotalCreditCost(totalQuestions),
       );
+      const feature = cvAnalysisFeature(totalQuestions);
       await this.aiCredits.reserve({
         userId,
         feature,

@@ -6,18 +6,23 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { AiCreditsService } from './ai-credits.service';
 
-@UseGuards(JwtAuthGuard)
 @Controller('ai-credits')
 export class AiCreditsController {
   constructor(private readonly aiCredits: AiCreditsService) {}
 
+  @Get('pricing')
+  getPricing() {
+    return this.aiCredits.getPricing();
+  }
+
   @Get('me')
+  @UseGuards(JwtAuthGuard)
   getMine(@CurrentUser() user: { id: string }) {
     return this.aiCredits.getBalance(user.id);
   }
 
   @Get('admin/summary')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   getAdminSummary() {
     return this.aiCredits.getAdminSummary();

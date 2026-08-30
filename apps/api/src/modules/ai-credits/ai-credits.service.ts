@@ -21,6 +21,7 @@ import {
   FREE_DAILY_AI_CREDITS,
   getAiCreditCost,
   getReservationTtlMs,
+  mockCvTotalCreditCost,
 } from './ai-credit-pricing';
 
 type TransactionClient = Prisma.TransactionClient;
@@ -63,6 +64,43 @@ export class AiCreditsService {
   async getBalance(userId: string) {
     const cycle = await this.getOrCreateActiveCycle(userId);
     return this.toBalance(cycle);
+  }
+
+  getPricing() {
+    return {
+      mockCv: {
+        totalCreditsByQuestionCount: {
+          10: mockCvTotalCreditCost(10),
+          20: mockCvTotalCreditCost(20),
+          30: mockCvTotalCreditCost(30),
+        },
+      },
+    };
+  }
+
+  /** Kiểm tra số dư server-side trước khi mở luồng AI nhiều bước. */
+  async assertAvailable(userId: string, requiredCredits: number) {
+    if (!Number.isInteger(requiredCredits) || requiredCredits <= 0) {
+      throw new BadRequestException('Số AI credits cần kiểm tra không hợp lệ.');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await lockBillingUser(tx, userId);
+      const cycle = await this.getOrCreateActiveCycleInTransaction(
+        tx,
+        userId,
+        new Date(),
+      );
+      const balance = this.toBalance(cycle);
+      if (balance.available < requiredCredits) {
+        throw creditException(
+          'AI_CREDITS_EXHAUSTED',
+          `Bạn cần ít nhất ${requiredCredits} AI credits để hoàn thành bài Mock CV này.`,
+          HttpStatus.PAYMENT_REQUIRED,
+        );
+      }
+      return balance;
+    });
   }
 
   /** Số liệu vận hành được aggregate tại DB, không tải lịch sử reservation lên bộ nhớ. */

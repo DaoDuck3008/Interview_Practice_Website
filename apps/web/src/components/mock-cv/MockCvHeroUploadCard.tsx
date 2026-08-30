@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   BriefcaseBusiness,
   ChevronDown,
   Clock3,
+  Coins,
   FileCheck2,
   FileQuestion,
   FileText,
@@ -22,6 +23,7 @@ import {
   type CreateMockCvInput,
   type MockCvTargetRoleCode,
 } from "@/lib/api/mockCvs";
+import { getAiCreditPricing, type AiCreditPricing } from "@/lib/api/aiCredits";
 
 const MAX_CV_SIZE = 5 * 1024 * 1024;
 
@@ -40,6 +42,8 @@ export default function MockCvHeroUploadCard({
     useState<(typeof MOCK_CV_QUESTION_OPTIONS)[number]>(10);
   const [durationSeconds, setDurationSeconds] =
     useState<(typeof MOCK_CV_DURATION_OPTIONS)[number]["value"]>(900);
+  const [pricing, setPricing] = useState<AiCreditPricing | null>(null);
+  const [pricingLoadFailed, setPricingLoadFailed] = useState(false);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     setFile(acceptedFiles[0] ?? null);
@@ -65,6 +69,17 @@ export default function MockCvHeroUploadCard({
           ? "File CV không hợp lệ."
           : null;
   const canSubmit = !!targetRoleCode && !!file && !submitting;
+  const totalCredits =
+    pricing?.mockCv.totalCreditsByQuestionCount[totalQuestions];
+
+  useEffect(() => {
+    void getAiCreditPricing()
+      .then((data) => {
+        setPricing(data);
+        setPricingLoadFailed(false);
+      })
+      .catch(() => setPricingLoadFailed(true));
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -193,6 +208,14 @@ export default function MockCvHeroUploadCard({
                 aria-hidden="true"
                 className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-violet-200/75 transition-transform group-focus-within:rotate-180"
               />
+            </span>
+            <span className="mt-2 flex items-center gap-1.5 text-xs font-medium text-violet-100/80">
+              <Coins size={14} aria-hidden="true" className="text-amber-300" />
+              {totalCredits !== undefined
+                ? `Tối đa ${totalCredits} AI credits cho toàn bộ bài luyện`
+                : pricingLoadFailed
+                  ? "Chưa thể tải giá AI credits"
+                  : "Đang tải giá AI credits"}
             </span>
           </label>
 
