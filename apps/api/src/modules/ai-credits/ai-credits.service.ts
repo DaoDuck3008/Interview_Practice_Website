@@ -309,7 +309,7 @@ export class AiCreditsService {
 
   /** Consume là idempotent: gọi lại reservation đã CONSUMED không trừ thêm credit. */
   async consume(reservationId: string) {
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const reservation = await tx.creditReservation.findUnique({
         where: { id: reservationId },
       });
@@ -318,7 +318,7 @@ export class AiCreditsService {
       await lockBillingUser(tx, reservation.userId);
 
       if (reservation.status === CreditReservationStatus.CONSUMED) {
-        return reservation;
+        return { kind: 'consumed' as const, reservation };
       }
       if (reservation.status !== CreditReservationStatus.PENDING) {
         throw creditException(
@@ -334,11 +334,7 @@ export class AiCreditsService {
           CreditReservationStatus.EXPIRED,
           'Reservation hết hạn trước khi hoàn tất.',
         );
-        throw creditException(
-          'CREDIT_RESERVATION_EXPIRED',
-          'Credit reservation đã hết hạn.',
-          HttpStatus.CONFLICT,
-        );
+        return { kind: 'expired' as const };
       }
 
       const consumedAt = new Date();
@@ -358,8 +354,17 @@ export class AiCreditsService {
         },
       });
       this.logCreditEvent('consume', consumed);
-      return consumed;
+      return { kind: 'consumed' as const, reservation: consumed };
     });
+
+    if (result.kind === 'expired') {
+      throw creditException(
+        'CREDIT_RESERVATION_EXPIRED',
+        'Credit reservation đã hết hạn.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    return result.reservation;
   }
 
   /** Worker dùng reference đã biết thay vì phải mang reservationId trong payload queue. */
@@ -448,7 +453,7 @@ export class AiCreditsService {
 
   /** Worker gọi khi đã bắt đầu để tránh queue delay làm reservation hết hạn. */
   async extendReservation(reservationId: string, minimumExpiresAt?: Date) {
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const reservation = await tx.creditReservation.findUnique({
         where: { id: reservationId },
       });
@@ -456,8 +461,9 @@ export class AiCreditsService {
         throw new NotFoundException('Không tìm thấy credit reservation.');
       await lockBillingUser(tx, reservation.userId);
 
-      if (reservation.status !== CreditReservationStatus.PENDING)
-        return reservation;
+      if (reservation.status !== CreditReservationStatus.PENDING) {
+        return { kind: 'unchanged' as const, reservation };
+      }
       const now = new Date();
       if (reservation.expiresAt <= now) {
         await this.releasePendingInTransaction(
@@ -466,11 +472,7 @@ export class AiCreditsService {
           CreditReservationStatus.EXPIRED,
           'Reservation hết hạn trước khi worker bắt đầu.',
         );
-        throw creditException(
-          'CREDIT_RESERVATION_EXPIRED',
-          'Credit reservation đã hết hạn.',
-          HttpStatus.CONFLICT,
-        );
+        return { kind: 'expired' as const };
       }
 
       const expiresAt = new Date(
@@ -481,11 +483,21 @@ export class AiCreditsService {
         expiresAt,
         ...(minimumExpiresAt ? [minimumExpiresAt] : []),
       ].reduce((latest, item) => (item > latest ? item : latest));
-      return tx.creditReservation.update({
+      const extended = await tx.creditReservation.update({
         where: { id: reservation.id },
         data: { expiresAt: targetExpiresAt },
       });
+      return { kind: 'extended' as const, reservation: extended };
     });
+
+    if (result.kind === 'expired') {
+      throw creditException(
+        'CREDIT_RESERVATION_EXPIRED',
+        'Credit reservation đã hết hạn.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    return result.reservation;
   }
 
   async extendByIdempotencyKey(
