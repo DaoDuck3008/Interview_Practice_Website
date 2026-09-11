@@ -11,7 +11,7 @@ import {
 import type { InterviewQuestionView } from "@/lib/interview-core/types";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
 import { mockQuestionStatusBadge } from "@/lib/utils/mockInterview";
-import { SkeletonBlock } from "./MockResultShell";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { averageScore, ScoreBar } from "./MockResultScore";
 import { RESULT_FILTERS, type QuestionFilter } from "./types";
 
@@ -213,9 +213,9 @@ function QuestionStatusChip({ item }: { item: InterviewQuestionView }) {
 function ScorePendingSkeleton() {
   return (
     <div className="space-y-3">
-      <SkeletonBlock className="h-4 rounded-full" />
-      <SkeletonBlock className="h-4 rounded-full" />
-      <SkeletonBlock className="h-4 rounded-full" />
+      <Skeleton className="h-4 rounded-full" />
+      <Skeleton className="h-4 rounded-full" />
+      <Skeleton className="h-4 rounded-full" />
       <p className="flex items-center gap-2 text-xs text-white/45">
         <Loader2 size={13} className="animate-spin text-violet-200" />
         Đang chờ kết quả chấm.

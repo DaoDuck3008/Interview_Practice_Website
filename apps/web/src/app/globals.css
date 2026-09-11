@@ -18,6 +18,16 @@
   --font-body: var(--font-be-vietnam), "Be Vietnam Pro", sans-serif;
 }
 
+:root {
+  --motion-duration-instant: 120ms;
+  --motion-duration-fast: 180ms;
+  --motion-duration-normal: 240ms;
+  --motion-duration-slow: 320ms;
+  --motion-duration-reveal: 500ms;
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 html {
   color-scheme: dark;
 }
@@ -75,8 +85,8 @@ h6 {
 .reveal {
   opacity: 0;
   transition:
-    opacity 0.65s ease,
-    transform 0.65s ease;
+    opacity var(--motion-duration-reveal) var(--motion-ease-enter),
+    transform var(--motion-duration-reveal) var(--motion-ease-enter);
 }
 .reveal--fade-up {
   transform: translateY(28px);
@@ -90,9 +100,6 @@ h6 {
 .reveal--fade-right {
   transform: translateX(28px);
 }
-.reveal--control {
-  transition-duration: 0.5s;
-}
 .reveal--control.reveal--fade-up {
   transform: translateY(20px);
 }
@@ -105,6 +112,26 @@ h6 {
 .reveal.is-visible {
   opacity: 1;
   transform: none;
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.page-enter {
+  animation: pageEnter var(--motion-duration-normal) var(--motion-ease-enter)
+    both;
+}
+
+.page-enter[data-reduced-motion="true"] {
+  animation: none;
 }
 
 @keyframes topicMarquee {
@@ -219,6 +246,9 @@ h6 {
 
 /* Tôn trọng việc hạn chế chuyển động của browser (khi người dùng bật Reduce motion) */
 @media (prefers-reduced-motion: reduce) {
+  .page-enter {
+    animation: none;
+  }
   .reveal {
     opacity: 1;
     transform: none;

@@ -25,7 +25,7 @@ Next.js frontend for an interview-practice platform. Part of an npm-workspaces m
 | Toasts | react-toastify |
 | Markdown | react-markdown + @uiw/react-md-editor |
 | Audio | wavesurfer.js |
-| Animations | react-intersection-observer |
+| Animations | Motion + react-intersection-observer |
 
 ---
 
@@ -189,7 +189,7 @@ src/components/
 ├── questions/   # Learning / browse UI
 ├── admin/       # Admin panel UI
 ├── providers/   # React context / hydration providers
-└── ui/          # Truly reusable primitives (StatusModal, Reveal, ImageDropzone)
+└── ui/          # Truly reusable primitives (StatusModal, Reveal, Skeleton, ImageDropzone)
 ```
 
 New primitives go in `components/ui/`. Feature components go in the folder matching their route group.
@@ -369,6 +369,41 @@ Available variants: `fade-up`, `fade-in`, `fade-left`, `fade-right`. Use
 `preset="control"` for directional landing CTAs and feature buttons. Optional
 `delay`, `threshold`, and `rootMargin` props support stagger and observer tuning.
 The primitive respects `prefers-reduced-motion` through the shared global CSS.
+
+## Motion Tokens and Page Entry
+
+Shared duration and easing tokens live in the `:root` block of
+`src/app/globals.css`. Use the semantic token that matches the interaction;
+do not add a new duration when an existing token is close enough:
+
+- `--motion-duration-instant`: pressed feedback and small icons.
+- `--motion-duration-fast`: hover, focus and compact state changes.
+- `--motion-duration-normal`: page and panel entry.
+- `--motion-duration-slow`: modal and drawer transitions.
+- `--motion-duration-reveal`: scroll-entry animation.
+- `--motion-ease-standard`: state changes.
+- `--motion-ease-enter`: content entering the screen.
+
+Use `PageEnter` (`src/components/ui/PageEnter.tsx`) for short mount-time entry
+feedback. It is different from `Reveal`: `PageEnter` runs when content mounts,
+while `Reveal` waits for viewport intersection. Do not place `PageEnter` in the
+root layout or manually key it by pathname. Add route templates only after
+confirming their remount behavior will not reset forms, recorders, or session
+state.
+
+## Loading Skeletons
+
+Use `Skeleton` (`src/components/ui/Skeleton.tsx`) for the shared pulse surface.
+The primitive is server-compatible, is hidden from assistive technology, and
+only owns its border, background and pulse animation. Set width, height and
+border radius at the call site so each loading boundary can mirror its real
+content instead of sharing a generic page layout.
+
+Keep skeleton layouts inside the feature or route that owns them. A loading
+region must expose meaningful feedback with `role="status"` and visually hidden
+text, or with an appropriate `aria-label` and `aria-busy="true"`. Do not make a
+separate skeleton component unless the same layout has more than one real
+consumer.
 
 ---
 

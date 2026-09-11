@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 // Shell nền riêng cho trang /mock-interviews/[id]/result, đồng bộ với phòng mock.
 export function MockResultShell({ children }: { children: ReactNode }) {
@@ -68,10 +69,10 @@ export function ScoringResultSkeleton() {
       <div className="grid gap-4 md:grid-cols-2" aria-hidden="true">
         {Array.from({ length: 2 }).map((_, index) => (
           <ResultGlassPanel key={index} className="p-5">
-            <SkeletonBlock className="h-5 w-36 rounded-full" />
-            <SkeletonBlock className="mt-4 h-4 w-full rounded-full" />
-            <SkeletonBlock className="mt-3 h-4 w-4/5 rounded-full" />
-            <SkeletonBlock className="mt-6 h-20 rounded-2xl" />
+            <Skeleton className="h-5 w-36 rounded-full" />
+            <Skeleton className="mt-4 h-4 w-full rounded-full" />
+            <Skeleton className="mt-3 h-4 w-4/5 rounded-full" />
+            <Skeleton className="mt-6 h-20 rounded-2xl" />
           </ResultGlassPanel>
         ))}
       </div>
@@ -84,51 +85,40 @@ export function ResultSkeleton() {
   return (
     <div className="mx-auto max-w-7xl space-y-5">
       <div className="flex items-center justify-between gap-3">
-        <SkeletonBlock className="h-10 w-44 rounded-full" />
-        <SkeletonBlock className="h-10 w-28 rounded-full" />
+        <Skeleton className="h-10 w-44 rounded-full" />
+        <Skeleton className="h-10 w-28 rounded-full" />
       </div>
 
       <ResultGlassPanel className="p-5 md:p-6">
         <div className="grid gap-6 lg:grid-cols-[1fr_16rem]">
           <div className="space-y-3">
-            <SkeletonBlock className="h-5 w-32" />
-            <SkeletonBlock className="h-12 max-w-2xl" />
-            <SkeletonBlock className="h-5 max-w-lg" />
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-12 max-w-2xl" />
+            <Skeleton className="h-5 max-w-lg" />
           </div>
-          <SkeletonBlock className="h-36 rounded-[1.5rem]" />
+          <Skeleton className="h-36 rounded-[1.5rem]" />
         </div>
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {Array.from({ length: 5 }).map((_, index) => (
-            <SkeletonBlock key={index} className="h-20 rounded-3xl" />
+            <Skeleton key={index} className="h-20 rounded-3xl" />
           ))}
         </div>
       </ResultGlassPanel>
 
       <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
         <ResultGlassPanel className="p-5">
-          <SkeletonBlock className="h-6 w-52" />
+          <Skeleton className="h-6 w-52" />
           <div className="mt-4 space-y-4">
-            <SkeletonBlock className="h-4" />
-            <SkeletonBlock className="h-4" />
-            <SkeletonBlock className="h-4" />
+            <Skeleton className="h-4" />
+            <Skeleton className="h-4" />
+            <Skeleton className="h-4" />
           </div>
         </ResultGlassPanel>
         <ResultGlassPanel className="p-5">
-          <SkeletonBlock className="h-6 w-40" />
-          <SkeletonBlock className="mt-4 h-32 rounded-3xl" />
+          <Skeleton className="h-6 w-40" />
+          <Skeleton className="mt-4 h-32 rounded-3xl" />
         </ResultGlassPanel>
       </div>
     </div>
-  );
-}
-
-export function SkeletonBlock({ className }: { className: string }) {
-  return (
-    <div
-      className={[
-        "skeleton-pulse border border-white/10 bg-white/[0.07]",
-        className,
-      ].join(" ")}
-    />
   );
 }
