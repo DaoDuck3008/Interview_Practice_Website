@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { getOrder, type CheckoutOrder } from "@/lib/api/payments";
 import { formatVnd } from "@/lib/utils/format";
+import { CheckoutSkeleton } from "./CheckoutSkeleton";
 
 const panel =
   "rounded-2xl border border-[#c4b5fd]/16 p-6 md:p-8";
@@ -109,11 +110,7 @@ export default function CheckoutView({ orderId }: { orderId: string }) {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24 text-[var(--color-text-secondary)]">
-        <Loader2 className="animate-spin" />
-      </div>
-    );
+    return <CheckoutSkeleton />;
   }
 
   if (notFound || !order) {

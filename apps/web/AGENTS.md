@@ -391,6 +391,12 @@ root layout or manually key it by pathname. Add route templates only after
 confirming their remount behavior will not reset forms, recorders, or session
 state.
 
+Current route templates are intentionally limited to `learning` and the
+`(account)` route group. Pricing already has nested `Reveal` animations; do not
+wrap it in another page-entry template. Do not add a template above Practice,
+Mock Interview or Mock CV rooms: those flows own recorder, processing or
+interview session state.
+
 ## Loading Skeletons
 
 Use `Skeleton` (`src/components/ui/Skeleton.tsx`) for the shared pulse surface.
@@ -404,6 +410,11 @@ region must expose meaningful feedback with `role="status"` and visually hidden
 text, or with an appropriate `aria-label` and `aria-busy="true"`. Do not make a
 separate skeleton component unless the same layout has more than one real
 consumer.
+
+`MockLandingSkeleton` is shared by Mock Interview and Mock CV landing routes;
+`InterviewRoomSkeleton` is shared by both interview room types. Result routes
+reuse `ResultSkeleton`. Prefer these existing layouts before introducing
+another route-level skeleton abstraction.
 
 ---
 

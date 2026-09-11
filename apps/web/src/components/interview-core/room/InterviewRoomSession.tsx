@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
 import axios from "axios";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import type {
@@ -18,6 +17,7 @@ import { QuestionMoveButton, TimerPill, TopicBadge } from "./MockRoomHeader";
 import { SubmitConfirmModal } from "./MockRoomPanels";
 import { MobileBottomDock, ProgressSidebar } from "./MockRoomProgress";
 import { AnsweredPanel, RecorderPanel } from "./MockRoomRecorder";
+import { InterviewRoomSkeleton } from "./InterviewRoomSkeleton";
 import type { UploadState } from "./types";
 
 const MIN_DURATION = 10;
@@ -54,7 +54,6 @@ export default function InterviewRoomSession({
   const [mock, setMock] = useState<InterviewSessionView | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [starting, setStarting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [uploadState, setUploadState] = useState<UploadState>("idle");
@@ -100,9 +99,7 @@ export default function InterviewRoomSession({
     try {
       let data = await loadInterview(id);
       if (startInterview && data.status === "DRAFT") {
-        setStarting(true);
         data = await startInterview(id);
-        setStarting(false);
       }
 
       const hasExpired =
@@ -133,7 +130,6 @@ export default function InterviewRoomSession({
         : undefined;
       setError(serverMsg ?? "Không thể tải phòng mock interview.");
     } finally {
-      setStarting(false);
       setLoading(false);
     }
   }, [
@@ -350,20 +346,7 @@ export default function InterviewRoomSession({
   }
 
   if (!hydrated || loading) {
-    return (
-      <>
-        <div className="mx-auto flex min-h-[460px] max-w-3xl items-center justify-center">
-          <div className="rounded-full border border-white/15 bg-white/[0.07] px-5 py-3 text-sm font-semibold text-white/80 shadow-2xl shadow-violet-950/30 backdrop-blur-2xl">
-            <span className="inline-flex items-center gap-3">
-              <Loader2 size={18} className="animate-spin text-violet-200" />
-              {starting
-                ? "Đang bắt đầu mock interview..."
-                : "Đang tải phòng mock..."}
-            </span>
-          </div>
-        </div>
-      </>
-    );
+    return <InterviewRoomSkeleton />;
   }
 
   if (error && !mock) {
