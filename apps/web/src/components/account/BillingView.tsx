@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import {
   BadgeCheck,
@@ -67,8 +67,15 @@ export default function BillingView() {
 
   return (
     <div className="flex-1 flex flex-col gap-6">
-      <CurrentPlanCard sub={sub} now={now} />
-      <HistoryCard orders={orders} />
+      <div className="content-ready-enter">
+        <CurrentPlanCard sub={sub} now={now} />
+      </div>
+      <div
+        className="content-ready-enter"
+        style={{ "--motion-enter-delay": "70ms" } as CSSProperties}
+      >
+        <HistoryCard orders={orders} />
+      </div>
     </div>
   );
 }
@@ -189,10 +196,11 @@ function HistoryCard({ orders }: { orders: PaidOrder[] }) {
         </p>
       ) : (
         <ul className="mt-4 flex flex-col">
-          {orders.map((o) => (
+          {orders.map((o, index) => (
             <li
               key={o.id}
-              className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-white/10 py-3.5 last:border-b-0 text-sm"
+              className="data-row-enter flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-white/10 py-3.5 last:border-b-0 text-sm"
+              style={{ "--motion-enter-delay": `${Math.min(index, 5) * 20}ms` } as CSSProperties}
             >
               <span className="flex items-center gap-2 min-w-0">
                 <span className="font-semibold text-[var(--color-text-primary)] truncate">

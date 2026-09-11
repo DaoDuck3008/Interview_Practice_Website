@@ -11,7 +11,7 @@ import {
   Search,
   Sparkles,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { MockInterview } from "@/lib/api/mockInterviews";
 import {
   mockInterviewScoreBand,
@@ -158,8 +158,8 @@ export default function MockHistorySection({
                     key={mock.id}
                     type="button"
                     onClick={() => router.push(targetPath)}
-                    className="group cursor-pointer relative grid w-full max-w-[42rem] grid-cols-[5.25rem_minmax(0,1fr)] animate-[cardPushIn_650ms_120ms_cubic-bezier(.2,.8,.2,1)_both] items-stretch gap-2.5 overflow-hidden rounded-[1.25rem] border border-white/10 bg-surface/70 p-2.5 text-left shadow-[0_20px_55px_rgba(2,6,23,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition-[transform,background-color,border-color] duration-300 hover:-translate-y-0.5 hover:border-accent-light/30 hover:bg-elevated/75 sm:grid-cols-[6rem_minmax(0,1fr)] sm:gap-3 sm:p-3 md:grid-cols-[7.5rem_minmax(0,1fr)] md:p-4"
-                    style={{ animationDelay: `${index * 70}ms` }}
+                    className="collection-item-enter group cursor-pointer relative grid w-full max-w-[42rem] grid-cols-[5.25rem_minmax(0,1fr)] items-stretch gap-2.5 overflow-hidden rounded-[1.25rem] border border-white/10 bg-surface/70 p-2.5 text-left shadow-[0_20px_55px_rgba(2,6,23,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition-[transform,background-color,border-color] duration-300 hover:-translate-y-0.5 hover:border-accent-light/30 hover:bg-elevated/75 sm:grid-cols-[6rem_minmax(0,1fr)] sm:gap-3 sm:p-3 md:grid-cols-[7.5rem_minmax(0,1fr)] md:p-4"
+                    style={{ "--motion-enter-delay": `${Math.min(index, 7) * 35}ms` } as CSSProperties}
                   >
                     <span className="pointer-events-none absolute inset-y-0 left-0 w-24 bg-accent/5 [mask-image:linear-gradient(to_right,black,transparent)]" />
                     <ScoreBadge score={mock.overallScore} />

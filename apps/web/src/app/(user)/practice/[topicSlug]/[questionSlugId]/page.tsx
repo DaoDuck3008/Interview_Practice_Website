@@ -94,7 +94,7 @@ export default async function QuestionPage({
   const levelStyle = LEVEL_STYLE[question.level];
 
   return (
-    <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-[28px] border border-[#c4b5fd]/18 bg-[#171d3d]/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_18px_42px_rgba(2,6,23,0.22)]">
+    <main className="flex min-w-0 flex-1 flex-col collection-item-enter overflow-hidden rounded-[28px] border border-[#c4b5fd]/18 bg-[#171d3d]/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_18px_42px_rgba(2,6,23,0.22)]">
       <div className="flex-1 overflow-y-auto">
         <div className="flex w-full flex-col gap-4 px-4 py-5 sm:px-8 lg:px-12">
           <section className="flex flex-col gap-5 rounded-[24px] border border-[#c4b5fd]/16 bg-[#1b2248]/90 px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:px-6">

@@ -370,7 +370,7 @@ export default function InterviewRoomSession({
       <div className="performance-page lg:pr-[21.5rem]">
         <section
           key={activeQuestion.id}
-          className="eval-enter mx-auto flex min-h-[calc(100dvh-10rem)] max-w-5xl flex-col justify-center py-3 md:py-5"
+          className="step-enter mx-auto flex min-h-[calc(100dvh-10rem)] max-w-5xl flex-col justify-center py-3 md:py-5"
         >
           <MockQuestionArticle>
             <div className="relative border-b border-white/10 px-4 py-3 md:px-6">

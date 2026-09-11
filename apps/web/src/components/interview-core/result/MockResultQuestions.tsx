@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import {
   BarChart3,
   ChevronDown,
@@ -60,9 +60,17 @@ export function QuestionResultsSection({
             Không có câu hỏi nào trong bộ lọc này.
           </p>
         ) : (
-          visibleQuestions.map((item) => (
-            <QuestionResultCard key={item.id} item={item} />
-          ))
+          <div key={`${filter}-${visibleQuestions.map((item) => item.id).join("-")}`} className="space-y-3">
+            {visibleQuestions.map((item, index) => (
+              <div
+                key={item.id}
+                className="collection-item-enter"
+                style={{ "--motion-enter-delay": `${Math.min(index, 7) * 35}ms` } as CSSProperties}
+              >
+                <QuestionResultCard item={item} />
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </section>

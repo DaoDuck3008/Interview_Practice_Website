@@ -134,6 +134,113 @@ h6 {
   animation: none;
 }
 
+@keyframes collectionItemEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.collection-item-enter {
+  opacity: 0;
+  animation: collectionItemEnter var(--motion-duration-normal)
+    var(--motion-ease-enter) both;
+  animation-delay: var(--motion-enter-delay, 0ms);
+}
+
+@keyframes dataRowEnter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.data-row-enter {
+  opacity: 0;
+  animation: dataRowEnter var(--motion-duration-fast) var(--motion-ease-enter)
+    both;
+  animation-delay: var(--motion-enter-delay, 0ms);
+}
+
+@keyframes contentReadyEnter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.content-ready-enter {
+  opacity: 0;
+  animation: contentReadyEnter var(--motion-duration-normal)
+    var(--motion-ease-enter) both;
+  animation-delay: var(--motion-enter-delay, 0ms);
+}
+
+@keyframes feedbackEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.feedback-enter {
+  animation: feedbackEnter var(--motion-duration-slow) var(--motion-ease-enter)
+    both;
+}
+
+.step-enter {
+  animation: contentReadyEnter var(--motion-duration-normal)
+    var(--motion-ease-enter) both;
+}
+
+@keyframes overlayEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.overlay-enter {
+  animation: overlayEnter var(--motion-duration-slow) var(--motion-ease-enter)
+    both;
+}
+
+@keyframes messageEnter {
+  from {
+    opacity: 0;
+    transform: translate(var(--motion-message-offset, 0), 4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.message-enter {
+  animation: messageEnter var(--motion-duration-fast) var(--motion-ease-enter)
+    both;
+}
+
 @keyframes topicMarquee {
   from {
     transform: translateX(0);
@@ -201,7 +308,6 @@ h6 {
   animation: textTypeCursorBlink 0.72s steps(1, end) infinite;
 }
 
-/* AnswerEvaluation — panel trượt/đẩy vào khi hiện kết quả */
 @keyframes featureTabProgress {
   from {
     transform: scaleX(0);
@@ -214,20 +320,6 @@ h6 {
 .feature-tab-progress {
   animation: featureTabProgress 10s linear both;
   transform-origin: left center;
-}
-
-@keyframes evalEnter {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-.eval-enter {
-  animation: evalEnter 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* Skeleton loading — nhấp nháy bằng opacity (không dùng gradient) */
@@ -249,13 +341,20 @@ h6 {
   .page-enter {
     animation: none;
   }
+  .collection-item-enter,
+  .data-row-enter,
+  .content-ready-enter,
+  .feedback-enter,
+  .step-enter,
+  .overlay-enter,
+  .message-enter {
+    opacity: 1;
+    animation: none;
+  }
   .reveal {
     opacity: 1;
     transform: none;
     transition: none;
-  }
-  .eval-enter {
-    animation: none;
   }
   .topic-marquee-track,
   [class*="animate-\\[fadeIn_"],

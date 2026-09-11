@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -356,19 +356,24 @@ export default function MockCvPage() {
               onAction={search ? undefined : scrollToUploadForm}
             />
           ) : (
-            <div className="grid gap-3 lg:grid-cols-2">
-              {cvs.map((cv) => (
-                <MockCvCard
+            <div key={`${page}-${debouncedSearch}-${sortOrder}`} className="grid gap-3 lg:grid-cols-2">
+              {cvs.map((cv, index) => (
+                <div
                   key={cv.id}
-                  cv={cv}
-                  busy={retryingCvId === cv.id || deletingCvId === cv.id}
-                  onStart={(item) =>
-                    router.push(`/mock-cv/processing/${item.id}`)
-                  }
-                  onRetry={(item) => void handleRetry(item)}
-                  onDelete={(item) => void handleDelete(item)}
-                  onReplace={scrollToUploadForm}
-                />
+                  className="collection-item-enter"
+                  style={{ "--motion-enter-delay": `${Math.min(index, 7) * 35}ms` } as CSSProperties}
+                >
+                  <MockCvCard
+                    cv={cv}
+                    busy={retryingCvId === cv.id || deletingCvId === cv.id}
+                    onStart={(item) =>
+                      router.push(`/mock-cv/processing/${item.id}`)
+                    }
+                    onRetry={(item) => void handleRetry(item)}
+                    onDelete={(item) => void handleDelete(item)}
+                    onReplace={scrollToUploadForm}
+                  />
+                </div>
               ))}
             </div>
           )}

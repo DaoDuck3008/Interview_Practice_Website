@@ -56,7 +56,7 @@ export default function TopicsSidebar({
 
   return (
     <aside
-      className="sticky hidden h-full max-h-[calc(150dvh)] w-60 flex-shrink-0 flex-col overflow-hidden rounded-[28px] md:flex"
+      className="sticky hidden h-full max-h-[calc(150dvh)] w-60 flex-shrink-0 flex-col overflow-hidden rounded-[28px] md:flex content-ready-enter"
       style={{
         background: "rgba(20, 25, 56, 0.88)",
         border: "1px solid rgba(196,181,253,0.18)",

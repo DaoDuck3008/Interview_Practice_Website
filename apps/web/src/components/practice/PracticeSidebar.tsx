@@ -62,24 +62,19 @@ export default function PracticeSidebar({
 
   // Cursor pagination qua TanStack Query — cache theo (topicId, level),
   // không reset khi chuyển câu hỏi nhờ sidebar nằm ở layout
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-  } = useInfiniteQuery({
-    queryKey: ["practice-questions", topicId, activeLevel],
-    queryFn: ({ pageParam }) =>
-      getQuestionsCursor({
-        topicId,
-        level: activeLevel ?? undefined,
-        cursor: pageParam,
-        limit: PAGE_SIZE,
-      }),
-    initialPageParam: null as string | null,
-    getNextPageParam: (lastPage) => lastPage.nextCursor,
-  });
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useInfiniteQuery({
+      queryKey: ["practice-questions", topicId, activeLevel],
+      queryFn: ({ pageParam }) =>
+        getQuestionsCursor({
+          topicId,
+          level: activeLevel ?? undefined,
+          cursor: pageParam,
+          limit: PAGE_SIZE,
+        }),
+      initialPageParam: null as string | null,
+      getNextPageParam: (lastPage) => lastPage.nextCursor,
+    });
 
   const items = useMemo(
     () => data?.pages.flatMap((p) => p.items) ?? [],
@@ -154,7 +149,7 @@ export default function PracticeSidebar({
 
       {/* Sidebar: cột tĩnh trên desktop, drawer trượt từ trái trên mobile */}
       <aside
-        className={`flex flex-col overflow-hidden transition-transform duration-300
+        className={`flex flex-col overflow-hidden transition-transform duration-300 collection-item-enter
           fixed inset-y-0 left-0 z-50 w-[85%] max-w-[340px] rounded-r-2xl
           md:static md:inset-auto md:z-auto md:w-[320px] md:max-w-none md:flex-shrink-0 md:translate-x-0 md:rounded-2xl
           ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
@@ -165,155 +160,157 @@ export default function PracticeSidebar({
             "inset 0 1px 0 rgba(255,255,255,0.1), 0 24px 70px rgba(2,6,23,0.24)",
         }}
       >
-      {/* Header — topic picker + level filter */}
-      <div
-        className="flex-shrink-0 px-4 pt-4 pb-3.5 flex flex-col gap-3"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
-      >
-        <TopicPicker
-          topics={topics}
-          currentSlug={topicSlug}
-          currentName={topicName}
-          questionCount={topicCount}
-          onNavigate={closeMobile}
-        />
-
-        {/* Level filter — segmented control */}
+        {/* Header — topic picker + level filter */}
         <div
-          className="flex gap-1 p-1 rounded-xl"
-          style={{ background: "rgba(255,255,255,0.055)" }}
+          className="flex-shrink-0 px-4 pt-4 pb-3.5 flex flex-col gap-3"
+          style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
         >
-          {LEVELS.map(({ value, label }) => {
-            const isActive =
-              value === "ALL" ? activeLevel === null : activeLevel === value;
-            return (
-              <button
-                key={value}
-                onClick={() => setLevel(value)}
-                className="flex-1 text-[11px] font-semibold py-1.5 rounded-lg transition-colors duration-200 cursor-pointer"
-                style={{
-                  background: isActive ? "rgba(124,58,237,0.34)" : "transparent",
-                  color: isActive ? "#ffffff" : "#9898aa",
-                }}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+          <TopicPicker
+            topics={topics}
+            currentSlug={topicSlug}
+            currentName={topicName}
+            questionCount={topicCount}
+            onNavigate={closeMobile}
+          />
 
-      {/* Question list */}
-      <div className="flex-1 overflow-y-auto px-2 py-2 flex flex-col gap-2">
-        {items.map((q, idx) => {
-          const isActive = q.id === currentQuestionId;
-          const levelParam = activeLevel ? `?level=${activeLevel}` : "";
-
-          const featured = q.isFeatured;
-
-          return (
-            <Link
-              key={q.id}
-              ref={isActive ? activeRef : undefined}
-              href={getPracticeQuestionHref(topicSlug, q, levelParam)}
-              onClick={closeMobile}
-              className="flex items-start gap-3 px-3 py-2.5 rounded-xl transition-colors duration-200 group cursor-pointer"
-              style={{
-                background: isActive
-                  ? "rgba(124,58,237,0.14)"
-                  : featured
-                    ? "rgba(245,158,11,0.10)"
-                    : "transparent",
-                // Câu nổi bật: luôn giữ viền amber bên trái, kể cả khi đang mở
-                boxShadow: featured ? "inset 3px 0 0 #f59e0b" : undefined,
-              }}
-            >
-              {/* Level dot */}
-              <span
-                className={`mt-[7px] w-1.5 h-1.5 rounded-full flex-shrink-0 ${LEVEL_DOT[q.level]}`}
-                style={{ opacity: isActive ? 1 : 0.55 }}
-              />
-
-              <div className="flex flex-col gap-1 min-w-0">
-                <span className="flex items-center gap-1.5 font-mono text-[10px] text-[#606072] tracking-wide">
-                  {String(idx + 1).padStart(2, "0")}
-                  {featured && (
-                    <span
-                      className="flex items-center gap-1 px-1.5 py-0.5 rounded-full"
-                      style={{ background: "rgba(245,158,11,0.15)" }}
-                    >
-                      <Star
-                        size={9}
-                        className="text-[#f59e0b]"
-                        fill="#f59e0b"
-                        strokeWidth={0}
-                      />
-                      <span className="text-[9px] font-semibold tracking-normal text-[#f59e0b]">
-                        Nổi bật
-                      </span>
-                    </span>
-                  )}
-                </span>
-                <p
-                  className="text-[13px] leading-snug line-clamp-2 transition-colors duration-200"
+          {/* Level filter — segmented control */}
+          <div
+            className="flex gap-1 p-1 rounded-xl"
+            style={{ background: "rgba(255,255,255,0.055)" }}
+          >
+            {LEVELS.map(({ value, label }) => {
+              const isActive =
+                value === "ALL" ? activeLevel === null : activeLevel === value;
+              return (
+                <button
+                  key={value}
+                  onClick={() => setLevel(value)}
+                  className="flex-1 text-[11px] font-semibold py-1.5 rounded-lg transition-colors duration-200 cursor-pointer"
                   style={{
-                    color: isActive
-                      ? "#f4f4f6"
-                      : featured
-                        ? "#e4e4f0"
-                        : "#9898aa",
+                    background: isActive
+                      ? "rgba(124,58,237,0.34)"
+                      : "transparent",
+                    color: isActive ? "#ffffff" : "#9898aa",
                   }}
                 >
-                  {q.content}
-                </p>
-              </div>
-            </Link>
-          );
-        })}
-
-        {/* Xem thêm — đồng thời là sentinel tự tải khi cuộn tới đáy */}
-        {hasNextPage && (
-          <button
-            ref={sentinelRef}
-            onClick={() => fetchNextPage()}
-            disabled={isFetchingNextPage}
-            className="mt-1 mx-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-semibold text-[#9898aa] transition-colors duration-200 cursor-pointer hover:text-[#f4f4f6] disabled:cursor-default"
-            style={{
-              background: "rgba(255,255,255,0.055)",
-              border: "1px solid rgba(255,255,255,0.1)",
-            }}
-          >
-            {isFetchingNextPage ? (
-              <>
-                <Loader2 size={13} className="animate-spin" />
-                Đang tải...
-              </>
-            ) : (
-              <>
-                <ChevronDown size={13} />
-                Xem thêm
-              </>
-            )}
-          </button>
-        )}
-
-        {/* Loading lần đầu */}
-        {isLoading && (
-          <div className="flex items-center justify-center gap-2 px-4 py-10 text-xs text-[#606072]">
-            <Loader2 size={14} className="animate-spin" />
-            Đang tải câu hỏi...
+                  {label}
+                </button>
+              );
+            })}
           </div>
-        )}
+        </div>
 
-        {/* Trống */}
-        {!isLoading && items.length === 0 && (
-          <p className="px-4 py-10 text-xs text-center text-[#606072]">
-            {activeLevel
-              ? "Không có câu hỏi cho cấp độ này."
-              : "Chưa có câu hỏi nào."}
-          </p>
-        )}
-      </div>
+        {/* Question list */}
+        <div className="flex-1 overflow-y-auto px-2 py-2 flex flex-col gap-2">
+          {items.map((q, idx) => {
+            const isActive = q.id === currentQuestionId;
+            const levelParam = activeLevel ? `?level=${activeLevel}` : "";
+
+            const featured = q.isFeatured;
+
+            return (
+              <Link
+                key={q.id}
+                ref={isActive ? activeRef : undefined}
+                href={getPracticeQuestionHref(topicSlug, q, levelParam)}
+                onClick={closeMobile}
+                className="flex items-start gap-3 px-3 py-2.5 rounded-xl transition-colors duration-200 group cursor-pointer"
+                style={{
+                  background: isActive
+                    ? "rgba(124,58,237,0.14)"
+                    : featured
+                      ? "rgba(245,158,11,0.10)"
+                      : "transparent",
+                  // Câu nổi bật: luôn giữ viền amber bên trái, kể cả khi đang mở
+                  boxShadow: featured ? "inset 3px 0 0 #f59e0b" : undefined,
+                }}
+              >
+                {/* Level dot */}
+                <span
+                  className={`mt-[7px] w-1.5 h-1.5 rounded-full flex-shrink-0 ${LEVEL_DOT[q.level]}`}
+                  style={{ opacity: isActive ? 1 : 0.55 }}
+                />
+
+                <div className="flex flex-col gap-1 min-w-0">
+                  <span className="flex items-center gap-1.5 font-mono text-[10px] text-[#606072] tracking-wide">
+                    {String(idx + 1).padStart(2, "0")}
+                    {featured && (
+                      <span
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded-full"
+                        style={{ background: "rgba(245,158,11,0.15)" }}
+                      >
+                        <Star
+                          size={9}
+                          className="text-[#f59e0b]"
+                          fill="#f59e0b"
+                          strokeWidth={0}
+                        />
+                        <span className="text-[9px] font-semibold tracking-normal text-[#f59e0b]">
+                          Nổi bật
+                        </span>
+                      </span>
+                    )}
+                  </span>
+                  <p
+                    className="text-[13px] leading-snug line-clamp-2 transition-colors duration-200"
+                    style={{
+                      color: isActive
+                        ? "#f4f4f6"
+                        : featured
+                          ? "#e4e4f0"
+                          : "#9898aa",
+                    }}
+                  >
+                    {q.content}
+                  </p>
+                </div>
+              </Link>
+            );
+          })}
+
+          {/* Xem thêm — đồng thời là sentinel tự tải khi cuộn tới đáy */}
+          {hasNextPage && (
+            <button
+              ref={sentinelRef}
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+              className="mt-1 mx-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-semibold text-[#9898aa] transition-colors duration-200 cursor-pointer hover:text-[#f4f4f6] disabled:cursor-default"
+              style={{
+                background: "rgba(255,255,255,0.055)",
+                border: "1px solid rgba(255,255,255,0.1)",
+              }}
+            >
+              {isFetchingNextPage ? (
+                <>
+                  <Loader2 size={13} className="animate-spin" />
+                  Đang tải...
+                </>
+              ) : (
+                <>
+                  <ChevronDown size={13} />
+                  Xem thêm
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Loading lần đầu */}
+          {isLoading && (
+            <div className="flex items-center justify-center gap-2 px-4 py-10 text-xs text-[#606072]">
+              <Loader2 size={14} className="animate-spin" />
+              Đang tải câu hỏi...
+            </div>
+          )}
+
+          {/* Trống */}
+          {!isLoading && items.length === 0 && (
+            <p className="px-4 py-10 text-xs text-center text-[#606072]">
+              {activeLevel
+                ? "Không có câu hỏi cho cấp độ này."
+                : "Chưa có câu hỏi nào."}
+            </p>
+          )}
+        </div>
       </aside>
     </>
   );

@@ -397,6 +397,35 @@ wrap it in another page-entry template. Do not add a template above Practice,
 Mock Interview or Mock CV rooms: those flows own recorder, processing or
 interview session state.
 
+### Content-ready, feedback and overlay motion
+
+Use the shared CSS classes in `src/app/globals.css` for client data becoming
+visible. They are intentionally distinct from `PageEnter` and `Reveal`:
+
+- `collection-item-enter`: cards or richer list items after a result changes.
+  Set `--motion-enter-delay` per item, cap the stagger after the first eight
+  visible items, and key the list by its result-defining state (page, filters,
+  search or sort). Do not use one intersection observer per card.
+- `data-row-enter`: compact history rows and dense tables. Keep the offset and
+  delay shorter than card collections; cap the stagger after six rows.
+- `content-ready-enter`: a whole panel, metric group or chart replacing its
+  own skeleton. Stagger sibling panels only lightly. Do not animate chart
+  geometry or replay this animation for unrelated local state.
+- `feedback-enter`: an AI evaluation or completed action becoming available.
+  Apply it to the result panel, not every metric inside it.
+- `step-enter`: the active question or step changing inside a sequential
+  practice/interview flow. Keep it separate from evaluation feedback.
+- `overlay-enter`: a popup or transient overlay mounting. Drawers and dialogs
+  that already coordinate entrance and exit with local `show` state should keep
+  that behavior rather than mount-only CSS animation.
+- `message-enter`: an individual support-chat message. Use a small horizontal
+  offset based on the sender, without replaying the entire conversation.
+
+All motion classes must remain covered by the global `prefers-reduced-motion`
+override. Do not reuse landing-specific `fadeIn` or `cardPushIn` for dynamic
+data lists: those animations are art-directed for hero content and are too
+slow for repeated collection updates.
+
 ## Loading Skeletons
 
 Use `Skeleton` (`src/components/ui/Skeleton.tsx`) for the shared pulse surface.

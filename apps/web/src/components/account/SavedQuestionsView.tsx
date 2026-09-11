@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Bookmark } from "lucide-react";
 import QuestionCard from "@/components/questions/QuestionCard";
 import LearningPagination from "@/components/questions/LearningPagination";
@@ -61,14 +61,25 @@ export default function SavedQuestionsView() {
             </p>
           </div>
         ) : (
-          data.items.map((question, i) => (
-            <QuestionCard
-              key={question.id}
-              question={question}
-              index={(data.page - 1) * data.limit + i + 1}
-              onFavoriteRemoved={handleRemoved}
-            />
-          ))
+          <div key={`saved-${data.page}`} className="flex flex-col gap-2">
+            {data.items.map((question, i) => (
+              <div
+                key={question.id}
+                className="collection-item-enter"
+                style={
+                  {
+                    "--motion-enter-delay": `${Math.min(i, 7) * 35}ms`,
+                  } as CSSProperties
+                }
+              >
+                <QuestionCard
+                  question={question}
+                  index={(data.page - 1) * data.limit + i + 1}
+                  onFavoriteRemoved={handleRemoved}
+                />
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

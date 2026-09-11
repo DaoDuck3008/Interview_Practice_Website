@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { X, Send, Loader2, ImagePlus } from "lucide-react";
 import { toast } from "react-toastify";
 import {
@@ -87,7 +87,7 @@ export default function SupportChatPopup({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex h-[110] w-80 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
+    <div className="overlay-enter fixed bottom-4 right-4 z-50 flex h-[110] w-80 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
       <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
         <p className="text-sm font-bold text-text-primary">Hỗ trợ trực tiếp</p>
         <button
@@ -119,9 +119,10 @@ export default function SupportChatPopup({ onClose }: { onClose: () => void }) {
             return (
               <div
                 key={m.id}
-                className={`flex max-w-[85%] items-start gap-2 ${
+                className={`message-enter flex max-w-[85%] items-start gap-2 ${
                   isAdmin ? "self-start" : "self-end"
                 }`}
+                style={{ "--motion-message-offset": isAdmin ? "-4px" : "4px" } as CSSProperties}
               >
                 {isAdmin && (
                   <Avatar

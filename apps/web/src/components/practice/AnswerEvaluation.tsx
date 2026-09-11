@@ -68,7 +68,7 @@ export default function AnswerEvaluation({ evaluation, sessionId }: Props) {
   const avgPalette = scorePalette(avg);
 
   return (
-    <section className="px-6 py-6 flex flex-col gap-5 eval-enter">
+    <section className="feedback-enter px-6 py-6 flex flex-col gap-5">
       <div className="flex items-center justify-between gap-3">
         <p className="flex items-center gap-1.5 text-xs font-medium text-[#9898aa]">
           <Sparkles size={13} className="text-[#8b5cf6]" />

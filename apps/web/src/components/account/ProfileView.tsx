@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import Image from "next/image";
 import {
   BadgeCheck,
@@ -56,7 +56,7 @@ export default function ProfileView() {
   return (
     <div className="flex-1 flex flex-col gap-6">
       {/* Header */}
-      <div className={cardClass} style={cardBg}>
+      <div className={`${cardClass} content-ready-enter`} style={cardBg}>
         <div className="flex items-center gap-4">
           {profile.avatarUrl ? (
             <Image
@@ -94,7 +94,7 @@ export default function ProfileView() {
       </div>
 
       {/* Thông tin tài khoản */}
-      <div className={cardClass} style={cardBg}>
+      <div className={`${cardClass} content-ready-enter`} style={{ ...cardBg, "--motion-enter-delay": "60ms" } as CSSProperties}>
         <h3 className="text-lg font-bold text-[var(--color-text-primary)]">
           Thông tin tài khoản
         </h3>
@@ -126,7 +126,7 @@ export default function ProfileView() {
       </div>
 
       {/* Bảo mật */}
-      <div className={cardClass} style={cardBg}>
+      <div className={`${cardClass} content-ready-enter`} style={{ ...cardBg, "--motion-enter-delay": "120ms" } as CSSProperties}>
         <h3 className="text-lg font-bold text-[var(--color-text-primary)]">
           Bảo mật
         </h3>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { getMyHistory, type HistoryItem } from "@/lib/api/sessions";
@@ -50,9 +50,17 @@ export default function PracticeHistoryList() {
             {loading ? "Đang tải…" : "Bạn chưa có buổi luyện tập nào."}
           </p>
         ) : (
-          <ul className="flex flex-col divide-y divide-white/10">
-            {historyItems.map((item) => (
-              <li key={item.id}>
+          <ul key={`history-${data.page}`} className="flex flex-col divide-y divide-white/10">
+            {historyItems.map((item, index) => (
+              <li
+                key={item.id}
+                className="data-row-enter"
+                style={
+                  {
+                    "--motion-enter-delay": `${Math.min(index, 5) * 20}ms`,
+                  } as CSSProperties
+                }
+              >
                 <Link
                   href={getPracticeQuestionHref(
                     item.question.topic.slug,

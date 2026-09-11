@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Dumbbell, Clock, Star, Sparkles } from "lucide-react";
 import {
   getMyStats,
@@ -88,44 +88,29 @@ export default function OverviewView() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <StatCard
-            icon={Dumbbell}
-            label="Tổng lượt luyện"
-            value={formatNumber(stats?.totalSessions ?? 0)}
-            hint="Câu hỏi đã luyện"
-          />
-          <StatCard
-            icon={Clock}
-            label="Thời gian luyện"
-            value={formatHoursMinutes(stats?.totalDurationSeconds ?? 0)}
-            hint="Trong tháng qua"
-          />
-          <StatCard
-            icon={Star}
-            label="Điểm trung bình"
-            value={avgOverall !== null ? `${avgOverall}/10` : "—"}
-            hint={
-              avgOverall !== null
-                ? `KT ${stats?.avgTechnical} · ĐĐ ${stats?.avgCompleteness} · RR ${stats?.avgClarity}`
-                : "Chưa có buổi nào được chấm"
-            }
-          />
+          {[
+            <StatCard key="sessions" icon={Dumbbell} label="Tổng lượt luyện" value={formatNumber(stats?.totalSessions ?? 0)} hint="Câu hỏi đã luyện" />,
+            <StatCard key="duration" icon={Clock} label="Thời gian luyện" value={formatHoursMinutes(stats?.totalDurationSeconds ?? 0)} hint="Trong tháng qua" />,
+            <StatCard key="score" icon={Star} label="Điểm trung bình" value={avgOverall !== null ? `${avgOverall}/10` : "—"} hint={avgOverall !== null ? `KT ${stats?.avgTechnical} · ĐĐ ${stats?.avgCompleteness} · RR ${stats?.avgClarity}` : "Chưa có buổi nào được chấm"} />,
+          ].map((card, index) => (
+            <div
+              key={card.key}
+              className="content-ready-enter"
+              style={{ "--motion-enter-delay": `${index * 45}ms` } as CSSProperties}
+            >
+              {card}
+            </div>
+          ))}
         </div>
       )}
 
-      <ActivityHeatmap
-        data={heatmap?.days ?? []}
-        from={heatmap?.from}
-        to={heatmap?.to}
-        loading={heatmapLoading}
-      />
+      <div key={`heatmap-${heatmapLoading}`} className={!heatmapLoading ? "content-ready-enter" : undefined}>
+        <ActivityHeatmap data={heatmap?.days ?? []} from={heatmap?.from} to={heatmap?.to} loading={heatmapLoading} />
+      </div>
 
-      <ProgressChart
-        data={monthly?.progress ?? []}
-        month={month}
-        onMonthChange={setMonth}
-        loading={monthlyLoading}
-      />
+      <div key={`progress-${month}-${monthlyLoading}`} className={!monthlyLoading ? "content-ready-enter" : undefined}>
+        <ProgressChart data={monthly?.progress ?? []} month={month} onMonthChange={setMonth} loading={monthlyLoading} />
+      </div>
 
       <PracticeHistoryList />
     </div>

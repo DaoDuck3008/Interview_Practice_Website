@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { ArrowUpRight } from "lucide-react";
 import type { Question } from "@/lib/api/questions";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
@@ -40,7 +41,7 @@ export default function RelatedQuestionList({
 
       {visibleQuestions.length > 0 ? (
         <div className="divide-y divide-white/[0.07]">
-          {visibleQuestions.map((question) => {
+          {visibleQuestions.map((question, index) => {
             const topicSlug = question.topic?.slug ?? fallbackTopicSlug;
             const levelStyle = LEVEL_STYLE[question.level];
             const href = getLearningQuestionHref(topicSlug, question);
@@ -52,7 +53,8 @@ export default function RelatedQuestionList({
               <Link
                 key={question.id}
                 href={detailHref}
-                className="group flex items-start gap-3 px-4 py-3 transition-[background-color] duration-200 hover:bg-[#1a203d]"
+                className="data-row-enter group flex items-start gap-3 px-4 py-3 transition-[background-color] duration-200 hover:bg-[#1a203d]"
+                style={{ "--motion-enter-delay": `${index * 20}ms` } as CSSProperties}
               >
                 <span
                   className={`mt-0.5 shrink-0 self-start rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${levelStyle.className}`}

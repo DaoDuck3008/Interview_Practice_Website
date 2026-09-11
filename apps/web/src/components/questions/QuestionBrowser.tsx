@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -59,6 +59,13 @@ export default function QuestionBrowser({
   };
   const allLevelCount =
     levelCounts.EASY + levelCounts.MEDIUM + levelCounts.HARD;
+  const resultKey = [
+    currentTopicSlug,
+    initialPage,
+    initialLevel ?? "ALL",
+    initialSearch ?? "",
+    initialSort,
+  ].join(":");
 
   const levelBadgeClass: Record<Level, string> = {
     EASY: "bg-[#22c55e] shadow-[0_0_14px_rgba(34,197,94,0.45)]",
@@ -176,7 +183,7 @@ export default function QuestionBrowser({
         </div>
 
         <div
-          className="mb-2 overflow-hidden rounded-[28px]"
+          className="mb-2 overflow-hidden rounded-[28px] content-ready-enter"
           style={{
             background: "rgba(20, 25, 56, 0.88)",
             border: "1px solid rgba(196,181,253,0.18)",
@@ -417,14 +424,23 @@ export default function QuestionBrowser({
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-2">
+          <div key={resultKey} className="flex flex-col gap-2">
             {items.map((question, i) => (
-              <QuestionCard
+              <div
                 key={question.id}
-                question={question}
-                index={(initialPage - 1) * initialLimit + i + 1}
-                searchQuery={searchValue}
-              />
+                className="collection-item-enter"
+                style={
+                  {
+                    "--motion-enter-delay": `${Math.min(i, 7) * 35}ms`,
+                  } as CSSProperties
+                }
+              >
+                <QuestionCard
+                  question={question}
+                  index={(initialPage - 1) * initialLimit + i + 1}
+                  searchQuery={searchValue}
+                />
+              </div>
             ))}
           </div>
         )}

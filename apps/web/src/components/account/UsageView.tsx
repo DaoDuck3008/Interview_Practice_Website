@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { CalendarClock, Gauge, LockKeyhole, Sparkles } from "lucide-react";
 import { useAiCredits } from "@/hooks/useAiCredits";
 import { formatDate, formatNumber } from "@/lib/utils/format";
@@ -39,7 +40,7 @@ export default function UsageView() {
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      <div className={cardClass}>
+      <div className={`${cardClass} content-ready-enter`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
@@ -60,7 +61,7 @@ export default function UsageView() {
         </p>
       </div>
 
-      <div className={cardClass}>
+      <div className={`${cardClass} content-ready-enter`} style={{ "--motion-enter-delay": "70ms" } as CSSProperties}>
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-sm font-medium text-text-secondary">
