@@ -71,49 +71,40 @@ h6 {
   text-shadow: 0 0 34px rgba(139, 92, 246, 0.22);
 }
 
-/* Scroll animations */
-.will-animate {
+/* Shared scroll-entry animation */
+.reveal {
   opacity: 0;
   transition:
     opacity 0.65s ease,
     transform 0.65s ease;
 }
-.will-animate--fade-up {
+.reveal--fade-up {
   transform: translateY(28px);
 }
-.will-animate--fade-in {
+.reveal--fade-in {
   transform: none;
 }
-.will-animate--fade-left {
+.reveal--fade-left {
   transform: translateX(-28px);
 }
-
-.will-animate.is-visible {
+.reveal--fade-right {
+  transform: translateX(28px);
+}
+.reveal--control {
+  transition-duration: 0.5s;
+}
+.reveal--control.reveal--fade-up {
+  transform: translateY(20px);
+}
+.reveal--control.reveal--fade-left {
+  transform: translateX(-24px);
+}
+.reveal--control.reveal--fade-right {
+  transform: translateX(24px);
+}
+.reveal.is-visible {
   opacity: 1;
-  transform: none !important;
-}
-
-@keyframes pricingCardPushIn {
-  0% {
-    opacity: 0;
-    filter: blur(8px);
-    transform: translateY(26px) scale(0.96);
-  }
-  62% {
-    opacity: 1;
-    filter: blur(0);
-    transform: translateY(-4px) scale(1.012);
-  }
-  100% {
-    opacity: 1;
-    filter: blur(0);
-    transform: none;
-  }
-}
-
-.pricing-card-push-in {
-  animation: pricingCardPushIn 0.72s cubic-bezier(0.16, 1, 0.3, 1) both;
-  transform-origin: center bottom;
+  transform: none;
 }
 
 @keyframes topicMarquee {
@@ -142,36 +133,6 @@ h6 {
 .performance-page [class*="backdrop-blur"] {
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
-}
-
-@keyframes landingGlowDrift {
-  0%,
-  100% {
-    opacity: 0.68;
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    opacity: 0.92;
-    transform: translate3d(18px, -12px, 0) scale(1.06);
-  }
-}
-
-.landing-glow-drift {
-  animation: landingGlowDrift 8s ease-in-out infinite;
-}
-
-@keyframes landingFloat {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-.landing-float {
-  animation: landingFloat 6s ease-in-out infinite;
 }
 
 @keyframes fadeIn {
@@ -256,16 +217,17 @@ h6 {
   animation: skeletonPulse 1.4s ease-in-out infinite;
 }
 
+/* Tôn trọng việc hạn chế chuyển động của browser (khi người dùng bật Reduce motion) */
 @media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
   .eval-enter {
     animation: none;
   }
-  .pricing-card-push-in {
-    animation: none;
-  }
   .topic-marquee-track,
-  .landing-glow-drift,
-  .landing-float,
   [class*="animate-\\[fadeIn_"],
   [class*="animate-\\[cardPushIn_"],
   .text-type-cursor,
@@ -278,6 +240,9 @@ h6 {
   .skeleton-pulse {
     animation: none;
     opacity: 0.5;
+  }
+  .status-icon-pop {
+    animation: none;
   }
 }
 

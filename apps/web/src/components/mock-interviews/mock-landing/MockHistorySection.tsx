@@ -21,7 +21,7 @@ import {
 } from "@/lib/utils/mockInterview";
 import { formatDay } from "@/lib/utils/format";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
-import { TopicIcon } from "@/components/ui/TopicOption";
+import { TopicIcon } from "@/components/ui/TopicIcon";
 
 export default function MockHistorySection({
   history,
@@ -158,7 +158,7 @@ export default function MockHistorySection({
                     key={mock.id}
                     type="button"
                     onClick={() => router.push(targetPath)}
-                    className="group cursor-pointer relative grid w-full max-w-[42rem] grid-cols-[5.25rem_minmax(0,1fr)] animate-[cardPushIn_650ms_120ms_cubic-bezier(.2,.8,.2,1)_both] items-stretch gap-2.5 overflow-hidden rounded-[1.25rem] border border-white/10 bg-surface/70 p-2.5 text-left shadow-[0_20px_55px_rgba(2,6,23,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-accent-light/30 hover:bg-elevated/75 sm:grid-cols-[6rem_minmax(0,1fr)] sm:gap-3 sm:p-3 md:grid-cols-[7.5rem_minmax(0,1fr)] md:p-4"
+                    className="group cursor-pointer relative grid w-full max-w-[42rem] grid-cols-[5.25rem_minmax(0,1fr)] animate-[cardPushIn_650ms_120ms_cubic-bezier(.2,.8,.2,1)_both] items-stretch gap-2.5 overflow-hidden rounded-[1.25rem] border border-white/10 bg-surface/70 p-2.5 text-left shadow-[0_20px_55px_rgba(2,6,23,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition-[transform,background-color,border-color] duration-300 hover:-translate-y-0.5 hover:border-accent-light/30 hover:bg-elevated/75 sm:grid-cols-[6rem_minmax(0,1fr)] sm:gap-3 sm:p-3 md:grid-cols-[7.5rem_minmax(0,1fr)] md:p-4"
                     style={{ animationDelay: `${index * 70}ms` }}
                   >
                     <span className="pointer-events-none absolute inset-y-0 left-0 w-24 bg-accent/5 [mask-image:linear-gradient(to_right,black,transparent)]" />
@@ -207,7 +207,7 @@ export default function MockHistorySection({
                         <CalendarDays size={14} className="shrink-0" />
                         <span className="truncate">{dateText}</span>
                       </span>
-                      <span className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-accent-light/25 bg-accent/10 px-2.5 text-xs font-semibold text-accent-light transition-all duration-300 group-hover:bg-accent group-hover:text-white sm:h-9 sm:gap-2 sm:px-3.5">
+                      <span className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-accent-light/25 bg-accent/10 px-2.5 text-xs font-semibold text-accent-light transition-colors duration-300 group-hover:bg-accent group-hover:text-white sm:h-9 sm:gap-2 sm:px-3.5">
                         {actionLabel}
                         <ArrowRight
                           size={15}
@@ -282,7 +282,7 @@ function HistoryPagination({
               onClick={() => onPageChange(item)}
               disabled={disabled || item === page}
               aria-current={item === page ? "page" : undefined}
-              className={`grid size-9 place-items-center rounded-lg border text-sm font-bold transition-all duration-200 ${
+              className={`grid size-9 place-items-center rounded-lg border text-sm font-bold transition-colors duration-200 ${
                 item === page
                   ? "border-accent-light/40 bg-accent text-white"
                   : "border-white/10 bg-white/[0.04] text-text-secondary hover:border-accent-light/30 hover:bg-white/[0.08] hover:text-text-primary disabled:cursor-default"
@@ -321,7 +321,7 @@ function PaginationButton({
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      className="grid size-9 place-items-center rounded-lg border border-white/10 bg-white/[0.04] text-text-secondary transition-all duration-200 hover:border-accent-light/30 hover:bg-white/[0.08] hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
+      className="grid size-9 place-items-center rounded-lg border border-white/10 bg-white/[0.04] text-text-secondary transition-colors duration-200 hover:border-accent-light/30 hover:bg-white/[0.08] hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
     >
       {children}
     </button>

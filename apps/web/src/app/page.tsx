@@ -3,7 +3,7 @@ import Footer from "@/components/layout/Footer";
 import Hero from "@/components/landing/Hero";
 import FeaturesSection from "@/components/landing/FeaturesSection";
 import QuestionBankShowcase from "@/components/landing/QuestionBankShowcase";
-import { AnimateOnScroll } from "@/components/ui/AnimateOnScroll";
+import { Reveal } from "@/components/ui/Reveal";
 import { createSeoMetadata } from "@/lib/seo";
 
 export const metadata = createSeoMetadata({
@@ -19,15 +19,15 @@ export default function HomePage() {
       <main
         className="flex flex-col flex-1 bg-[#0f172a] text-white"
       >
-        <AnimateOnScroll>
+        <Reveal>
           <Hero />
-        </AnimateOnScroll>
-        <AnimateOnScroll variant="fade-up">
+        </Reveal>
+        <Reveal variant="fade-up">
           <FeaturesSection />
-        </AnimateOnScroll>
-        <AnimateOnScroll variant="fade-up" delay={60}>
+        </Reveal>
+        <Reveal variant="fade-up" delay={60}>
           <QuestionBankShowcase />
-        </AnimateOnScroll>
+        </Reveal>
       </main>
       <Footer />
     </>

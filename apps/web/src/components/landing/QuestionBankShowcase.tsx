@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { FlyInOnView } from "../ui/FlyInOnView";
+import { Reveal } from "../ui/Reveal";
 
 export default function QuestionBankShowcase() {
   return (
@@ -28,7 +28,7 @@ export default function QuestionBankShowcase() {
             design để bạn luyện đúng phần còn yếu trước vòng phỏng vấn.
           </p>
 
-          <FlyInOnView delay={120} direction="left">
+          <Reveal preset="control" delay={120} variant="fade-left">
             <Link
               href="/learning/javascript/questions"
               className="mt-8 inline-flex h-12 w-fit items-center justify-center gap-2 rounded-full border border-white/20 bg-[#26223f] px-6 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_0_30px_rgba(167,139,250,0.24)] transition-[transform,background-color,border-color] duration-300 hover:-translate-y-1 hover:border-[#ddd6fe]/65 hover:bg-[#342d58] active:scale-[0.98]"
@@ -36,7 +36,7 @@ export default function QuestionBankShowcase() {
               Khám phá câu hỏi
               <ArrowRight size={15} />
             </Link>
-          </FlyInOnView>
+          </Reveal>
         </div>
       </div>
     </section>

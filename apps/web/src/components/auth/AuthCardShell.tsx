@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, Sparkles } from "lucide-react";
-import { AnimateOnScroll } from "@/components/ui/AnimateOnScroll";
+import { Reveal } from "@/components/ui/Reveal";
 
 /**
  * Khung trang xác thực căn giữa, lấy phong cách từ trang Bảng giá:
@@ -31,7 +31,7 @@ export default function AuthCardShell({
           Phỏng vấn <span className="text-[var(--color-accent-light)]">IT</span>
         </Link>
 
-        <AnimateOnScroll variant="fade-up">
+        <Reveal variant="fade-up">
           <div className="mb-8 text-center">
             <span className="mb-4 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-accent-light)]">
               <Sparkles size={14} />
@@ -59,7 +59,7 @@ export default function AuthCardShell({
             <ArrowLeft size={14} />
             {backLabel}
           </Link>
-        </AnimateOnScroll>
+        </Reveal>
       </div>
     </div>
   );

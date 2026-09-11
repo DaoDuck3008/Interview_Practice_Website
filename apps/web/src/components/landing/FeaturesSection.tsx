@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BrainCircuit, FileSearch, Mic } from "lucide-react";
-import { FlyInOnView } from "../ui/FlyInOnView";
+import { Reveal } from "../ui/Reveal";
 
 const ACTIVE_INTERVAL_MS = 10000;
 
@@ -91,11 +91,12 @@ export default function FeaturesSection() {
               const Icon = feature.icon;
               const selected = feature.id === active.id;
               return (
-                <FlyInOnView
+                <Reveal
                   key={feature.id}
+                  preset="control"
                   className="block w-full max-w-[25rem]"
                   delay={index * 90}
-                  direction="left"
+                  variant="fade-left"
                 >
                   <button
                     type="button"
@@ -123,12 +124,12 @@ export default function FeaturesSection() {
                       {feature.title}
                     </span>
                   </button>
-                </FlyInOnView>
+                </Reveal>
               );
             })}
           </div>
 
-          <FlyInOnView delay={320} direction="left">
+          <Reveal preset="control" delay={320} variant="fade-left">
             <Link
               href={active.href}
               className="mt-7 inline-flex h-11 w-fit items-center justify-center gap-2 rounded-full border border-white/20 bg-[#26223f] px-5 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_0_28px_rgba(167,139,250,0.24)] transition-[transform,background-color,border-color] duration-300 hover:-translate-y-1 hover:border-[#ddd6fe]/65 hover:bg-[#342d58] active:scale-[0.98]"
@@ -136,7 +137,7 @@ export default function FeaturesSection() {
               {active.cta}
               <ArrowRight size={15} />
             </Link>
-          </FlyInOnView>
+          </Reveal>
         </div>
       </div>
     </section>

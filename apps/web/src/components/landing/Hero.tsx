@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
 import TopicsPreview from "./TopicsPreview";
-import { FlyInOnView } from "../ui/FlyInOnView";
+import { Reveal } from "../ui/Reveal";
 
 export default async function Hero() {
   return (
@@ -48,7 +48,7 @@ export default async function Hero() {
           </p>
 
           <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            <FlyInOnView className="w-full sm:w-auto" delay={80}>
+            <Reveal preset="control" className="w-full sm:w-auto" delay={80}>
               <Link
                 href="/learning/javascript/questions"
                 className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-[#6240c7] px-8 font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_0_32px_rgba(124,58,237,0.32)] transition-[transform,background-color,border-color] duration-300 hover:-translate-y-1 hover:border-[#8b5cf6]/60 hover:bg-[#7049d8] active:scale-[0.98] sm:w-auto"
@@ -56,8 +56,8 @@ export default async function Hero() {
                 Bắt đầu học
                 <ArrowRight size={16} />
               </Link>
-            </FlyInOnView>
-            <FlyInOnView className="w-full sm:w-auto" delay={180}>
+            </Reveal>
+            <Reveal preset="control" className="w-full sm:w-auto" delay={180}>
               <Link
                 href="/practice"
                 className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/12 bg-[#171a28] px-8 font-semibold text-[#f4f4f6] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition-[transform,background-color,border-color] duration-300 hover:-translate-y-1 hover:border-[#8b5cf6]/45 hover:bg-[#22263a] active:scale-[0.98] sm:w-auto"
@@ -65,7 +65,7 @@ export default async function Hero() {
                 Luyện tập ngay
                 <ArrowRight size={16} />
               </Link>
-            </FlyInOnView>
+            </Reveal>
           </div>
 
           <p className="mt-5 text-sm font-medium text-[#c4b5fd]">

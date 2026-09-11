@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { Check, BadgeCheck, Sparkles, Loader2, Info } from "lucide-react";
-import { AnimateOnScroll } from "@/components/ui/AnimateOnScroll";
+import { Reveal } from "@/components/ui/Reveal";
 import { getPlans, type Plan } from "@/lib/api/plans";
 import { createCheckout } from "@/lib/api/payments";
 import {
@@ -25,7 +25,7 @@ const FEATURES = [
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const cardClass =
-  "pricing-card-push-in group relative flex h-full flex-col rounded-[28px] border p-7 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_14px_38px_rgba(2,6,23,0.2)] transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-1";
+  "group relative flex h-full flex-col rounded-[28px] border p-7 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_14px_38px_rgba(2,6,23,0.2)] transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-1";
 
 export default function PricingCards() {
   const router = useRouter();
@@ -131,7 +131,7 @@ export default function PricingCards() {
           const isCurrent = hasActiveSub && sub!.plan.slug === plan.slug;
 
           return (
-            <AnimateOnScroll key={plan.id} variant="fade-up" delay={i * 120}>
+            <Reveal key={plan.id} variant="fade-up" delay={i * 120}>
               <div
                 className={`${cardClass} ${
                   isCurrent
@@ -144,7 +144,6 @@ export default function PricingCards() {
                   background: popular
                     ? "rgba(30, 21, 52, 0.66)"
                     : "rgba(10, 12, 21, 0.44)",
-                  animationDelay: `${i * 110}ms`,
                 }}
               >
                 {isCurrent ? (
@@ -205,7 +204,7 @@ export default function PricingCards() {
                   {buttonLabel()}
                 </button>
               </div>
-            </AnimateOnScroll>
+            </Reveal>
           );
         })}
       </div>

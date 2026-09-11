@@ -132,7 +132,7 @@ Landing, pricing, and other public marketing sections may use controlled gradien
 - `object-cover` image backgrounds,
 - subtle text gradients for large section headers,
 - glassmorphism with translucent white fills and thin white borders,
-- soft transform/opacity animation via `FlyInOnView` or the shared animation utilities.
+- soft transform/opacity animation via the shared `Reveal` utility.
 
 ---
 
@@ -175,7 +175,7 @@ export default function RecordButton() {
 
 **Reusability first.** Do not split a component just to reduce file length. Extract a component only when:
 - It is used in **more than one place**, OR
-- It has **clearly distinct responsibility** and meaningful props interface (e.g., `StatusModal`, `AnimateOnScroll`)
+- It has **clearly distinct responsibility** and meaningful props interface (e.g., `StatusModal`, `Reveal`)
 
 One-off UI sections that live in a single page stay inline or in the same file. Avoid premature abstraction.
 
@@ -189,7 +189,7 @@ src/components/
 ├── questions/   # Learning / browse UI
 ├── admin/       # Admin panel UI
 ├── providers/   # React context / hydration providers
-└── ui/          # Truly reusable primitives (StatusModal, AnimateOnScroll, ImageDropzone)
+└── ui/          # Truly reusable primitives (StatusModal, Reveal, ImageDropzone)
 ```
 
 New primitives go in `components/ui/`. Feature components go in the folder matching their route group.
@@ -357,18 +357,18 @@ interface Improvement { id, improvedAnswer, annotations: Annotation[], keyChange
 
 ## Scroll Animations
 
-Use `AnimateOnScroll` (`src/components/ui/AnimateOnScroll.tsx`) to animate elements into view. Do not write custom intersection observer code.
-
-Use `FlyInOnView` (`src/components/ui/FlyInOnView.tsx`) for landing CTAs and feature buttons that need a directional push-in/fly-in effect.
+Use `Reveal` (`src/components/ui/Reveal.tsx`) to animate elements into view. Do not write custom intersection observer code.
 
 ```tsx
-<AnimateOnScroll variant="fade-up" delay={100}>
+<Reveal variant="fade-up" delay={100}>
   <YourComponent />
-</AnimateOnScroll>
+</Reveal>
 ```
 
-Available variants: `fade-up`, `fade-in`, `fade-left`.  
-Optional `delay` prop in ms for stagger effects.
+Available variants: `fade-up`, `fade-in`, `fade-left`, `fade-right`. Use
+`preset="control"` for directional landing CTAs and feature buttons. Optional
+`delay`, `threshold`, and `rootMargin` props support stagger and observer tuning.
+The primitive respects `prefers-reduced-motion` through the shared global CSS.
 
 ---
 

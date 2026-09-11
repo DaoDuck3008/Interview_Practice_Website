@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Search, X } from "lucide-react";
 import type { TopicWithCount } from "@/lib/api/topics";
-import { TopicIcon } from "@/components/ui/TopicOption";
+import { TopicIcon } from "@/components/ui/TopicIcon";
 
 const MAX_TOPICS = 6;
 
@@ -79,7 +79,7 @@ export default function TopicMultiDropdown({
       <button
         type="button"
         onClick={() => !loading && setOpen((current) => !current)}
-        className="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-white/12 bg-white/[0.07] px-3 py-2.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition-all duration-300 hover:bg-white/[0.1]"
+        className="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-white/12 bg-white/[0.07] px-3 py-2.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition-colors duration-300 hover:bg-white/[0.1]"
       >
         <span className="min-w-0 text-sm font-bold text-white">
           {loading
@@ -143,7 +143,7 @@ export default function TopicMultiDropdown({
                     return (
                       <label
                         key={topic.id}
-                        className={`flex cursor-pointer items-center gap-2 rounded-xl border px-2.5 py-2 text-left transition-all duration-200 ${active ? "border-[#c4b5fd]/50 bg-[#7c3aed]/18 text-white" : "border-white/10 bg-white/[0.035] text-[#d8d6ea] hover:border-white/20 hover:bg-white/[0.07]"} ${disabled ? "cursor-not-allowed opacity-45" : ""}`}
+                        className={`flex cursor-pointer items-center gap-2 rounded-xl border px-2.5 py-2 text-left transition-colors duration-200 ${active ? "border-[#c4b5fd]/50 bg-[#7c3aed]/18 text-white" : "border-white/10 bg-white/[0.035] text-[#d8d6ea] hover:border-white/20 hover:bg-white/[0.07]"} ${disabled ? "cursor-not-allowed opacity-45" : ""}`}
                       >
                         <input
                           type="checkbox"
