@@ -36,10 +36,22 @@ export class MockCvProfileJobHandler {
 
   async process(job: Job<MockCvProfileJobData>): Promise<void> {
     const { analysisId, userId, attempt } = job.data;
+    const claimed = await this.prisma.mockCvAnalysis.updateMany({
+      where: {
+        id: analysisId,
+        status: MockCvAnalysisStatus.PENDING,
+        analysisAttempt: attempt,
+      },
+      data: {
+        status: MockCvAnalysisStatus.ANALYZING,
+        analysisStartedAt: new Date(),
+      },
+    });
+    if (claimed.count === 0) return;
+
     const analysis = await this.prisma.mockCvAnalysis.findUnique({
       where: { id: analysisId },
       select: {
-        status: true,
         analysisAttempt: true,
         mockCv: {
           select: {
@@ -57,7 +69,6 @@ export class MockCvProfileJobHandler {
     if (
       !analysis ||
       analysis.mockCv.userId !== userId ||
-      analysis.status !== MockCvAnalysisStatus.ANALYZING ||
       analysis.analysisAttempt !== attempt
     ) {
       if (this.isDev) {
@@ -67,6 +78,12 @@ export class MockCvProfileJobHandler {
       }
       return;
     }
+
+    this.websocket.emitToUser(userId, 'mock-cv:analysis-updated', {
+      mockCvId: analysis.mockCv.id,
+      analysisId,
+      status: MockCvAnalysisStatus.ANALYZING,
+    });
 
     await this.aiCredits.extendByReference(
       userId,

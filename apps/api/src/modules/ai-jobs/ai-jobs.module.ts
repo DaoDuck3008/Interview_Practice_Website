@@ -6,7 +6,7 @@ import { StorageModule } from '../storage/storage.module';
 import { WebsocketModule } from '../../websocket/websocket.module';
 import { AiJobsService } from './ai-jobs.service';
 import { AiJobsProcessor } from './ai-jobs.processor';
-import { AI_JOBS_QUEUE } from './ai-jobs.types';
+import { AI_JOBS_QUEUE, PDF_JOBS_QUEUE } from './ai-jobs.types';
 import { MockCvProfileService } from '../mock-cv/analysis/mock-cv-profile.service';
 import { MockCvQuestionGenerationService } from '../mock-cv/analysis/mock-cv-question-generation.service';
 import { ImproveJobHandler } from './handlers/improve-job.handler';
@@ -20,10 +20,12 @@ import { MockCvInterviewOverviewJobHandler } from './handlers/mock-cv-interview-
 import { MockCvInterviewScoringService } from './services/mock-cv-interview-scoring.service';
 import { MockCvQuestionPreparationService } from './services/mock-cv-question-preparation.service';
 import { AiCreditsModule } from '../ai-credits/ai-credits.module';
+import { PdfJobsProcessor } from './pdf-jobs.processor';
+import { PdfExtractionSandboxService } from '../mock-cv/analysis/pdf-extraction-sandbox.service';
 
 @Module({
   imports: [
-    BullModule.registerQueue({ name: AI_JOBS_QUEUE }),
+    BullModule.registerQueue({ name: AI_JOBS_QUEUE }, { name: PDF_JOBS_QUEUE }),
     AiModule,
     ScoreModule,
     StorageModule,
@@ -33,7 +35,9 @@ import { AiCreditsModule } from '../ai-credits/ai-credits.module';
   providers: [
     AiJobsService,
     AiJobsProcessor,
+    PdfJobsProcessor,
     MockCvProfileService,
+    PdfExtractionSandboxService,
     MockCvQuestionGenerationService,
     MockCvInterviewOverviewService,
     ScoreJobHandler,

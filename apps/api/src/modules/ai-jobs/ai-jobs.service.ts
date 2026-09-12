@@ -3,6 +3,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
 import {
   AI_JOBS_QUEUE,
+  PDF_JOBS_QUEUE,
   JOB_IMPROVE,
   JOB_MOCK_CV_PROFILE,
   JOB_MOCK_CV_INTERVIEW_OVERVIEW,
@@ -30,6 +31,7 @@ export class AiJobsService {
 
   constructor(
     @InjectQueue(AI_JOBS_QUEUE) private queue: Queue,
+    @InjectQueue(PDF_JOBS_QUEUE) private pdfQueue: Queue,
     private readonly config: ConfigService,
     private readonly aiCredits: AiCreditsService,
   ) {
@@ -79,7 +81,8 @@ export class AiJobsService {
   ): Promise<void> {
     const data: MockCvProfileJobData = { analysisId, userId, attempt };
     // Mỗi attempt có jobId riêng để lần retry mới không bị job cũ đang chạy dedup nhầm.
-    return this.enqueue(
+    return this.enqueueOnQueue(
+      this.pdfQueue,
       JOB_MOCK_CV_PROFILE,
       `mock_cv_profile_${analysisId}_${attempt}`,
       data,
@@ -124,7 +127,10 @@ export class AiJobsService {
   async removeJobs(jobIds: string[]): Promise<string[]> {
     const activeJobIds: string[] = [];
     for (const jobId of new Set(jobIds)) {
-      const job = await this.queue.getJob(jobId);
+      const queue = jobId.startsWith('mock_cv_profile_')
+        ? this.pdfQueue
+        : this.queue;
+      const job = await queue.getJob(jobId);
       if (!job) continue;
       const state = await job.getState();
       if (state === 'active') {
@@ -158,7 +164,16 @@ export class AiJobsService {
     jobId: string,
     data: AiJobData,
   ): Promise<void> {
-    const existing = await this.queue.getJob(jobId);
+    return this.enqueueOnQueue(this.queue, jobName, jobId, data);
+  }
+
+  private async enqueueOnQueue(
+    queue: Queue,
+    jobName: string,
+    jobId: string,
+    data: AiJobData,
+  ): Promise<void> {
+    const existing = await queue.getJob(jobId);
     if (existing) {
       const state = await existing.getState();
       if (state === 'failed') {
@@ -176,7 +191,7 @@ export class AiJobsService {
       }
     }
 
-    await this.queue.add(jobName, data, {
+    await queue.add(jobName, data, {
       jobId,
       attempts: 1,
       removeOnComplete: true,

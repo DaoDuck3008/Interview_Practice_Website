@@ -31,6 +31,9 @@ export const validationSchema = Joi.object({
   RESEND_API_KEY: Joi.string().allow('').default(''),
   MAIL_FROM: Joi.string().default('Phỏng vấn IT <onboarding@resend.dev>'),
   AI_QUEUE_CONCURRENCY: Joi.number().default(5),
+  PDF_QUEUE_CONCURRENCY: Joi.number().min(1).max(2).default(2),
+  PDF_PARSE_TIMEOUT_MS: Joi.number().min(5_000).max(120_000).default(45_000),
+  PDF_PARSE_MEMORY_LIMIT_MB: Joi.number().min(96).max(512).default(192),
 });
 
 export default () => ({
@@ -82,5 +85,13 @@ export default () => ({
     // kiểm soát tải/chi phí AI ở cấp hệ thống, khác ConcurrencyInterceptor
     // (chỉ giới hạn theo từng user riêng lẻ).
     concurrency: parseInt(process.env.AI_QUEUE_CONCURRENCY ?? '5', 10),
+  },
+  pdfQueue: {
+    concurrency: parseInt(process.env.PDF_QUEUE_CONCURRENCY ?? '2', 10),
+    parseTimeoutMs: parseInt(process.env.PDF_PARSE_TIMEOUT_MS ?? '45000', 10),
+    parseMemoryLimitMb: parseInt(
+      process.env.PDF_PARSE_MEMORY_LIMIT_MB ?? '192',
+      10,
+    ),
   },
 });

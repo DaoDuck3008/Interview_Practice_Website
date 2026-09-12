@@ -1,4 +1,5 @@
 export const AI_JOBS_QUEUE = 'ai-jobs';
+export const PDF_JOBS_QUEUE = 'pdf-jobs';
 
 export const JOB_SCORE = 'score';
 export const JOB_IMPROVE = 'improve';

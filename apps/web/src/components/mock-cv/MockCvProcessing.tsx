@@ -42,7 +42,7 @@ const PREPARATION_STAGES: Array<{
     icon: UploadCloud,
   },
   {
-    title: "Đang đọc hồ sơ",
+    title: "Đọc hồ sơ",
     description: "Xác định kinh nghiệm, kỹ năng và dự án nổi bật.",
     icon: FileSearch2,
   },
@@ -172,7 +172,6 @@ export default function MockCvProcessing({ id }: { id: string }) {
   return (
     <main className="performance-page mx-auto flex min-h-[calc(100vh-7rem)] w-full max-w-5xl items-center py-6 sm:py-10">
       <section className="relative w-full overflow-hidden rounded-[2rem] border border-[#c4b5fd]/16 bg-[#171d3d]/90 p-4 shadow-[0_18px_48px_rgba(2,6,23,0.3),inset_0_1px_0_rgba(255,255,255,0.08)] sm:p-7 lg:p-10">
-
         <div className="relative">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Link
@@ -215,9 +214,11 @@ export default function MockCvProcessing({ id }: { id: string }) {
                   : "Đang chuẩn bị bài luyện của bạn"}
             </h1>
             <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-text-secondary sm:text-white">
-              {cv
-                ? `${cv.targetRole} · ${cv.analysis?.requestedQuestionCount ?? 10} câu · ${Math.round((cv.analysis?.requestedDurationSeconds ?? 900) / 60)} phút`
-                : "Hệ thống đang đồng bộ thông tin bài luyện."}
+              {cv?.analysis?.status === "PENDING"
+                ? "CV đang chờ đến lượt xử lý. Bạn có thể đóng trang và quay lại sau."
+                : cv
+                  ? `${cv.targetRole} · ${cv.analysis?.requestedQuestionCount ?? 10} câu · ${Math.round((cv.analysis?.requestedDurationSeconds ?? 900) / 60)} phút`
+                  : "Hệ thống đang đồng bộ thông tin bài luyện."}
             </p>
           </div>
 
@@ -327,6 +328,7 @@ export default function MockCvProcessing({ id }: { id: string }) {
 function resolveProgress(cv: MockCv | null) {
   const analysis = cv?.analysis;
   if (!analysis) return { percent: 20, activeIndex: 1 };
+  if (analysis.status === "PENDING") return { percent: 25, activeIndex: 0 };
   if (analysis.status !== "READY") return { percent: 45, activeIndex: 1 };
   if (analysis.questionGenerationStatus !== "READY") {
     return { percent: 78, activeIndex: 2 };

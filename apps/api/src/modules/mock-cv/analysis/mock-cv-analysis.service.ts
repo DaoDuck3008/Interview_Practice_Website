@@ -365,6 +365,9 @@ export class MockCvAnalysisService {
         'CV cần được tải lên lại, không thể dùng lại file hiện tại.',
       );
     }
+    if (analysis.status === MockCvAnalysisStatus.PENDING) {
+      throw new ConflictException('CV đang chờ đến lượt xử lý.');
+    }
     if (analysis.status === MockCvAnalysisStatus.ANALYZING && !isStale) {
       throw new ConflictException('CV đang được phân tích.');
     }
@@ -393,11 +396,8 @@ export class MockCvAnalysisService {
       where: {
         id: analysisId,
         OR: [
-          {
-            status: {
-              in: [MockCvAnalysisStatus.PENDING, MockCvAnalysisStatus.FAILED],
-            },
-          },
+          { status: MockCvAnalysisStatus.FAILED },
+          { status: MockCvAnalysisStatus.PENDING, analysisAttempt: 0 },
           {
             status: MockCvAnalysisStatus.ANALYZING,
             analysisStartedAt: { lte: staleAt },
@@ -405,9 +405,9 @@ export class MockCvAnalysisService {
         ],
       },
       data: {
-        status: MockCvAnalysisStatus.ANALYZING,
+        status: MockCvAnalysisStatus.PENDING,
         analysisAttempt: { increment: 1 },
-        analysisStartedAt: now,
+        analysisStartedAt: null,
         analysisError: null,
         ...(isRetry && { lastRetryAt: now }),
       },
@@ -433,7 +433,7 @@ export class MockCvAnalysisService {
       await this.prisma.mockCvAnalysis.updateMany({
         where: {
           id: analysisId,
-          status: MockCvAnalysisStatus.ANALYZING,
+          status: MockCvAnalysisStatus.PENDING,
           analysisAttempt: analysis.analysisAttempt,
         },
         data: {
@@ -489,9 +489,7 @@ export class MockCvAnalysisService {
       : null;
     const canRetry =
       !!analysis &&
-      (analysis.status === MockCvAnalysisStatus.FAILED ||
-        analysis.status === MockCvAnalysisStatus.PENDING ||
-        isStale) &&
+      (analysis.status === MockCvAnalysisStatus.FAILED || isStale) &&
       (!retryAvailableAt || retryAvailableAt.getTime() <= now);
 
     return {

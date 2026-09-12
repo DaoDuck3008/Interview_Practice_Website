@@ -5,19 +5,16 @@ import type { Job } from 'bullmq';
 import {
   AI_JOBS_QUEUE,
   JOB_IMPROVE,
-  JOB_MOCK_CV_PROFILE,
   JOB_MOCK_CV_INTERVIEW_OVERVIEW,
   JOB_MOCK_CV_QUESTION_GENERATION,
   JOB_SCORE,
   type AiJobData,
   type ImproveJobData,
-  type MockCvProfileJobData,
   type MockCvInterviewOverviewJobData,
   type MockCvQuestionGenerationJobData,
   type ScoreJobData,
 } from './ai-jobs.types';
 import { ImproveJobHandler } from './handlers/improve-job.handler';
-import { MockCvProfileJobHandler } from './handlers/mock-cv-profile-job.handler';
 import { MockCvQuestionGenerationJobHandler } from './handlers/mock-cv-question-generation-job.handler';
 import { ScoreJobHandler } from './handlers/score-job.handler';
 import { MockCvInterviewOverviewJobHandler } from './handlers/mock-cv-interview-overview-job.handler';
@@ -34,7 +31,6 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
   constructor(
     private readonly scoreHandler: ScoreJobHandler,
     private readonly improveHandler: ImproveJobHandler,
-    private readonly mockCvProfileHandler: MockCvProfileJobHandler,
     private readonly mockCvQuestionHandler: MockCvQuestionGenerationJobHandler,
     private readonly mockCvOverviewHandler: MockCvInterviewOverviewJobHandler,
     private readonly config: ConfigService,
@@ -54,10 +50,6 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
         return this.scoreHandler.process(job as Job<ScoreJobData>);
       case JOB_IMPROVE:
         return this.improveHandler.process(job as Job<ImproveJobData>);
-      case JOB_MOCK_CV_PROFILE:
-        return this.mockCvProfileHandler.process(
-          job as Job<MockCvProfileJobData>,
-        );
       case JOB_MOCK_CV_QUESTION_GENERATION:
         return this.mockCvQuestionHandler.process(
           job as Job<MockCvQuestionGenerationJobData>,
@@ -106,10 +98,6 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
         return this.scoreHandler.onFailed(job as Job<ScoreJobData>);
       case JOB_IMPROVE:
         return this.improveHandler.onFailed(job as Job<ImproveJobData>);
-      case JOB_MOCK_CV_PROFILE:
-        return this.mockCvProfileHandler.onFailed(
-          job as Job<MockCvProfileJobData>,
-        );
       case JOB_MOCK_CV_QUESTION_GENERATION:
         return this.mockCvQuestionHandler.onFailed(
           job as Job<MockCvQuestionGenerationJobData>,
