@@ -9,13 +9,15 @@ import type { TopicWithCount } from "@/lib/api/topics";
 interface TopicsSidebarProps {
   topics: TopicWithCount[];
   currentSlug: string;
-  currentLevel?: string;
+  getTopicHref: (slug: string) => string;
+  onTopicChange: (slug: string) => void;
 }
 
 export default function TopicsSidebar({
   topics,
   currentSlug,
-  currentLevel,
+  getTopicHref,
+  onTopicChange,
 }: TopicsSidebarProps) {
   const [filter, setFilter] = useState("");
 
@@ -37,13 +39,6 @@ export default function TopicsSidebar({
   const total = topics
     .filter((t) => t.parentId !== null)
     .reduce((s, t) => s + t.questionCount, 0);
-
-  function buildHref(slug: string) {
-    const params = new URLSearchParams();
-    if (currentLevel) params.set("level", currentLevel);
-    const qs = params.toString();
-    return `/learning/${slug}/questions${qs ? `?${qs}` : ""}`;
-  }
 
   // When filtering: only show parents that have matching children
   const visibleParents = filterLower
@@ -121,7 +116,17 @@ export default function TopicsSidebar({
                 return (
                   <Link
                     key={topic.id}
-                    href={buildHref(topic.slug)}
+                    href={getTopicHref(topic.slug)}
+                    onClick={(event) => {
+                      if (
+                        event.metaKey ||
+                        event.ctrlKey ||
+                        event.shiftKey ||
+                        event.altKey
+                      ) return;
+                      event.preventDefault();
+                      onTopicChange(topic.slug);
+                    }}
                     className={[
                       "flex items-center justify-between gap-2 rounded-full px-3.5 py-2 text-[13px] transition-all duration-200",
                       active

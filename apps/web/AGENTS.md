@@ -426,6 +426,18 @@ override. Do not reuse landing-specific `fadeIn` or `cardPushIn` for dynamic
 data lists: those animations are art-directed for hero content and are too
 slow for repeated collection updates.
 
+### Learning question browser state
+
+`QuestionBrowser` owns the query state for the learning question list after
+the initial server render. Topic, level, sort, search and pagination changes
+must update only the result region through `getQuestionsPublic`; do not call
+`router.push` for those interactions. Keep the canonical URL synchronized with
+the native History API: use `pushState` for topic/filter/page changes and
+`replaceState` for debounced search. Preserve normal modified-click behavior
+on sidebar links and handle `popstate` so Back/Forward restores the matching
+client query. Cache a small, bounded number of recent result sets and ignore
+stale responses when queries change quickly.
+
 ## Loading Skeletons
 
 Use `Skeleton` (`src/components/ui/Skeleton.tsx`) for the shared pulse surface.

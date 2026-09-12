@@ -1,15 +1,24 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
-import Link from "next/link";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { ArrowUp, ChevronDown, Search, X } from "lucide-react";
 import TopicsSidebar from "./TopicsSidebar";
 import QuestionCard from "./QuestionCard";
 import LearningPagination from "./LearningPagination";
 import type { TopicWithCount } from "@/lib/api/topics";
-import type { Level, Paginated, Question } from "@/lib/api/questions";
+import {
+  getQuestionsPublic,
+  type Level,
+  type Paginated,
+  type Question,
+} from "@/lib/api/questions";
 import { LEVELS } from "@/lib/utils/levels";
 
 type SortMode = "latest" | "easy" | "hard";
@@ -19,6 +28,31 @@ const SORT_OPTIONS: { value: SortMode; label: string }[] = [
   { value: "easy", label: "Dễ trước" },
   { value: "hard", label: "Khó trước" },
 ];
+
+const RESULT_CACHE_LIMIT = 24;
+const questionResultCache = new Map<string, Paginated<Question>>();
+
+interface BrowseState {
+  slug: string;
+  page: number;
+  level?: Level;
+  search?: string;
+  sort: SortMode;
+}
+
+type BrowseUpdates = Omit<Partial<BrowseState>, "level"> & {
+  level?: Level | "ALL";
+};
+
+function resultCacheKey(state: BrowseState) {
+  return [
+    state.slug,
+    state.page,
+    state.level ?? "ALL",
+    state.search ?? "",
+    state.sort,
+  ].join(":");
+}
 
 interface QuestionBrowserProps {
   topics: TopicWithCount[];
@@ -41,18 +75,26 @@ export default function QuestionBrowser({
   initialSearch,
   initialSort,
 }: QuestionBrowserProps) {
-  const router = useRouter();
-  const { items, total, totalPages } = initialResult;
-
+  const [browseState, setBrowseState] = useState<BrowseState>(() => ({
+    slug: currentTopicSlug,
+    page: initialPage,
+    level: initialLevel,
+    search: initialSearch,
+    sort: initialSort,
+  }));
+  const [result, setResult] = useState(initialResult);
+  const [loading, setLoading] = useState(false);
   const [searchValue, setSearchValue] = useState(initialSearch ?? "");
   const [showBackToTop, setShowBackToTop] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestIdRef = useRef(0);
 
-  const currentTopic = topics.find((t) => t.slug === currentTopicSlug);
-  const isAllTopics = currentTopicSlug === "all";
+  const { items, total, totalPages } = result;
+  const currentTopic = topics.find((t) => t.slug === browseState.slug);
+  const isAllTopics = browseState.slug === "all";
   const currentTopicLabel = currentTopic?.name ?? "Tất cả topic";
   const childTopics = topics.filter((t) => t.parentId !== null);
-  const levelCounts = initialResult.levelCounts ?? {
+  const levelCounts = result.levelCounts ?? {
     EASY: 0,
     MEDIUM: 0,
     HARD: 0,
@@ -60,11 +102,11 @@ export default function QuestionBrowser({
   const allLevelCount =
     levelCounts.EASY + levelCounts.MEDIUM + levelCounts.HARD;
   const resultKey = [
-    currentTopicSlug,
-    initialPage,
-    initialLevel ?? "ALL",
-    initialSearch ?? "",
-    initialSort,
+    browseState.slug,
+    browseState.page,
+    browseState.level ?? "ALL",
+    browseState.search ?? "",
+    browseState.sort,
   ].join(":");
 
   const levelBadgeClass: Record<Level, string> = {
@@ -73,48 +115,145 @@ export default function QuestionBrowser({
     HARD: "bg-[#ef4444] shadow-[0_0_14px_rgba(239,68,68,0.42)]",
   };
 
-  function buildHref(
-    updates: {
-      slug?: string;
-      page?: number;
-      level?: Level | "ALL";
-      search?: string;
-      sort?: SortMode;
-    } = {},
-  ) {
+  function buildHref(state: BrowseState) {
     const params = new URLSearchParams();
-    const slug = updates.slug ?? currentTopicSlug;
-    const newPage = updates.page ?? initialPage;
-    const newLevel = updates.level !== undefined ? updates.level : initialLevel;
-    const newSearch =
-      updates.search !== undefined ? updates.search : initialSearch;
-    const newSort = updates.sort ?? initialSort;
 
-    if (newPage > 1) params.set("page", String(newPage));
-    if (newLevel && newLevel !== "ALL") params.set("level", newLevel);
-    if (newSearch?.trim()) params.set("search", newSearch.trim());
-    if (newSort !== "easy") params.set("sort", newSort);
+    if (state.page > 1) params.set("page", String(state.page));
+    if (state.level) params.set("level", state.level);
+    if (state.search?.trim()) params.set("search", state.search.trim());
+    if (state.sort !== "easy") params.set("sort", state.sort);
 
     const qs = params.toString();
-    return `/learning/${slug}/questions${qs ? `?${qs}` : ""}`;
+    return `/learning/${state.slug}/questions${qs ? `?${qs}` : ""}`;
   }
 
-  function navigate(updates: {
-    page?: number;
-    level?: Level | "ALL";
-    search?: string;
-    sort?: SortMode;
-  }) {
-    router.push(buildHref(updates));
+  const loadResult = useCallback(
+    async (nextState: BrowseState) => {
+      const requestId = ++requestIdRef.current;
+      const key = resultCacheKey(nextState);
+      const cached = questionResultCache.get(key);
+      if (cached) {
+        setResult(cached);
+        setLoading(false);
+        return;
+      }
+
+      const topic = topics.find((item) => item.slug === nextState.slug);
+      if (nextState.slug !== "all" && !topic) {
+        setResult({
+          items: [],
+          total: 0,
+          page: nextState.page,
+          limit: initialLimit,
+          totalPages: 0,
+          levelCounts: { EASY: 0, MEDIUM: 0, HARD: 0 },
+        });
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      const nextResult = await getQuestionsPublic({
+        topicId: topic?.id,
+        level: nextState.level,
+        search: nextState.search,
+        sortBy: nextState.sort === "latest" ? "createdAt" : "level",
+        order: nextState.sort === "hard" ? "desc" : "asc",
+        page: nextState.page,
+        limit: initialLimit,
+      });
+      if (requestId !== requestIdRef.current) return;
+
+      questionResultCache.set(key, nextResult);
+      if (questionResultCache.size > RESULT_CACHE_LIMIT) {
+        questionResultCache.delete(questionResultCache.keys().next().value!);
+      }
+      setResult(nextResult);
+      setLoading(false);
+    },
+    [initialLimit, topics],
+  );
+
+  function navigate(
+    updates: BrowseUpdates,
+    historyMode: "push" | "replace" = "push",
+  ) {
+    const selectedLevel = updates.level;
+    const nextLevel: Level | undefined =
+      selectedLevel === "ALL"
+        ? undefined
+        : (selectedLevel ?? browseState.level);
+    const nextState: BrowseState = {
+      ...browseState,
+      ...updates,
+      level: nextLevel,
+      search:
+        updates.search !== undefined
+          ? updates.search.trim() || undefined
+          : browseState.search,
+    };
+    setBrowseState(nextState);
+    if (historyMode === "replace") {
+      window.history.replaceState(null, "", buildHref(nextState));
+    } else {
+      window.history.pushState(null, "", buildHref(nextState));
+    }
+    void loadResult(nextState);
   }
 
   function handleSearchChange(value: string) {
     setSearchValue(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      navigate({ search: value, page: 1 });
+      navigate({ search: value, page: 1 }, "replace");
     }, 400);
   }
+
+  useEffect(() => {
+    questionResultCache.set(
+      resultCacheKey({
+        slug: currentTopicSlug,
+        page: initialPage,
+        level: initialLevel,
+        search: initialSearch,
+        sort: initialSort,
+      }),
+      initialResult,
+    );
+  }, [
+    currentTopicSlug,
+    initialLevel,
+    initialPage,
+    initialResult,
+    initialSearch,
+    initialSort,
+  ]);
+
+  useEffect(() => {
+    function handlePopState() {
+      const segments = window.location.pathname.split("/");
+      const slug = segments[2];
+      if (!slug || segments[3] !== "questions") return;
+      const params = new URLSearchParams(window.location.search);
+      const level = params.get("level");
+      const sort = params.get("sort");
+      const nextState: BrowseState = {
+        slug,
+        page: Math.max(1, Number(params.get("page")) || 1),
+        level: (["EASY", "MEDIUM", "HARD"] as Level[]).includes(level as Level)
+          ? (level as Level)
+          : undefined,
+        search: params.get("search")?.trim() || undefined,
+        sort: sort === "latest" || sort === "hard" ? sort : "easy",
+      };
+      setBrowseState(nextState);
+      setSearchValue(nextState.search ?? "");
+      void loadResult(nextState);
+    }
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [loadResult]);
 
   useEffect(() => {
     function handleScroll() {
@@ -130,6 +269,13 @@ export default function QuestionBrowser({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useEffect(
+    () => () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    },
+    [],
+  );
+
   function scrollToTop() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -138,19 +284,21 @@ export default function QuestionBrowser({
     <div className="mt-4 flex items-start gap-3">
       <TopicsSidebar
         topics={topics}
-        currentSlug={currentTopicSlug}
-        currentLevel={initialLevel}
+        currentSlug={browseState.slug}
+        getTopicHref={(slug) => buildHref({ ...browseState, slug, page: 1 })}
+        onTopicChange={(slug) => navigate({ slug, page: 1 })}
       />
 
       <main className="flex min-w-0 flex-1 flex-col gap-2">
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:hidden">
           {childTopics.map((topic) => {
-            const active = topic.slug === currentTopicSlug;
+            const active = topic.slug === browseState.slug;
 
             return (
-              <Link
+              <button
                 key={topic.id}
-                href={buildHref({ slug: topic.slug, page: 1 })}
+                type="button"
+                onClick={() => navigate({ slug: topic.slug, page: 1 })}
                 className="flex h-8 flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border pl-1.5 pr-3 text-[13px] transition-[transform,background-color] duration-200 hover:-translate-y-0.5 hover:bg-white/[0.12]"
                 style={{
                   background: active
@@ -177,7 +325,7 @@ export default function QuestionBrowser({
                 <span className="font-mono text-[11px] text-[#94a3b8]">
                   {topic.questionCount}
                 </span>
-              </Link>
+              </button>
             );
           })}
         </div>
@@ -250,7 +398,7 @@ export default function QuestionBrowser({
             <label className="relative inline-flex flex-shrink-0 items-center">
               <span className="sr-only">Sắp xếp câu hỏi</span>
               <select
-                value={initialSort}
+                value={browseState.sort}
                 onChange={(e) =>
                   navigate({ sort: e.target.value as SortMode, page: 1 })
                 }
@@ -273,8 +421,8 @@ export default function QuestionBrowser({
             {LEVELS.map((lvl) => {
               const active =
                 lvl.value === "ALL"
-                  ? !initialLevel
-                  : initialLevel === lvl.value;
+                  ? !browseState.level
+                  : browseState.level === lvl.value;
 
               return (
                 <button
@@ -314,81 +462,20 @@ export default function QuestionBrowser({
               );
             })}
           </div>
-
-          {(currentTopic ||
-            isAllTopics ||
-            initialLevel ||
-            initialSearch ||
-            initialSort !== "easy") && (
-            <div className="flex flex-wrap items-center gap-2 border-t border-white/[0.08] px-4 py-3 sm:px-5">
-              {/* Applied filters keep context visible and removable. */}
-              {currentTopic && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    router.push(buildHref({ slug: "all", page: 1 }))
-                  }
-                  className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-3 py-1.5 text-xs font-semibold text-[#e9d5ff] transition-all hover:bg-white/[0.11]"
-                >
-                  {currentTopic.name}
-                  <X size={12} />
-                </button>
-              )}
-              {isAllTopics && (
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-3 py-1.5 text-xs font-semibold text-[#e9d5ff]">
-                  Tất cả topic
-                </span>
-              )}
-              {initialLevel && (
-                <button
-                  type="button"
-                  onClick={() => navigate({ level: "ALL", page: 1 })}
-                  className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-3 py-1.5 text-xs font-semibold text-[#e9d5ff] transition-all hover:bg-white/[0.11]"
-                >
-                  {LEVELS.find((level) => level.value === initialLevel)?.label}
-                  <X size={12} />
-                </button>
-              )}
-              {initialSearch && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchValue("");
-                    navigate({ search: "", page: 1 });
-                  }}
-                  className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-3 py-1.5 text-xs font-semibold text-[#e9d5ff] transition-all hover:bg-white/[0.11]"
-                >
-                  Search: {initialSearch}
-                  <X size={12} />
-                </button>
-              )}
-              {initialSort !== "easy" && (
-                <button
-                  type="button"
-                  onClick={() => navigate({ sort: "easy", page: 1 })}
-                  className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-3 py-1.5 text-xs font-semibold text-[#e9d5ff] transition-all hover:bg-white/[0.11]"
-                >
-                  {
-                    SORT_OPTIONS.find((option) => option.value === initialSort)
-                      ?.label
-                  }
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-          )}
         </div>
 
-        {items.length === 0 ? (
+        {loading ? (
+          <QuestionListSkeleton />
+        ) : items.length === 0 ? (
           <div className="flex items-center justify-center py-24">
             <div className="max-w-xl rounded-[28px] border border-white/10 bg-[#151b2d] px-6 py-5 text-center text-sm text-[#cbd5e1]">
               <p className="font-semibold text-[#f4f4f6]">
-                {initialSearch
-                  ? `Không tìm thấy kết quả cho "${initialSearch}".`
+                {browseState.search
+                  ? `Không tìm thấy kết quả cho "${browseState.search}".`
                   : "Không có câu hỏi nào phù hợp."}
               </p>
               <div className="mt-4 flex flex-wrap justify-center gap-2">
-                {initialLevel && (
+                {browseState.level && (
                   <button
                     type="button"
                     onClick={() => navigate({ level: "ALL", page: 1 })}
@@ -397,7 +484,7 @@ export default function QuestionBrowser({
                     Xóa level filter
                   </button>
                 )}
-                {initialSearch && (
+                {browseState.search && (
                   <button
                     type="button"
                     onClick={() => {
@@ -409,12 +496,10 @@ export default function QuestionBrowser({
                     Xóa tìm kiếm
                   </button>
                 )}
-                {!isAllTopics && initialSearch && (
+                {!isAllTopics && browseState.search && (
                   <button
                     type="button"
-                    onClick={() =>
-                      router.push(buildHref({ slug: "all", page: 1 }))
-                    }
+                    onClick={() => navigate({ slug: "all", page: 1 })}
                     className="rounded-full border border-[#c4b5fd]/35 bg-[rgba(124,58,237,0.24)] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[rgba(139,92,246,0.3)]"
                   >
                     Tìm trong tất cả topic
@@ -437,8 +522,8 @@ export default function QuestionBrowser({
               >
                 <QuestionCard
                   question={question}
-                  index={(initialPage - 1) * initialLimit + i + 1}
-                  searchQuery={searchValue}
+                  index={(browseState.page - 1) * initialLimit + i + 1}
+                  searchQuery={browseState.search}
                 />
               </div>
             ))}
@@ -446,7 +531,7 @@ export default function QuestionBrowser({
         )}
 
         <LearningPagination
-          page={initialPage}
+          page={browseState.page}
           totalPages={totalPages}
           onPageChange={(p) => navigate({ page: p })}
         />
@@ -463,6 +548,21 @@ export default function QuestionBrowser({
           <ArrowUp size={18} />
         </button>
       )}
+    </div>
+  );
+}
+
+function QuestionListSkeleton() {
+  return (
+    <div className="flex flex-col gap-2" role="status" aria-live="polite">
+      <span className="sr-only">Đang cập nhật danh sách câu hỏi</span>
+      {Array.from({ length: 5 }).map((_, index) => (
+        <div
+          key={index}
+          className="skeleton-pulse h-24 rounded-2xl border border-white/10 bg-white/[0.06]"
+          style={{ animationDelay: `${index * 70}ms` }}
+        />
+      ))}
     </div>
   );
 }
