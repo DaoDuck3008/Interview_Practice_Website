@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BrainCircuit, FileSearch, Mic } from "lucide-react";
+import { LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { Reveal } from "../ui/Reveal";
 
 const ACTIVE_INTERVAL_MS = 10000;
@@ -33,8 +34,8 @@ const FEATURES = [
     id: "cv",
     eyebrow: "CV analysis",
     title: "Gợi ý câu hỏi theo CV",
-    cta: "Đang phát triển",
-    href: "/pricing",
+    cta: "Phân tích CV ngay",
+    href: "/mock-cv",
     image: "/images/landing-redesign/workflow-cv-analysis-soft-strong-glow.png",
     icon: FileSearch,
   },
@@ -42,8 +43,11 @@ const FEATURES = [
 
 export default function FeaturesSection() {
   const [activeId, setActiveId] = useState(FEATURES[0].id);
+  const [hoveredFeatureId, setHoveredFeatureId] = useState<string | null>(null);
+  const shouldReduceMotion = useReducedMotion();
   const active =
     FEATURES.find((feature) => feature.id === activeId) ?? FEATURES[0];
+  const highlightedFeatureId = hoveredFeatureId ?? active.id;
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -86,48 +90,79 @@ export default function FeaturesSection() {
             Chọn một luồng luyện tập để xem hình minh họa workflow tương ứng.
           </p>
 
-          <div className="mt-8 grid gap-3">
-            {FEATURES.map((feature, index) => {
-              const Icon = feature.icon;
-              const selected = feature.id === active.id;
-              return (
-                <Reveal
-                  key={feature.id}
-                  preset="control"
-                  className="block w-full max-w-[25rem]"
-                  delay={index * 90}
-                  variant="fade-left"
-                >
-                  <button
-                    type="button"
-                    onClick={() => setActiveId(feature.id)}
-                    aria-pressed={selected}
-                    className={`group relative flex h-14 w-full items-center gap-3 overflow-hidden rounded-full border px-3.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_44px_rgba(91,33,182,0.16)] transition-[transform,background-color,border-color,box-shadow] duration-300 active:scale-[0.985] ${
-                      selected
-                        ? "translate-x-1 scale-[1.015] border-[#ddd6fe]/70 bg-[#292447]/95 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_18px_52px_rgba(124,58,237,0.25)]"
-                        : "border-white/15 bg-[#161b30]/92 text-white hover:translate-x-1 hover:border-white/30 hover:bg-[#202641]"
-                    }`}
+          <LayoutGroup id="landing-feature-navigation">
+            <div
+              className="mt-8 grid gap-3"
+              onPointerLeave={() => setHoveredFeatureId(null)}
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                  setHoveredFeatureId(null);
+                }
+              }}
+            >
+              {FEATURES.map((feature, index) => {
+                const Icon = feature.icon;
+                const selected = feature.id === active.id;
+                const highlighted = feature.id === highlightedFeatureId;
+                return (
+                  <Reveal
+                    key={feature.id}
+                    preset="control"
+                    className="block w-full max-w-[25rem]"
+                    delay={index * 90}
+                    variant="fade-left"
                   >
-                    {selected ? (
-                      <span className="feature-tab-progress pointer-events-none absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-[#ddd6fe] to-transparent" />
-                    ) : null}
-                    <span
-                      className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-[transform,background-color,border-color,box-shadow] duration-300 group-hover:scale-110 ${
+                    <button
+                      type="button"
+                      onClick={() => setActiveId(feature.id)}
+                      onPointerEnter={() => setHoveredFeatureId(feature.id)}
+                      onFocus={() => setHoveredFeatureId(feature.id)}
+                      aria-pressed={selected}
+                      className={`group relative flex h-14 w-full items-center gap-3 overflow-hidden rounded-full border px-3.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_44px_rgba(91,33,182,0.16)] transition-[border-color,box-shadow] duration-300 active:scale-[0.985] ${
                         selected
-                          ? "border-[#ddd6fe]/60 bg-white/[0.18] text-white shadow-[0_0_24px_rgba(196,181,253,0.28)]"
-                          : "border-white/15 bg-white/[0.08] text-[#efe7ff]"
+                          ? "border-[#ddd6fe]/70 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_18px_52px_rgba(124,58,237,0.25)]"
+                          : "border-white/15 text-white"
                       }`}
                     >
-                      <Icon size={18} />
-                    </span>
-                    <span className="relative min-w-0 truncate text-sm font-bold text-white sm:text-white">
-                      {feature.title}
-                    </span>
-                  </button>
-                </Reveal>
-              );
-            })}
-          </div>
+                      {highlighted ? (
+                        <motion.span
+                          layoutId="landing-feature-indicator"
+                          className={`pointer-events-none absolute inset-0 rounded-full ${
+                            selected ? "bg-[#292447]/95" : "bg-[#202641]/92"
+                          }`}
+                          transition={
+                            shouldReduceMotion
+                              ? { duration: 0 }
+                              : {
+                                  type: "spring",
+                                  stiffness: 420,
+                                  damping: 34,
+                                  mass: 0.55,
+                                }
+                          }
+                        />
+                      ) : null}
+                      {selected ? (
+                        <span className="feature-tab-progress pointer-events-none absolute bottom-0 left-0 z-10 h-px w-full bg-gradient-to-r from-transparent via-[#ddd6fe] to-transparent" />
+                      ) : null}
+                      <span
+                        className={`relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-[transform,background-color,border-color,box-shadow] duration-300 group-hover:scale-110 ${
+                          selected || highlighted
+                            ? "border-[#ddd6fe]/60 bg-white/[0.18] text-white shadow-[0_0_24px_rgba(196,181,253,0.28)]"
+                            : "border-white/15 bg-white/[0.08] text-[#efe7ff]"
+                        }`}
+                      >
+                        <Icon size={18} />
+                      </span>
+                      <span className="relative z-10 min-w-0 truncate text-sm font-bold text-white sm:text-white">
+                        {feature.title}
+                      </span>
+                    </button>
+                  </Reveal>
+                );
+              })}
+            </div>
+          </LayoutGroup>
 
           <Reveal preset="control" delay={320} variant="fade-left">
             <Link

@@ -12,6 +12,7 @@ import {
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 import { Check, ChevronDown, List, Loader2, Search, Star } from "lucide-react";
+import { LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { getQuestionsCursor } from "@/lib/api/questions";
 import type { Level } from "@/lib/api/questions";
 import type { TopicWithCount } from "@/lib/api/topics";
@@ -47,7 +48,14 @@ export default function PracticeSidebar({
 
   // Drawer trên mobile (desktop luôn hiện cột tĩnh)
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [hoveredLevel, setHoveredLevel] = useState<Level | "ALL" | null>(null);
+  const [hoveredQuestionId, setHoveredQuestionId] = useState<string | null>(
+    null,
+  );
+  const shouldReduceMotion = useReducedMotion();
   const closeMobile = () => setMobileOpen(false);
+  const highlightedLevel = hoveredLevel ?? activeLevel ?? "ALL";
+  const highlightedQuestionId = hoveredQuestionId ?? currentQuestionId;
 
   function setLevel(level: Level | "ALL") {
     const next = new URLSearchParams(searchParams.toString());
@@ -174,143 +182,200 @@ export default function PracticeSidebar({
           />
 
           {/* Level filter — segmented control */}
-          <div
-            className="flex gap-1 p-1 rounded-xl"
-            style={{ background: "rgba(255,255,255,0.055)" }}
-          >
-            {LEVELS.map(({ value, label }) => {
-              const isActive =
-                value === "ALL" ? activeLevel === null : activeLevel === value;
-              return (
-                <button
-                  key={value}
-                  onClick={() => setLevel(value)}
-                  className="flex-1 text-[11px] font-semibold py-1.5 rounded-lg transition-colors duration-200 cursor-pointer"
-                  style={{
-                    background: isActive
-                      ? "rgba(124,58,237,0.34)"
-                      : "transparent",
-                    color: isActive ? "#ffffff" : "#9898aa",
-                  }}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
+          <LayoutGroup id="practice-level-filter">
+            <div
+              className="flex gap-1 p-1 rounded-xl"
+              style={{ background: "rgba(255,255,255,0.055)" }}
+              onPointerLeave={() => setHoveredLevel(null)}
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                  setHoveredLevel(null);
+                }
+              }}
+            >
+              {LEVELS.map(({ value, label }) => {
+                const isActive =
+                  value === "ALL"
+                    ? activeLevel === null
+                    : activeLevel === value;
+                const highlighted = value === highlightedLevel;
+                return (
+                  <button
+                    key={value}
+                    onClick={() => setLevel(value)}
+                    onPointerEnter={() => setHoveredLevel(value)}
+                    onFocus={() => setHoveredLevel(value)}
+                    className={`relative flex-1 rounded-lg py-1.5 text-[11px] font-semibold transition-colors duration-200 cursor-pointer ${
+                      isActive || highlighted ? "text-white" : "text-[#9898aa]"
+                    }`}
+                  >
+                    {highlighted && (
+                      <motion.span
+                        layoutId="practice-level-indicator"
+                        className={`pointer-events-none absolute inset-0 rounded-lg ${
+                          isActive ? "bg-violet-500/34" : "bg-white/[0.08]"
+                        }`}
+                        transition={
+                          shouldReduceMotion
+                            ? { duration: 0 }
+                            : {
+                                type: "spring",
+                                stiffness: 420,
+                                damping: 34,
+                                mass: 0.55,
+                              }
+                        }
+                      />
+                    )}
+                    <span className="relative z-10">{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </LayoutGroup>
         </div>
 
         {/* Question list */}
-        <div className="flex-1 overflow-y-auto px-2 py-2 flex flex-col gap-2">
-          {items.map((q, idx) => {
-            const isActive = q.id === currentQuestionId;
-            const levelParam = activeLevel ? `?level=${activeLevel}` : "";
+        <LayoutGroup id="practice-question-navigation">
+          <div
+            className="flex-1 overflow-y-auto px-2 py-2 flex flex-col gap-2"
+            onPointerLeave={() => setHoveredQuestionId(null)}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) {
+                setHoveredQuestionId(null);
+              }
+            }}
+          >
+            {items.map((q, idx) => {
+              const isActive = q.id === currentQuestionId;
+              const highlighted = q.id === highlightedQuestionId;
+              const levelParam = activeLevel ? `?level=${activeLevel}` : "";
 
-            const featured = q.isFeatured;
+              const featured = q.isFeatured;
 
-            return (
-              <Link
-                key={q.id}
-                ref={isActive ? activeRef : undefined}
-                href={getPracticeQuestionHref(topicSlug, q, levelParam)}
-                onClick={closeMobile}
-                className="flex items-start gap-3 px-3 py-2.5 rounded-xl transition-colors duration-200 group cursor-pointer"
-                style={{
-                  background: isActive
-                    ? "rgba(124,58,237,0.14)"
-                    : featured
+              return (
+                <Link
+                  key={q.id}
+                  ref={isActive ? activeRef : undefined}
+                  href={getPracticeQuestionHref(topicSlug, q, levelParam)}
+                  onClick={closeMobile}
+                  onPointerEnter={() => setHoveredQuestionId(q.id)}
+                  onFocus={() => setHoveredQuestionId(q.id)}
+                  className="relative flex items-start gap-3 px-3 py-2.5 rounded-xl transition-colors duration-200 group cursor-pointer"
+                  style={{
+                    background: featured
                       ? "rgba(245,158,11,0.10)"
                       : "transparent",
-                  // Câu nổi bật: luôn giữ viền amber bên trái, kể cả khi đang mở
-                  boxShadow: featured ? "inset 3px 0 0 #f59e0b" : undefined,
+                    // Câu nổi bật: luôn giữ viền amber bên trái, kể cả khi đang mở
+                    boxShadow: featured ? "inset 3px 0 0 #f59e0b" : undefined,
+                  }}
+                >
+                  {highlighted && (
+                    <motion.span
+                      layoutId="practice-question-indicator"
+                      className={`pointer-events-none absolute inset-0 rounded-xl ${
+                        isActive ? "bg-violet-500/14" : "bg-white/[0.06]"
+                      }`}
+                      transition={
+                        shouldReduceMotion
+                          ? { duration: 0 }
+                          : {
+                              type: "spring",
+                              stiffness: 420,
+                              damping: 34,
+                              mass: 0.55,
+                            }
+                      }
+                    />
+                  )}
+                  {/* Level dot */}
+                  <span
+                    className={`relative z-10 mt-[7px] w-1.5 h-1.5 rounded-full flex-shrink-0 ${LEVEL_DOT[q.level]}`}
+                    style={{ opacity: isActive || highlighted ? 1 : 0.55 }}
+                  />
+
+                  <div className="relative z-10 flex flex-col gap-1 min-w-0">
+                    <span className="flex items-center gap-1.5 font-mono text-[10px] text-[#606072] tracking-wide">
+                      {String(idx + 1).padStart(2, "0")}
+                      {featured && (
+                        <span
+                          className="flex items-center gap-1 px-1.5 py-0.5 rounded-full"
+                          style={{ background: "rgba(245,158,11,0.15)" }}
+                        >
+                          <Star
+                            size={9}
+                            className="text-[#f59e0b]"
+                            fill="#f59e0b"
+                            strokeWidth={0}
+                          />
+                          <span className="text-[9px] font-semibold tracking-normal text-[#f59e0b]">
+                            Nổi bật
+                          </span>
+                        </span>
+                      )}
+                    </span>
+                    <p
+                      className="text-[13px] leading-snug line-clamp-2 transition-colors duration-200"
+                      style={{
+                        color:
+                          isActive || highlighted
+                            ? "#f4f4f6"
+                            : featured
+                              ? "#e4e4f0"
+                              : "#9898aa",
+                      }}
+                    >
+                      {q.content}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
+
+            {/* Xem thêm — đồng thời là sentinel tự tải khi cuộn tới đáy */}
+            {hasNextPage && (
+              <button
+                ref={sentinelRef}
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="mt-1 mx-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-semibold text-[#9898aa] transition-colors duration-200 cursor-pointer hover:text-[#f4f4f6] disabled:cursor-default"
+                style={{
+                  background: "rgba(255,255,255,0.055)",
+                  border: "1px solid rgba(255,255,255,0.1)",
                 }}
               >
-                {/* Level dot */}
-                <span
-                  className={`mt-[7px] w-1.5 h-1.5 rounded-full flex-shrink-0 ${LEVEL_DOT[q.level]}`}
-                  style={{ opacity: isActive ? 1 : 0.55 }}
-                />
+                {isFetchingNextPage ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin" />
+                    Đang tải...
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown size={13} />
+                    Xem thêm
+                  </>
+                )}
+              </button>
+            )}
 
-                <div className="flex flex-col gap-1 min-w-0">
-                  <span className="flex items-center gap-1.5 font-mono text-[10px] text-[#606072] tracking-wide">
-                    {String(idx + 1).padStart(2, "0")}
-                    {featured && (
-                      <span
-                        className="flex items-center gap-1 px-1.5 py-0.5 rounded-full"
-                        style={{ background: "rgba(245,158,11,0.15)" }}
-                      >
-                        <Star
-                          size={9}
-                          className="text-[#f59e0b]"
-                          fill="#f59e0b"
-                          strokeWidth={0}
-                        />
-                        <span className="text-[9px] font-semibold tracking-normal text-[#f59e0b]">
-                          Nổi bật
-                        </span>
-                      </span>
-                    )}
-                  </span>
-                  <p
-                    className="text-[13px] leading-snug line-clamp-2 transition-colors duration-200"
-                    style={{
-                      color: isActive
-                        ? "#f4f4f6"
-                        : featured
-                          ? "#e4e4f0"
-                          : "#9898aa",
-                    }}
-                  >
-                    {q.content}
-                  </p>
-                </div>
-              </Link>
-            );
-          })}
+            {/* Loading lần đầu */}
+            {isLoading && (
+              <div className="flex items-center justify-center gap-2 px-4 py-10 text-xs text-[#606072]">
+                <Loader2 size={14} className="animate-spin" />
+                Đang tải câu hỏi...
+              </div>
+            )}
 
-          {/* Xem thêm — đồng thời là sentinel tự tải khi cuộn tới đáy */}
-          {hasNextPage && (
-            <button
-              ref={sentinelRef}
-              onClick={() => fetchNextPage()}
-              disabled={isFetchingNextPage}
-              className="mt-1 mx-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-semibold text-[#9898aa] transition-colors duration-200 cursor-pointer hover:text-[#f4f4f6] disabled:cursor-default"
-              style={{
-                background: "rgba(255,255,255,0.055)",
-                border: "1px solid rgba(255,255,255,0.1)",
-              }}
-            >
-              {isFetchingNextPage ? (
-                <>
-                  <Loader2 size={13} className="animate-spin" />
-                  Đang tải...
-                </>
-              ) : (
-                <>
-                  <ChevronDown size={13} />
-                  Xem thêm
-                </>
-              )}
-            </button>
-          )}
-
-          {/* Loading lần đầu */}
-          {isLoading && (
-            <div className="flex items-center justify-center gap-2 px-4 py-10 text-xs text-[#606072]">
-              <Loader2 size={14} className="animate-spin" />
-              Đang tải câu hỏi...
-            </div>
-          )}
-
-          {/* Trống */}
-          {!isLoading && items.length === 0 && (
-            <p className="px-4 py-10 text-xs text-center text-[#606072]">
-              {activeLevel
-                ? "Không có câu hỏi cho cấp độ này."
-                : "Chưa có câu hỏi nào."}
-            </p>
-          )}
-        </div>
+            {/* Trống */}
+            {!isLoading && items.length === 0 && (
+              <p className="px-4 py-10 text-xs text-center text-[#606072]">
+                {activeLevel
+                  ? "Không có câu hỏi cho cấp độ này."
+                  : "Chưa có câu hỏi nào."}
+              </p>
+            )}
+          </div>
+        </LayoutGroup>
       </aside>
     </>
   );
@@ -336,7 +401,10 @@ function TopicPicker({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [hoveredTopicSlug, setHoveredTopicSlug] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const shouldReduceMotion = useReducedMotion();
+  const highlightedTopicSlug = hoveredTopicSlug ?? currentSlug;
 
   // Đóng khi click ra ngoài hoặc nhấn Escape
   useEffect(() => {
@@ -447,52 +515,68 @@ function TopicPicker({
           </div>
 
           {/* Options */}
-          <div className="overflow-y-auto py-1.5">
-            {hasGroups
-              ? parents.map((parent) => {
-                  const children = (childrenByParent[parent.id] ?? []).filter(
-                    match,
-                  );
-                  if (children.length === 0) return null;
-                  return (
-                    <div key={parent.id}>
-                      <div className="flex items-center gap-2 px-3 pt-2 pb-1">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-[#484860]">
-                          {parent.name}
-                        </span>
-                        <span
-                          className="flex-1 h-px"
-                          style={{ background: "rgba(255,255,255,0.06)" }}
-                        />
+          <LayoutGroup id="practice-topic-picker">
+            <div
+              className="overflow-y-auto py-1.5"
+              onPointerLeave={() => setHoveredTopicSlug(null)}
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                  setHoveredTopicSlug(null);
+                }
+              }}
+            >
+              {hasGroups
+                ? parents.map((parent) => {
+                    const children = (childrenByParent[parent.id] ?? []).filter(
+                      match,
+                    );
+                    if (children.length === 0) return null;
+                    return (
+                      <div key={parent.id}>
+                        <div className="flex items-center gap-2 px-3 pt-2 pb-1">
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#484860]">
+                            {parent.name}
+                          </span>
+                          <span
+                            className="flex-1 h-px"
+                            style={{ background: "rgba(255,255,255,0.06)" }}
+                          />
+                        </div>
+                        {children.map((t) => (
+                          <TopicOption
+                            key={t.id}
+                            topic={t}
+                            active={t.slug === currentSlug}
+                            highlighted={t.slug === highlightedTopicSlug}
+                            shouldReduceMotion={shouldReduceMotion}
+                            onHover={() => setHoveredTopicSlug(t.slug)}
+                            onSelect={() => selectTopic(t.slug)}
+                          />
+                        ))}
                       </div>
-                      {children.map((t) => (
-                        <TopicOption
-                          key={t.id}
-                          topic={t}
-                          active={t.slug === currentSlug}
-                          onSelect={() => selectTopic(t.slug)}
-                        />
-                      ))}
-                    </div>
-                  );
-                })
-              : topics
-                  .filter(match)
-                  .map((t) => (
-                    <TopicOption
-                      key={t.id}
-                      topic={t}
-                      active={t.slug === currentSlug}
-                      onSelect={() => selectTopic(t.slug)}
-                    />
-                  ))}
+                    );
+                  })
+                : topics
+                    .filter(match)
+                    .map((t) => (
+                      <TopicOption
+                        key={t.id}
+                        topic={t}
+                        active={t.slug === currentSlug}
+                        highlighted={t.slug === highlightedTopicSlug}
+                        shouldReduceMotion={shouldReduceMotion}
+                        onHover={() => setHoveredTopicSlug(t.slug)}
+                        onSelect={() => selectTopic(t.slug)}
+                      />
+                    ))}
 
-            {topics.filter(match).length === 0 && (
-              <p className="px-3 py-4 text-xs text-center text-[#606072]">
-                Không tìm thấy chủ đề.
-              </p>
-            )}
-          </div>
+              {topics.filter(match).length === 0 && (
+                <p className="px-3 py-4 text-xs text-center text-[#606072]">
+                  Không tìm thấy chủ đề.
+                </p>
+              )}
+            </div>
+          </LayoutGroup>
         </div>
       )}
     </div>
@@ -533,28 +617,53 @@ function TopicIcon({
 function TopicOption({
   topic,
   active,
+  highlighted,
+  shouldReduceMotion,
+  onHover,
   onSelect,
 }: {
   topic: TopicWithCount;
   active: boolean;
+  highlighted: boolean;
+  shouldReduceMotion: boolean | null;
+  onHover: () => void;
   onSelect: () => void;
 }) {
   return (
     <button
       onClick={onSelect}
-      className="w-full flex items-center justify-between gap-2 px-3 py-2 text-[13px] transition-colors duration-150 cursor-pointer hover:bg-white/[0.04]"
-      style={active ? { background: "rgba(124,58,237,0.16)" } : undefined}
+      onPointerEnter={onHover}
+      onFocus={onHover}
+      className="relative w-full flex items-center justify-between gap-2 px-3 py-2 text-[13px] transition-colors duration-150 cursor-pointer"
     >
-      <span className="flex items-center gap-2 min-w-0">
+      {highlighted && (
+        <motion.span
+          layoutId="practice-topic-picker-indicator"
+          className={`pointer-events-none absolute inset-0 ${
+            active ? "bg-violet-500/16" : "bg-white/[0.04]"
+          }`}
+          transition={
+            shouldReduceMotion
+              ? { duration: 0 }
+              : {
+                  type: "spring",
+                  stiffness: 420,
+                  damping: 34,
+                  mass: 0.55,
+                }
+          }
+        />
+      )}
+      <span className="relative z-10 flex items-center gap-2 min-w-0">
         <TopicIcon iconUrl={topic.iconUrl} size={20} />
         <span
           className="truncate"
-          style={{ color: active ? "#f4f4f6" : "#9898aa" }}
+          style={{ color: active || highlighted ? "#f4f4f6" : "#9898aa" }}
         >
           {topic.name}
         </span>
       </span>
-      <span className="flex items-center gap-2 flex-shrink-0">
+      <span className="relative z-10 flex items-center gap-2 flex-shrink-0">
         <span
           className="text-[11px] font-mono min-w-[22px] text-center px-1.5 py-0.5 rounded-md"
           style={

@@ -397,6 +397,17 @@ wrap it in another page-entry template. Do not add a template above Practice,
 Mock Interview or Mock CV rooms: those flows own recorder, processing or
 interview session state.
 
+The desktop header navigation uses one shared Motion layout indicator. Keep
+hover and keyboard-focus state on the navigation group so the indicator moves
+between links; it should return to the route-active link when focus or the
+pointer leaves the group, rather than restoring per-link hover backgrounds.
+
+Use the same shared-indicator pattern only within one related control group:
+topic lists, segmented filters, practice question lists, topic pickers, and
+the landing feature selector each need their own `LayoutGroup` and `layoutId`.
+Keep an active item violet and a hovered item subtly neutral; preserve any
+separate semantic marker, such as the amber treatment for featured questions.
+
 ### Content-ready, feedback and overlay motion
 
 Use the shared CSS classes in `src/app/globals.css` for client data becoming

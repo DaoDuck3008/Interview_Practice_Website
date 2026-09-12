@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Search } from "lucide-react";
+import { LayoutGroup, motion, useReducedMotion } from "motion/react";
 import type { TopicWithCount } from "@/lib/api/topics";
 
 interface TopicsSidebarProps {
@@ -20,6 +21,9 @@ export default function TopicsSidebar({
   onTopicChange,
 }: TopicsSidebarProps) {
   const [filter, setFilter] = useState("");
+  const [hoveredTopicSlug, setHoveredTopicSlug] = useState<string | null>(null);
+  const shouldReduceMotion = useReducedMotion();
+  const highlightedTopicSlug = hoveredTopicSlug ?? currentSlug;
 
   const filterLower = filter.trim().toLowerCase();
 
@@ -91,100 +95,126 @@ export default function TopicsSidebar({
       </div>
 
       {/* Topic list */}
-      <nav className="flex-1 overflow-y-auto px-2 py-2">
-        {visibleParents.map((parent) => {
-          const children = (childrenByParent[parent.id] ?? []).filter(
-            (c) => !filterLower || c.name.toLowerCase().includes(filterLower),
-          );
+      <LayoutGroup id="question-topic-navigation">
+        <nav
+          className="flex-1 overflow-y-auto px-2 py-2"
+          onPointerLeave={() => setHoveredTopicSlug(null)}
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) {
+              setHoveredTopicSlug(null);
+            }
+          }}
+        >
+          {visibleParents.map((parent) => {
+            const children = (childrenByParent[parent.id] ?? []).filter(
+              (c) => !filterLower || c.name.toLowerCase().includes(filterLower),
+            );
 
-          return (
-            <div key={parent.id}>
-              {/* Parent group header — not clickable */}
-              <div className="mt-2 flex items-center gap-2 px-3 py-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#c4b5fd]">
-                  {parent.name}
-                </span>
-                <span
-                  className="flex-1 h-px"
-                  style={{ background: "rgba(255,255,255,0.06)" }}
-                />
-              </div>
+            return (
+              <div key={parent.id}>
+                {/* Parent group header — not clickable */}
+                <div className="mt-2 flex items-center gap-2 px-3 py-1.5">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#c4b5fd]">
+                    {parent.name}
+                  </span>
+                  <span
+                    className="flex-1 h-px"
+                    style={{ background: "rgba(255,255,255,0.06)" }}
+                  />
+                </div>
 
-              {/* Child topics */}
-              {children.map((topic) => {
-                const active = topic.slug === currentSlug;
-                return (
-                  <Link
-                    key={topic.id}
-                    href={getTopicHref(topic.slug)}
-                    onClick={(event) => {
-                      if (
-                        event.metaKey ||
-                        event.ctrlKey ||
-                        event.shiftKey ||
-                        event.altKey
-                      ) return;
-                      event.preventDefault();
-                      onTopicChange(topic.slug);
-                    }}
-                    className={[
-                      "flex items-center justify-between gap-2 rounded-full px-3.5 py-2 text-[13px] transition-all duration-200",
-                      active
-                        ? "text-[#f4f4f6] shadow-[0_0_22px_rgba(124,58,237,0.16)]"
-                        : "text-[#cbd5e1] hover:bg-white/[0.075] hover:text-white",
-                    ].join(" ")}
-                    style={
-                      active
-                        ? {
-                            background: "rgba(124,58,237,0.24)",
-                            border: "1px solid rgba(196,181,253,0.24)",
+                {/* Child topics */}
+                {children.map((topic) => {
+                  const active = topic.slug === currentSlug;
+                  const highlighted = topic.slug === highlightedTopicSlug;
+                  return (
+                    <div key={topic.id} className="relative">
+                      {highlighted && (
+                        <motion.span
+                          layoutId="question-topic-indicator"
+                          className={`pointer-events-none absolute inset-0 rounded-full ring-1 ${
+                            active
+                              ? "bg-violet-500/24 shadow-[0_0_22px_rgba(124,58,237,0.16)] ring-violet-300/25"
+                              : "bg-white/[0.075] ring-white/[0.08]"
+                          }`}
+                          transition={
+                            shouldReduceMotion
+                              ? { duration: 0 }
+                              : {
+                                  type: "spring",
+                                  stiffness: 420,
+                                  damping: 34,
+                                  mass: 0.55,
+                                }
                           }
-                        : undefined
-                    }
-                  >
-                    <span className="flex items-center gap-2 min-w-0">
-                      {topic.iconUrl ? (
-                        <Image
-                          src={topic.iconUrl}
-                          alt=""
-                          width={20}
-                          height={20}
-                          className="h-5 w-5 flex-shrink-0 rounded-full object-contain"
-                        />
-                      ) : (
-                        <span
-                          className="h-5 w-5 flex-shrink-0 rounded-full"
-                          style={{ background: "rgba(255,255,255,0.07)" }}
                         />
                       )}
-                      <span className="truncate">{topic.name}</span>
-                    </span>
-                    <span
-                      className="min-w-[24px] flex-shrink-0 rounded-full px-1.5 py-0.5 text-center font-mono text-[11px]"
-                      style={
-                        active
-                          ? { background: "#7c3aed", color: "white" }
-                          : {
-                              background: "rgba(255,255,255,0.075)",
-                              color: "#c4b5fd",
-                            }
-                      }
-                    >
-                      {topic.questionCount}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-          );
-        })}
+                      <Link
+                        href={getTopicHref(topic.slug)}
+                        onPointerEnter={() => setHoveredTopicSlug(topic.slug)}
+                        onFocus={() => setHoveredTopicSlug(topic.slug)}
+                        onClick={(event) => {
+                          if (
+                            event.metaKey ||
+                            event.ctrlKey ||
+                            event.shiftKey ||
+                            event.altKey
+                          )
+                            return;
+                          event.preventDefault();
+                          onTopicChange(topic.slug);
+                        }}
+                        className={`relative z-10 flex items-center justify-between gap-2 rounded-full px-3.5 py-2 text-[13px] transition-colors duration-200 ${
+                          active || highlighted
+                            ? "text-[#f4f4f6]"
+                            : "text-[#cbd5e1]"
+                        }`}
+                      >
+                        <span className="flex items-center gap-2 min-w-0">
+                          {topic.iconUrl ? (
+                            <Image
+                              src={topic.iconUrl}
+                              alt=""
+                              width={20}
+                              height={20}
+                              className="h-5 w-5 flex-shrink-0 rounded-full object-contain"
+                            />
+                          ) : (
+                            <span
+                              className="h-5 w-5 flex-shrink-0 rounded-full"
+                              style={{ background: "rgba(255,255,255,0.07)" }}
+                            />
+                          )}
+                          <span className="truncate">{topic.name}</span>
+                        </span>
+                        <span
+                          className="min-w-[24px] flex-shrink-0 rounded-full px-1.5 py-0.5 text-center font-mono text-[11px]"
+                          style={
+                            active
+                              ? { background: "#7c3aed", color: "white" }
+                              : {
+                                  background: "rgba(255,255,255,0.075)",
+                                  color: "#c4b5fd",
+                                }
+                          }
+                        >
+                          {topic.questionCount}
+                        </span>
+                      </Link>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
 
-        {visibleParents.length === 0 && (
-          <p className="px-4 py-3 text-xs text-[#606072]">
-            Không tìm thấy chủ đề.
-          </p>
-        )}
-      </nav>
+          {visibleParents.length === 0 && (
+            <p className="px-4 py-3 text-xs text-[#606072]">
+              Không tìm thấy chủ đề.
+            </p>
+          )}
+        </nav>
+      </LayoutGroup>
     </aside>
   );
 }

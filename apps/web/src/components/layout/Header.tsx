@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { LayoutGroup, motion, useReducedMotion } from "motion/react";
 import {
   Menu,
   LogOut,
@@ -142,7 +143,12 @@ export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [favDrawerOpen, setFavDrawerOpen] = useState(false);
+  const [hoveredNavHref, setHoveredNavHref] = useState<string | null>(null);
   const pathname = usePathname();
+  const shouldReduceMotion = useReducedMotion();
+  const activeNavHref =
+    NAV_LINKS.find((link) => isNavActive(pathname, link.href))?.href ?? null;
+  const highlightedNavHref = hoveredNavHref ?? activeNavHref;
   const user = useAuthStore((s) => s.user);
   const hydrated = useAuthStore((s) => s.hydrated);
   const clearAuth = useAuthStore((s) => s.clearAuth);
@@ -188,27 +194,58 @@ export default function Header() {
         </Link>
 
         {/* Desktop links */}
-        <ul className="hidden items-center gap-1 rounded-full border border-white/[0.08] bg-white/[0.035] p-1 lg:flex">
-          {NAV_LINKS.map((link) => {
-            const active = isNavActive(pathname, link.href);
+        <LayoutGroup id="primary-navigation">
+          <ul
+            className="hidden items-center gap-1 rounded-full border border-white/[0.08] bg-white/[0.035] p-1 lg:flex"
+            onPointerLeave={() => setHoveredNavHref(null)}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) {
+                setHoveredNavHref(null);
+              }
+            }}
+          >
+            {NAV_LINKS.map((link) => {
+              const active = isNavActive(pathname, link.href);
+              const highlighted = highlightedNavHref === link.href;
 
-            return (
-              <li key={link.href}>
-                <Link
-                  href={link.href}
-                  aria-current={active ? "page" : undefined}
-                  className={`relative inline-flex cursor-pointer items-center rounded-full px-4 py-2 text-sm font-medium transition-[background-color,color,box-shadow] duration-300 ${
-                    active
-                      ? "bg-violet-500/24 text-white shadow-[0_0_24px_rgba(139,92,246,0.26)] ring-1 ring-violet-300/25"
-                      : "text-[#cbd5e1] hover:bg-white/[0.08] hover:text-white"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+              return (
+                <li key={link.href} className="relative">
+                  {highlighted && (
+                    <motion.span
+                      layoutId="primary-navigation-indicator"
+                      className={`pointer-events-none absolute inset-0 rounded-full ring-1 ${
+                        active
+                          ? "bg-violet-500/24 shadow-[0_0_24px_rgba(139,92,246,0.26)] ring-violet-300/25"
+                          : "bg-white/[0.08] ring-white/[0.10]"
+                      }`}
+                      transition={
+                        shouldReduceMotion
+                          ? { duration: 0 }
+                          : {
+                              type: "spring",
+                              stiffness: 420,
+                              damping: 34,
+                              mass: 0.55,
+                            }
+                      }
+                    />
+                  )}
+                  <Link
+                    href={link.href}
+                    aria-current={active ? "page" : undefined}
+                    onPointerEnter={() => setHoveredNavHref(link.href)}
+                    onFocus={() => setHoveredNavHref(link.href)}
+                    className={`relative z-10 inline-flex cursor-pointer items-center rounded-full px-4 py-2 text-sm font-medium transition-colors duration-200 ${
+                      active || highlighted ? "text-white" : "text-[#cbd5e1]"
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </LayoutGroup>
 
         {/* Desktop CTAs */}
         <div className="hidden items-center gap-3 lg:flex">
