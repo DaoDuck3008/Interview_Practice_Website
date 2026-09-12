@@ -408,6 +408,10 @@ the landing feature selector each need their own `LayoutGroup` and `layoutId`.
 Keep an active item violet and a hovered item subtly neutral; preserve any
 separate semantic marker, such as the amber treatment for featured questions.
 
+The desktop Practice sidebar may collapse to a narrow control rail. Animate its
+width while fading and slightly translating its content, keep the reopen control
+visible, and disable the transition through `useReducedMotion` when requested.
+
 ### Content-ready, feedback and overlay motion
 
 Use the shared CSS classes in `src/app/globals.css` for client data becoming

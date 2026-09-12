@@ -97,29 +97,31 @@ export default async function QuestionPage({
     <main className="flex min-w-0 flex-1 flex-col collection-item-enter overflow-hidden rounded-[28px] border border-[#c4b5fd]/18 bg-[#171d3d]/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_18px_42px_rgba(2,6,23,0.22)]">
       <div className="flex-1 overflow-y-auto">
         <div className="flex w-full flex-col gap-4 px-4 py-5 sm:px-8 lg:px-12">
-          <section className="flex flex-col gap-5 rounded-[24px] border border-[#c4b5fd]/16 bg-[#1b2248]/90 px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:px-6">
-            <nav className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-[#94a3b8]">
-              <Link
-                href="/"
-                className="rounded-full border border-white/10 bg-white/[0.045] px-3 py-1.5 font-semibold transition-colors hover:bg-white/[0.1] hover:text-white"
-              >
-                Trang chủ
-              </Link>
-              <ChevronRight size={13} className="text-[#64748b]" />
-              <Link
-                href={`/practice/${canonicalTopicSlug}`}
-                className="rounded-full border border-white/10 bg-white/[0.045] px-3 py-1.5 font-semibold text-[#ddd6fe] transition-colors hover:bg-white/[0.1] hover:text-white"
-              >
-                {topicName}
-              </Link>
-            </nav>
+          <section className="rounded-[24px] border border-[#c4b5fd]/16 bg-[#1b2248]/90 px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:px-6">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+              <nav className="flex flex-shrink-0 flex-wrap items-center gap-2 text-xs text-[#94a3b8]">
+                <Link
+                  href="/"
+                  className="rounded-full border border-white/10 bg-white/[0.045] px-3 py-1.5 font-semibold transition-colors hover:bg-white/[0.1] hover:text-white"
+                >
+                  Trang chủ
+                </Link>
+                <ChevronRight size={13} className="text-[#64748b]" />
+                <Link
+                  href={`/practice/${canonicalTopicSlug}`}
+                  className="rounded-full border border-white/10 bg-white/[0.045] px-3 py-1.5 font-semibold text-[#ddd6fe] transition-colors hover:bg-white/[0.1] hover:text-white"
+                >
+                  {topicName}
+                </Link>
+              </nav>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <h1 className="text-xl font-extrabold leading-snug text-[#f4f4f6] sm:text-2xl">
+              <ChevronRight size={13} className="text-[#64748b]" />
+
+              <h1 className="min-w-0 flex-1 text-xl font-extrabold leading-snug text-[#f4f4f6] sm:text-xl">
                 {question.content}
               </h1>
               <span
-                className={`w-fit flex-shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest ${levelStyle.className}`}
+                className={`w-fit flex-shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest lg:ml-auto ${levelStyle.className}`}
               >
                 {levelStyle.label}
               </span>
