@@ -48,6 +48,12 @@ export class UpdatePlanDto {
   creditPerCycle?: number;
 
   @IsOptional()
+  @IsInt({ message: 'Lượt giải thích mỗi chu kỳ phải là số nguyên' })
+  @Min(0, { message: 'Lượt giải thích không được âm' })
+  @Max(1_000_000, { message: 'Lượt giải thích tối đa 1000000' })
+  explanationCreditsPerCycle?: number;
+
+  @IsOptional()
   @IsObject({ message: 'limits phải là object' })
   limits?: Record<string, unknown>;
 

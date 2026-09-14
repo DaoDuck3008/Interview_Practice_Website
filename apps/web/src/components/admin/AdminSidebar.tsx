@@ -9,6 +9,7 @@ import {
   FolderTree,
   ListChecks,
   CreditCard,
+  BookOpen,
   Repeat,
   Wallet,
   Flag,
@@ -60,6 +61,7 @@ const NAV: NavItem[] = [
     exact: false,
   },
   { href: "/admin/plans", label: "Gói", icon: CreditCard, exact: false },
+  { href: "/admin/technical-terms", label: "Glossary", icon: BookOpen, exact: false },
   {
     href: "/admin/subscriptions",
     label: "Gói đăng ký",

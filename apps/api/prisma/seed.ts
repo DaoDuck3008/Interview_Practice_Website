@@ -128,6 +128,7 @@ async function main() {
       priceVnd: 50_000,
       durationDays: 7,
       creditPerCycle: 35,
+      explanationCreditsPerCycle: 15,
       sortOrder: 1,
     },
     {
@@ -137,6 +138,7 @@ async function main() {
       priceVnd: 89_000,
       durationDays: 30,
       creditPerCycle: 150,
+      explanationCreditsPerCycle: 60,
       sortOrder: 2,
     },
     {
@@ -146,6 +148,7 @@ async function main() {
       priceVnd: 255_000,
       durationDays: 90,
       creditPerCycle: 500,
+      explanationCreditsPerCycle: 180,
       sortOrder: 3,
     },
   ];
@@ -158,6 +161,7 @@ async function main() {
         priceVnd: p.priceVnd,
         durationDays: p.durationDays,
         creditPerCycle: p.creditPerCycle,
+        explanationCreditsPerCycle: p.explanationCreditsPerCycle,
         sortOrder: p.sortOrder,
         isActive: true,
       },

@@ -8,6 +8,7 @@ export interface Plan {
   priceVnd: number;
   durationDays: number;
   creditPerCycle: number;
+  explanationCreditsPerCycle: number;
 }
 
 const FALLBACK_PLANS: Plan[] = [
@@ -19,6 +20,7 @@ const FALLBACK_PLANS: Plan[] = [
     priceVnd: 50000,
     durationDays: 7,
     creditPerCycle: 35,
+    explanationCreditsPerCycle: 15,
   },
   {
     id: "pro-1m",
@@ -28,6 +30,7 @@ const FALLBACK_PLANS: Plan[] = [
     priceVnd: 89000,
     durationDays: 30,
     creditPerCycle: 150,
+    explanationCreditsPerCycle: 60,
   },
   {
     id: "pro-3m",
@@ -37,6 +40,7 @@ const FALLBACK_PLANS: Plan[] = [
     priceVnd: 255000,
     durationDays: 90,
     creditPerCycle: 500,
+    explanationCreditsPerCycle: 180,
   },
 ];
 
@@ -61,6 +65,7 @@ export interface AdminPlan {
   priceVnd: number;
   durationDays: number;
   creditPerCycle: number;
+  explanationCreditsPerCycle: number;
   isActive: boolean;
   sortOrder: number;
   createdAt: string;
@@ -76,6 +81,7 @@ export interface PlanInput {
   priceVnd: number;
   durationDays: number;
   creditPerCycle?: number;
+  explanationCreditsPerCycle?: number;
   isActive?: boolean;
   sortOrder?: number;
 }

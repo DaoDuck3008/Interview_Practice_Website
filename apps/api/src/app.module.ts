@@ -30,6 +30,8 @@ import { RedisThrottlerStorage } from './common/throttling/redis-throttler.stora
 import { ThrottlingModule } from './common/throttling/throttling.module';
 import { AuditInterceptor } from './modules/audit/audit.interceptor';
 import { AiCreditsModule } from './modules/ai-credits/ai-credits.module';
+import { ExplanationCreditsModule } from './modules/explanation-credits/explanation-credits.module';
+import { ExplanationsModule } from './modules/explanations/explanations.module';
 
 @Module({
   imports: [
@@ -79,6 +81,8 @@ import { AiCreditsModule } from './modules/ai-credits/ai-credits.module';
     FavoritesModule,
     AuditModule,
     AiCreditsModule,
+    ExplanationCreditsModule,
+    ExplanationsModule,
     MockInterviewsModule,
     MockCvModule,
   ],

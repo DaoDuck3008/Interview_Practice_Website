@@ -23,6 +23,8 @@ export const validationSchema = Joi.object({
   GROQ_API_KEY: Joi.string().required(),
   GROQ_TRANSCRIPTION_MODEL: Joi.string().default('whisper-large-v3-turbo'),
   DEEPSEEK_API_KEY: Joi.string().required(),
+  EXPLANATION_GLOBAL_DAILY_LIMIT: Joi.number().integer().min(1).default(500),
+  EXPLANATION_GLOBAL_CONCURRENCY: Joi.number().integer().min(1).max(20).default(5),
   SEPAY_WEBHOOK_SECRET: Joi.string().allow('').default(''),
   SEPAY_BANK_ACCOUNT: Joi.string().default(''),
   SEPAY_BANK_CODE: Joi.string().default(''),
@@ -68,6 +70,10 @@ export default () => ({
   },
   deepseek: {
     apiKey: process.env.DEEPSEEK_API_KEY,
+  },
+  explanation: {
+    globalDailyLimit: parseInt(process.env.EXPLANATION_GLOBAL_DAILY_LIMIT ?? '500', 10),
+    globalConcurrency: parseInt(process.env.EXPLANATION_GLOBAL_CONCURRENCY ?? '5', 10),
   },
   sepay: {
     webhookSecret: process.env.SEPAY_WEBHOOK_SECRET ?? '',

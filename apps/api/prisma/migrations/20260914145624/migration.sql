@@ -1,0 +1,2 @@
+-- RenameIndex
+ALTER INDEX "ExplanationCreditReservation_cycleId_referenceType_referenceId_" RENAME TO "ExplanationCreditReservation_cycleId_referenceType_referenc_key";

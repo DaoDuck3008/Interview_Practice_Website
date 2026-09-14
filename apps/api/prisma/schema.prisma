@@ -202,6 +202,32 @@ enum CreditReservationStatus {
   EXPIRED
 }
 
+enum ExplanationCreditSource {
+  FREE
+  SUBSCRIPTION
+  MANUAL
+}
+
+enum ExplanationCreditReservationStatus {
+  PENDING
+  CONSUMED
+  RELEASED
+  EXPIRED
+}
+
+enum TechnicalTermStatus {
+  PENDING
+  READY
+  FAILED
+  MERGED
+  DISABLED
+}
+
+enum TechnicalTermSource {
+  AI
+  ADMIN
+}
+
 // ─── Models ──────────────────────────────────────────
 
 model User {
@@ -228,6 +254,9 @@ model User {
   mockInterviews     MockInterview[]
   mockCvs            MockCv[]
   mockCvInterviews   MockCvInterview[]
+  technicalTermsCreated TechnicalTerm[] @relation("TechnicalTermCreatedBy")
+  explanationCreditCycles ExplanationCreditCycle[]
+  explanationCreditReservations ExplanationCreditReservation[]
 }
 
 model Topic {
@@ -609,6 +638,7 @@ model Plan {
   durationDays Int //                kỳ hạn tính theo ngày: 7 / 30 / 90 (cộng vào expiresAt khi kích hoạt)
 
   creditPerCycle Int   @default(0) // credit cấp theo chu kỳ subscription; snapshot vào CreditCycle
+  explanationCreditsPerCycle Int @default(0)
   limits         Json? //                   mở rộng các limit khác sau này
 
   isActive  Boolean  @default(true)
@@ -619,6 +649,7 @@ model Plan {
   subscriptions Subscription[]
   orders        Order[]
   creditCycles  CreditCycle[]
+  explanationCreditCycles ExplanationCreditCycle[]
 }
 
 model Subscription {
@@ -642,8 +673,91 @@ model Subscription {
 
   orders       Order[] // các đơn đã tạo/gia hạn sub này
   creditCycles CreditCycle[]
+  explanationCreditCycles ExplanationCreditCycle[]
 
   @@index([status, expiresAt]) // job hạ cấp: tìm ACTIVE & expiresAt < now
+}
+
+model TechnicalTerm {
+  id String @id @default(uuid())
+  canonicalTerm String
+  normalizedKey String @unique
+  explanation String?
+  status TechnicalTermStatus @default(PENDING)
+  source TechnicalTermSource @default(AI)
+  isVerified Boolean @default(false)
+  promptVersion String?
+  model String?
+  inputTokens Int?
+  outputTokens Int?
+  createdById String?
+  createdBy User? @relation("TechnicalTermCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  mergedIntoId String?
+  mergedInto TechnicalTerm? @relation("TechnicalTermMerge", fields: [mergedIntoId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  mergedTerms TechnicalTerm[] @relation("TechnicalTermMerge")
+  failureReason String?
+  aliases TechnicalTermAlias[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, updatedAt])
+  @@index([createdById, createdAt])
+}
+
+model TechnicalTermAlias {
+  id String @id @default(uuid())
+  termId String
+  term TechnicalTerm @relation(fields: [termId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  originalAlias String
+  normalizedAlias String @unique
+  createdAt DateTime @default(now())
+}
+
+model ExplanationCreditCycle {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  subscriptionId String?
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  planId String?
+  plan Plan? @relation(fields: [planId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  source ExplanationCreditSource
+  sourceReference String @unique
+  planName String?
+  startsAt DateTime
+  endsAt DateTime?
+  grantedCredits Int
+  usedCredits Int @default(0)
+  reservedCredits Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  reservations ExplanationCreditReservation[]
+
+  @@index([userId, endsAt])
+  @@index([subscriptionId])
+}
+
+model ExplanationCreditReservation {
+  id String @id @default(uuid())
+  cycleId String
+  cycle ExplanationCreditCycle @relation(fields: [cycleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  credits Int @default(1)
+  status ExplanationCreditReservationStatus @default(PENDING)
+  referenceType String
+  referenceId String
+  idempotencyKey String @unique
+  expiresAt DateTime
+  consumedAt DateTime?
+  releasedAt DateTime?
+  failureReason String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cycleId, referenceType, referenceId])
+  @@index([status, expiresAt])
+  @@index([userId, createdAt])
 }
 
 model Order {

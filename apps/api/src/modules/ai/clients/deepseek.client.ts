@@ -19,6 +19,17 @@ interface CallParams {
   userPrompt: string;
   temperature: number;
   timeoutMs?: number;
+  model?: string;
+  maxTokens?: number;
+  maxAttempts?: 1 | 2;
+  thinking?: 'enabled' | 'disabled';
+  providerUserId?: string;
+}
+
+export interface DeepSeekResult {
+  content: string;
+  inputTokens?: number;
+  outputTokens?: number;
 }
 
 /** Đánh dấu lỗi có thể thử lại — bọc sẵn exception cuối cùng sẽ ném ra nếu hết lượt retry. */
@@ -43,19 +54,25 @@ export class DeepSeekClient {
    * thời), không retry lỗi cấu hình (401/402) hay lỗi khác vì retry vô ích.
    */
   async call(params: CallParams): Promise<string> {
-    let lastTransient: TransientDeepSeekError | undefined;
+    return (await this.callWithUsage(params)).content;
+  }
 
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+  /** Biến thể có usage cho nghiệp vụ cần audit chi phí nhưng vẫn giữ call() tương thích ngược. */
+  async callWithUsage(params: CallParams): Promise<DeepSeekResult> {
+    let lastTransient: TransientDeepSeekError | undefined;
+    const maxAttempts = params.maxAttempts ?? MAX_ATTEMPTS;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         return await this.attemptCall(params);
       } catch (err) {
         if (!(err instanceof TransientDeepSeekError)) throw err;
 
         lastTransient = err;
-        if (attempt === MAX_ATTEMPTS) break;
+        if (attempt === maxAttempts) break;
 
         this.logger.warn(
-          `DeepSeek lỗi tạm thời (lần ${attempt}/${MAX_ATTEMPTS}), thử lại sau ${RETRY_DELAY_MS}ms...`,
+          `DeepSeek lỗi tạm thời (lần ${attempt}/${maxAttempts}), thử lại sau ${RETRY_DELAY_MS}ms...`,
         );
         await sleep(RETRY_DELAY_MS);
       }
@@ -69,7 +86,11 @@ export class DeepSeekClient {
     userPrompt,
     temperature,
     timeoutMs = DEFAULT_TIMEOUT_MS,
-  }: CallParams): Promise<string> {
+    model = 'deepseek-v4-flash',
+    maxTokens,
+    thinking,
+    providerUserId,
+  }: CallParams): Promise<DeepSeekResult> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -81,8 +102,11 @@ export class DeepSeekClient {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'deepseek-v4-flash',
+          model,
           temperature,
+          ...(maxTokens ? { max_tokens: maxTokens } : {}),
+          ...(thinking ? { thinking: { type: thinking } } : {}),
+          ...(providerUserId ? { user_id: providerUserId } : {}),
           response_format: { type: 'json_object' },
           messages: [
             { role: 'system', content: systemPrompt },
@@ -106,8 +130,13 @@ export class DeepSeekClient {
 
       const data = (await res.json()) as {
         choices?: { message?: { content?: string } }[];
+        usage?: { prompt_tokens?: number; completion_tokens?: number };
       };
-      return data.choices?.[0]?.message?.content ?? '';
+      return {
+        content: data.choices?.[0]?.message?.content ?? '',
+        inputTokens: data.usage?.prompt_tokens,
+        outputTokens: data.usage?.completion_tokens,
+      };
     } catch (err) {
       if (err instanceof TransientDeepSeekError) throw err;
       if (err instanceof ServiceUnavailableException) throw err;

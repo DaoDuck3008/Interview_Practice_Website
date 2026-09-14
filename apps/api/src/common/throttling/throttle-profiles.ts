@@ -148,6 +148,12 @@ export const THROTTLE_USER_MOCK_SCORE_RETRY = throttleProfile(
   { limit: 10, ttl: DAY_MS, blockDuration: DAY_MS },
 );
 
+export const THROTTLE_USER_EXPLANATION = throttleProfile(
+  'user-explanation',
+  { limit: 3, ttl: MINUTE_MS, blockDuration: MINUTE_MS },
+  { limit: 15, ttl: DAY_MS, blockDuration: DAY_MS },
+);
+
 // Checkout là endpoint "tạo hoặc tái dùng" đơn PENDING. Người dùng có thể
 // refresh QR nhiều lần khi mạng/Sepay lỗi, nên nới hơn các mutation tạo mới
 // thuần túy; service vẫn tái dùng đơn cũ để tránh tạo trùng.

@@ -9,6 +9,7 @@ import PracticeNavFooter from "@/components/practice/PracticeNavFooter";
 import { formatTopicName } from "@/lib/utils/topics";
 import { LEVEL_STYLE } from "@/lib/utils/levels";
 import { createSeoMetadata } from "@/lib/seo";
+import TermExplainer from "@/components/ui/TermExplainer";
 import {
   getPracticeQuestionHref,
   isCanonicalQuestionSlugId,
@@ -118,7 +119,9 @@ export default async function QuestionPage({
               <ChevronRight size={13} className="text-[#64748b]" />
 
               <h1 className="min-w-0 flex-1 text-xl font-extrabold leading-snug text-[#f4f4f6] sm:text-xl">
-                {question.content}
+                <TermExplainer questionId={questionId} source="QUESTION">
+                  {question.content}
+                </TermExplainer>
               </h1>
               <span
                 className={`w-fit flex-shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest lg:ml-auto ${levelStyle.className}`}

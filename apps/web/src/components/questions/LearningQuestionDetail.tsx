@@ -12,6 +12,7 @@ import {
 } from "@/lib/utils/markdown";
 import { getPracticeQuestionHref } from "@/lib/utils/question-url";
 import RelatedQuestionList from "./RelatedQuestionList";
+import TermExplainer from "@/components/ui/TermExplainer";
 
 interface LearningQuestionDetailProps {
   question: Question;
@@ -177,7 +178,9 @@ export default function LearningQuestionDetail({
           </div>
 
           <h1 className="mt-4 text-2xl font-extrabold leading-tight text-[#f4f4f6] sm:text-3xl">
-            {question.content}
+            <TermExplainer questionId={question.id} source="QUESTION">
+              {question.content}
+            </TermExplainer>
           </h1>
 
           {answerKeywords.length > 0 && (
@@ -204,7 +207,9 @@ export default function LearningQuestionDetail({
                 Tóm tắt đáp án
               </div>
               <p className="text-[15px] leading-7 text-[#cbd5e1]">
-                {question.answerKeySummary}
+                <TermExplainer questionId={question.id} source="SUMMARY">
+                  {question.answerKeySummary}
+                </TermExplainer>
               </p>
             </section>
           )}
@@ -214,14 +219,19 @@ export default function LearningQuestionDetail({
               Đáp án chi tiết
             </h2>
             {question.detailAnswerKey ? (
-              <div className="max-w-none">
+              <TermExplainer
+                questionId={question.id}
+                source="DETAIL_ANSWER"
+                as="div"
+                className="max-w-none"
+              >
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={markdownComponents}
                 >
                   {question.detailAnswerKey}
                 </ReactMarkdown>
-              </div>
+              </TermExplainer>
             ) : (
               <p className="text-sm text-[#94a3b8]">
                 Câu hỏi này chưa có đáp án chi tiết.

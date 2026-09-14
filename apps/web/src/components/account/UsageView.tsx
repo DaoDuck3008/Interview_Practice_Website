@@ -1,15 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import type { CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { CalendarClock, Gauge, LockKeyhole, Sparkles } from "lucide-react";
 import { useAiCredits } from "@/hooks/useAiCredits";
 import { formatDate, formatNumber } from "@/lib/utils/format";
+import { getExplanationCreditBalance, type ExplanationCreditBalance } from "@/lib/api/explanations";
 
 const cardClass = "rounded-2xl border border-border bg-surface p-6 md:p-8";
 
 export default function UsageView() {
   const { balance, balanceLoading } = useAiCredits({ loadBalance: true });
+  const [explanationBalance, setExplanationBalance] = useState<ExplanationCreditBalance | null>(null);
+
+  /** Tải độc lập để lỗi quota giải thích không che mất thông tin AI credit hiện có. */
+  useEffect(() => {
+    void getExplanationCreditBalance().then(setExplanationBalance).catch(() => setExplanationBalance(null));
+  }, []);
 
   if (balanceLoading && !balance) {
     return (
@@ -116,6 +123,31 @@ export default function UsageView() {
           )}
         </div>
       </div>
+
+      {explanationBalance && (
+        <div className={`${cardClass} content-ready-enter`} style={{ "--motion-enter-delay": "120ms" } as CSSProperties}>
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Glossary</span>
+              <h2 className="mt-1 text-xl font-extrabold text-text-primary">Lượt tạo giải thích mới</h2>
+              <p className="mt-2 text-sm text-text-secondary">
+                Chỉ hao lượt khi hệ thống phải tạo thuật ngữ mới; các thuật ngữ đã có luôn miễn phí.
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-3xl font-extrabold text-text-primary">{formatNumber(explanationBalance.available)}</p>
+              <p className="text-xs font-medium text-text-muted">/ {formatNumber(explanationBalance.granted)} lượt còn dùng được</p>
+            </div>
+          </div>
+          <p className="mt-4 border-t border-border pt-4 text-xs text-text-muted">
+            {explanationBalance.source === "FREE"
+              ? "Quota Free cố định cho tài khoản."
+              : explanationBalance.cycleEndsAt
+                ? `Chu kỳ kết thúc vào ${formatDate(explanationBalance.cycleEndsAt)}`
+                : "Chu kỳ chưa có ngày kết thúc."}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

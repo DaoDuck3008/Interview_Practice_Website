@@ -26,6 +26,7 @@ import {
 } from "@/lib/utils/question-url";
 import { useAuthStore } from "@/stores/auth.store";
 import { useFavoritesStore } from "@/stores/favorites.store";
+import TermExplainer from "@/components/ui/TermExplainer";
 
 interface QuestionCardProps {
   question: Question;
@@ -332,14 +333,14 @@ export default function QuestionCard({
       {open && (
         <div className="border-t border-white/[0.06] px-5 pb-5 pt-3 sm:px-10 lg:px-16">
           {fullAnswer ? (
-            <div className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+            <TermExplainer questionId={question.id} source="DETAIL_ANSWER" as="div" className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
               <ReactMarkdown
                 components={mdComponents}
                 remarkPlugins={[remarkGfm]}
               >
                 {fullAnswer}
               </ReactMarkdown>
-            </div>
+            </TermExplainer>
           ) : loadingAnswer ? (
             <p className="text-sm text-[#a78bfa]">Đang tải đáp án...</p>
           ) : answerError ? (

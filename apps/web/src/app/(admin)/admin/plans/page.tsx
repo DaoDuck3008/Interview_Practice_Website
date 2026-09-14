@@ -41,6 +41,7 @@ interface FormState {
   priceVnd: string;
   durationDays: string;
   creditPerCycle: string;
+  explanationCreditsPerCycle: string;
   sortOrder: string;
   isActive: boolean;
 }
@@ -52,6 +53,7 @@ const EMPTY_FORM: FormState = {
   priceVnd: "",
   durationDays: "",
   creditPerCycle: "",
+  explanationCreditsPerCycle: "",
   sortOrder: "0",
   isActive: true,
 };
@@ -106,6 +108,7 @@ export default function AdminPlansPage() {
       priceVnd: String(p.priceVnd),
       durationDays: String(p.durationDays),
       creditPerCycle: String(p.creditPerCycle),
+      explanationCreditsPerCycle: String(p.explanationCreditsPerCycle),
       sortOrder: String(p.sortOrder),
       isActive: p.isActive,
     });
@@ -130,6 +133,7 @@ export default function AdminPlansPage() {
     const priceVnd = Number(form.priceVnd);
     const durationDays = Number(form.durationDays);
     const creditPerCycle = Number(form.creditPerCycle);
+    const explanationCreditsPerCycle = Number(form.explanationCreditsPerCycle);
     if (!Number.isInteger(priceVnd) || priceVnd < 0) {
       setError("Giá phải là số nguyên ≥ 0.");
       return;
@@ -142,6 +146,10 @@ export default function AdminPlansPage() {
       setError("Credit mỗi chu kỳ phải là số nguyên ≥ 0.");
       return;
     }
+    if (!Number.isInteger(explanationCreditsPerCycle) || explanationCreditsPerCycle < 0) {
+      setError("Lượt giải thích mỗi chu kỳ phải là số nguyên ≥ 0.");
+      return;
+    }
 
     const payload: PlanInput = {
       slug,
@@ -150,6 +158,7 @@ export default function AdminPlansPage() {
       priceVnd,
       durationDays,
       creditPerCycle,
+      explanationCreditsPerCycle,
       sortOrder: Number(form.sortOrder) || 0,
       isActive: form.isActive,
     };
@@ -244,11 +253,12 @@ export default function AdminPlansPage() {
 
       <div className="rounded-2xl border border-[#1c1c28] bg-[#0d0d14] overflow-hidden">
         {/* Table header */}
-        <div className="grid grid-cols-[1.4fr_0.9fr_0.7fr_1fr_auto_auto] gap-4 px-5 py-3 border-b border-[#1c1c28] text-xs font-medium uppercase tracking-wider text-[#606072]">
+        <div className="grid grid-cols-[1.4fr_0.9fr_0.7fr_1fr_1fr_auto_auto] gap-4 px-5 py-3 border-b border-[#1c1c28] text-xs font-medium uppercase tracking-wider text-[#606072]">
           <span>Tên / Slug</span>
           <span className="text-right">Giá</span>
           <span className="text-right">Kỳ hạn</span>
           <span>AI credits</span>
+          <span>Lượt giải thích</span>
           <span className="w-24 text-center">Trạng thái</span>
           <span className="w-28 text-right">Thao tác</span>
         </div>
@@ -267,7 +277,7 @@ export default function AdminPlansPage() {
             return (
               <div
                 key={p.id}
-                className="grid grid-cols-[1.4fr_0.9fr_0.7fr_1fr_auto_auto] gap-4 px-5 py-3.5 border-b border-[#1c1c28] last:border-0 items-center hover:bg-[#13131c] transition-colors duration-150"
+                className="grid grid-cols-[1.4fr_0.9fr_0.7fr_1fr_1fr_auto_auto] gap-4 px-5 py-3.5 border-b border-[#1c1c28] last:border-0 items-center hover:bg-[#13131c] transition-colors duration-150"
                 style={{ opacity: p.isActive ? 1 : 0.55 }}
               >
                 {/* Name / slug */}
@@ -291,6 +301,9 @@ export default function AdminPlansPage() {
                   <span className="truncate">
                     {p.creditPerCycle} / chu kỳ
                   </span>
+                </span>
+                <span className="text-sm text-[#9898aa] inline-flex items-center gap-1.5 min-w-0">
+                  <span className="truncate">{p.explanationCreditsPerCycle} / chu kỳ</span>
                 </span>
 
                 {/* Status badge */}
@@ -400,6 +413,7 @@ export default function AdminPlansPage() {
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-[#9898aa]">
               Mô tả{" "}
@@ -415,6 +429,23 @@ export default function AdminPlansPage() {
               onFocus={onFocus}
               onBlur={onBlur}
             />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-[#9898aa]">
+              Lượt giải thích / chu kỳ
+            </label>
+            <input
+              type="number"
+              min={0}
+              value={form.explanationCreditsPerCycle}
+              onChange={(e) => set("explanationCreditsPerCycle", e.target.value)}
+              placeholder="60"
+              className={inputClass}
+              style={inputStyle}
+              onFocus={onFocus}
+              onBlur={onBlur}
+            />
+          </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
