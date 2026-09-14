@@ -5,6 +5,7 @@ import AuthHydrator from "@/components/providers/authHydrator";
 import QueryProvider from "@/components/providers/queryProvider";
 import SocketProvider from "@/components/providers/socketProvider";
 import SupportWidget from "@/components/support/SupportWidget";
+import GoToTopButton from "@/components/ui/GoToTopButton";
 import { ToastContainer } from "react-toastify";
 import { getSiteUrl } from "@/lib/seo";
 
@@ -40,6 +41,7 @@ export default function RootLayout({
             <SocketProvider>
               {children}
               <ToastContainer />
+              <GoToTopButton />
               <SupportWidget />
             </SocketProvider>
           </AuthHydrator>

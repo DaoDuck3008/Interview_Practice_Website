@@ -412,6 +412,12 @@ The desktop Practice sidebar may collapse to a narrow control rail. Animate its
 width while fading and slightly translating its content, keep the reopen control
 visible, and disable the transition through `useReducedMotion` when requested.
 
+`GoToTopButton` is mounted once in the root layout. Do not add route-local
+duplicates: it appears only after the window scroll passes its threshold and is
+positioned above the Support Widget's floating controls from `sm` upward. On
+smaller screens, Support Widget is hidden and GoToTopButton uses a compact
+bottom-right placement.
+
 ### Content-ready, feedback and overlay motion
 
 Use the shared CSS classes in `src/app/globals.css` for client data becoming

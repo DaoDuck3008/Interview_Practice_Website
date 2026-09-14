@@ -8,7 +8,7 @@ import {
   type CSSProperties,
 } from "react";
 import Image from "next/image";
-import { ArrowUp, ChevronDown, Search, X } from "lucide-react";
+import { ChevronDown, Search, X } from "lucide-react";
 import TopicsSidebar from "./TopicsSidebar";
 import QuestionCard from "./QuestionCard";
 import LearningPagination from "./LearningPagination";
@@ -85,7 +85,6 @@ export default function QuestionBrowser({
   const [result, setResult] = useState(initialResult);
   const [loading, setLoading] = useState(false);
   const [searchValue, setSearchValue] = useState(initialSearch ?? "");
-  const [showBackToTop, setShowBackToTop] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestIdRef = useRef(0);
 
@@ -255,30 +254,12 @@ export default function QuestionBrowser({
     return () => window.removeEventListener("popstate", handlePopState);
   }, [loadResult]);
 
-  useEffect(() => {
-    function handleScroll() {
-      const shouldShow = window.scrollY > 480;
-      setShowBackToTop((visible) =>
-        visible === shouldShow ? visible : shouldShow,
-      );
-    }
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    queueMicrotask(handleScroll);
-
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
   useEffect(
     () => () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     },
     [],
   );
-
-  function scrollToTop() {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
 
   return (
     <div className="mt-4 flex items-start gap-3">
@@ -536,18 +517,6 @@ export default function QuestionBrowser({
           onPageChange={(p) => navigate({ page: p })}
         />
       </main>
-
-      {showBackToTop && (
-        <button
-          type="button"
-          onClick={scrollToTop}
-          aria-label="Lên đầu trang"
-          title="Lên đầu trang"
-          className="fixed bottom-36 right-4 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-[#171d31] text-[#d4d4e0] shadow-[0_18px_44px_rgba(2,6,23,0.34)] transition-[transform,background-color,border-color,color] duration-200 hover:-translate-y-0.5 hover:border-[#c4b5fd]/50 hover:bg-[#232b46] hover:text-white"
-        >
-          <ArrowUp size={18} />
-        </button>
-      )}
     </div>
   );
 }

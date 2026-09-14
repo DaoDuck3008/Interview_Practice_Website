@@ -34,7 +34,7 @@ export default function SupportWidget() {
   if (hidden) return null;
 
   return (
-    <>
+    <div className="hidden sm:block">
       <div className="fixed bottom-4 right-4 z-40 flex flex-col gap-3">
         <a
           href={ZALO_URL}
@@ -71,6 +71,6 @@ export default function SupportWidget() {
       {chatOpen && user && (
         <SupportChatPopup onClose={() => setChatOpen(false)} />
       )}
-    </>
+    </div>
   );
 }
