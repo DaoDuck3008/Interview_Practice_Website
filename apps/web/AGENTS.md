@@ -230,11 +230,17 @@ Route groups are used for layout isolation:
 ```
 app/
 ├── (admin)/admin/        # Admin pages — wrapped in RoleGuard (ADMIN)
-├── (app)/learning/       # Learner browse pages
+├── (app)/                # Public learning, Practice and Mock CV landing pages
 ├── (auth)/               # Login + register — wrapped in GuestGuard
-├── (user)/practice/      # Practice session pages — authenticated
+├── (user)/(account)/     # Account pages — authenticated
+├── (user)/mock-cv/*      # Private Mock CV processing and interview routes
 └── page.tsx              # Homepage (public)
 ```
+
+Practice question pages and the Mock CV landing page are public previews.
+Keep resource-creating actions gated in their client components: anonymous
+users should receive a login toast before recording or uploading a CV, while
+the API remains the final authorization boundary.
 
 **Dynamic segments**:
 - `[topicSlug]` — topic slug string (e.g., `javascript`)

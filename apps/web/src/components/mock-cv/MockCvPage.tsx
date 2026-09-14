@@ -30,15 +30,18 @@ import { toastApiError } from "@/lib/utils/apiError";
 import { useStatusModal } from "@/components/ui/useStatusModal";
 import TextType from "@/components/ui/TextType";
 import { useSocket } from "@/hooks/useSocket";
+import { useAuthStore } from "@/stores/auth.store";
 
 const PAGE_SIZE = 6;
 
 export default function MockCvPage() {
   const router = useRouter();
   const socket = useSocket();
+  const user = useAuthStore((state) => state.user);
+  const hydrated = useAuthStore((state) => state.hydrated);
   const { confirm, statusModal } = useStatusModal();
   const [cvs, setCvs] = useState<MockCv[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -74,6 +77,8 @@ export default function MockCvPage() {
 
   const loadCvs = useCallback(
     async (silent = false) => {
+      if (!user) return;
+
       const requestId = ++loadRequestIdRef.current;
       if (!silent) setLoading(true);
       try {
@@ -109,12 +114,15 @@ export default function MockCvPage() {
         }
       }
     },
-    [debouncedSearch, page, sortOrder],
+    [debouncedSearch, page, sortOrder, user],
   );
 
   useEffect(() => {
+    if (!hydrated) return;
+    if (!user) return;
+
     queueMicrotask(() => void loadCvs());
-  }, [loadCvs]);
+  }, [hydrated, loadCvs, user]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -148,9 +156,15 @@ export default function MockCvPage() {
     };
   }, [loadCvs, socket]);
 
-  const shouldShowPagination = total > PAGE_SIZE;
+  const visibleCvs = user ? cvs : [];
+  const shouldShowPagination = Boolean(user) && total > PAGE_SIZE;
 
   async function handleUpload(input: CreateMockCvInput) {
+    if (!hydrated) return false;
+    if (!user) {
+      toast.warning("Vui lòng đăng nhập để tải CV và tạo bài luyện.");
+      return false;
+    }
     if (uploadLockRef.current) return false;
     uploadLockRef.current = true;
     setUploading(true);
@@ -333,8 +347,14 @@ export default function MockCvPage() {
         </div>
 
         <div className="mt-4">
-          {loading || searching ? (
+          {!hydrated || loading || searching ? (
             <MockCvSkeleton searching={searching} />
+          ) : !user ? (
+            <EmptyState
+              icon={FileSearch2}
+              title="Đăng nhập để xem CV của bạn"
+              description="CV và lịch sử luyện tập được lưu riêng cho từng tài khoản."
+            />
           ) : loadError ? (
             <EmptyState
               icon={RefreshCw}
@@ -343,7 +363,7 @@ export default function MockCvPage() {
               actionLabel="Thử lại"
               onAction={() => void loadCvs()}
             />
-          ) : cvs.length === 0 ? (
+          ) : visibleCvs.length === 0 ? (
             <EmptyState
               icon={search ? Search : FileText}
               title={search ? "Không tìm thấy CV phù hợp" : "Chưa có CV nào"}
@@ -357,7 +377,7 @@ export default function MockCvPage() {
             />
           ) : (
             <div key={`${page}-${debouncedSearch}-${sortOrder}`} className="grid gap-3 lg:grid-cols-2">
-              {cvs.map((cv, index) => (
+              {visibleCvs.map((cv, index) => (
                 <div
                   key={cv.id}
                   className="collection-item-enter"

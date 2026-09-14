@@ -18,15 +18,16 @@ interface Props {
 export default function PracticeContent({ questionId }: Props) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const hydrated = useAuthStore((s) => s.hydrated);
+  const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !user) return;
     getSessionsByQuestion(questionId).then(setSessions);
-  }, [questionId, hydrated]);
+  }, [questionId, hydrated, user]);
 
   return (
     <>
-      {sessions.length > 0 && <AnswerHistory sessions={sessions} />}
+      {user && sessions.length > 0 && <AnswerHistory sessions={sessions} />}
 
       <PracticeSession
         questionId={questionId}

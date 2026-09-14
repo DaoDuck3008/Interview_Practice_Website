@@ -24,6 +24,8 @@ import { formatTime } from "@/lib/utils/format";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { audioFileNameFromBlob } from "@/lib/audioFile";
 import { waitForScoreResult, waitForImproveResult } from "@/lib/ws/jobs";
+import { toast } from "react-toastify";
+import { useAuthStore } from "@/stores/auth.store";
 import TranscriptPanel from "@/components/practice/TranscriptPanel";
 import AnswerEvaluation from "@/components/practice/AnswerEvaluation";
 import EvaluationSkeleton from "@/components/practice/EvaluationSkeleton";
@@ -43,6 +45,8 @@ interface Props {
 }
 
 export default function PracticeSession({ questionId, onSessionSaved }: Props) {
+  const user = useAuthStore((s) => s.user);
+  const hydrated = useAuthStore((s) => s.hydrated);
   const [phase, setPhase] = useState<Phase>("idle");
   const [sessionId, setSessionId] = useState("");
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
@@ -239,6 +243,18 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
     evaluation.completenessScore === 0 &&
     evaluation.clarityScore === 0;
 
+  function handleStartRecording() {
+    if (!hydrated) return;
+
+    if (!user) {
+      toast.warning("Vui lòng đăng nhập để bắt đầu ghi âm.");
+      return;
+    }
+
+    new Audio("/sounds/record_start.mp3").play().catch(() => {});
+    startRecorder();
+  }
+
   return (
     <div
       className="flex flex-col divide-y divide-white/[0.07] overflow-hidden rounded-[24px] border border-[#c4b5fd]/16 bg-[#1b2248]/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
@@ -253,10 +269,7 @@ export default function PracticeSession({ questionId, onSessionSaved }: Props) {
         {recorderStatus === "idle" && phase === "idle" && (
           <div className="flex flex-col items-center gap-3 py-6">
             <button
-              onClick={() => {
-                new Audio("/sounds/record_start.mp3").play().catch(() => {});
-                startRecorder();
-              }}
+              onClick={handleStartRecording}
               className="w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
               style={{
                 background: "#7c3aed",
