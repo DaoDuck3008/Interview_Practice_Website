@@ -40,6 +40,40 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Thanh cuộn tối giản: track trong suốt, thumb mảnh và không có khung mặc định. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(196, 181, 253, 0.36) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+*::-webkit-scrollbar-thumb {
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(196, 181, 253, 0.36);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(221, 214, 254, 0.62);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: rgba(167, 139, 250, 0.78);
+}
+
 h1,
 h2,
 h3,

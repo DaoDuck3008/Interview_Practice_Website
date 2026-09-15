@@ -105,7 +105,7 @@ export interface AdminSessionListItem {
     content: string;
     level: Level;
     topic: { name: string; slug: string };
-  };
+  } | null;
   score: {
     id: string;
     technicalScore: number;
@@ -132,7 +132,7 @@ export interface AdminSessionDetail {
     answerKeywords: string[];
     level: Level;
     topic: { name: string; slug: string };
-  };
+  } | null;
   score:
     | (Score & {
         promptVersion: string | null;

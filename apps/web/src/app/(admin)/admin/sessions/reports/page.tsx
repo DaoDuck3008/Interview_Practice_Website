@@ -273,6 +273,9 @@ export default function AdminSessionReportsPage() {
                   s.score.clarityScore) /
                 3
               : null;
+            const questionContent =
+              s.question?.content ?? "Câu hỏi không còn khả dụng";
+            const topicName = s.question?.topic.name ?? "Không có chủ đề";
             return (
               <button
                 key={s.id}
@@ -297,12 +300,12 @@ export default function AdminSessionReportsPage() {
                 <div className="min-w-0">
                   <p
                     className="text-sm text-[var(--color-text-secondary)] truncate"
-                    title={s.question.content}
+                    title={questionContent}
                   >
-                    {s.question.content}
+                    {questionContent}
                   </p>
                   <p className="text-xs text-[var(--color-text-muted)]">
-                    {s.question.topic.name} · {formatDuration(s.duration)}
+                    {topicName} · {formatDuration(s.duration)}
                   </p>
                 </div>
 

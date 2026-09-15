@@ -521,6 +521,8 @@ export class SessionsService {
     const order = query.order ?? 'desc';
 
     const where: Prisma.SessionWhereInput = {
+      // Màn admin sessions này quản lý lượt luyện từ question bank; session Mock CV có questionId = null và có luồng quản lý riêng.
+      questionId: { not: null },
       ...(query.search && {
         user: {
           OR: [

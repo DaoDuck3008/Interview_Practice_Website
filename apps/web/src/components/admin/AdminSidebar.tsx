@@ -214,26 +214,33 @@ export default function AdminSidebar({ collapsed, onToggle }: Props) {
         })}
       </nav>
 
-      <div className="mt-auto flex flex-col gap-1 p-3 border-t border-[#1c1c28]">
+      <div
+        className={`mt-auto flex gap-1 border-t border-[#1c1c28] p-3 ${
+          collapsed ? "flex-col" : "items-center"
+        }`}
+      >
         <button
           onClick={onToggle}
           title={collapsed ? "Mở rộng" : "Thu gọn"}
-          className="flex cursor-pointer items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[#9898aa] transition-colors duration-150 hover:bg-[#13131c] hover:text-[#f4f4f6]"
-          style={{ justifyContent: collapsed ? "center" : "flex-start" }}
+          className={`flex h-10 cursor-pointer items-center justify-center rounded-lg text-[#9898aa] transition-colors duration-150 hover:bg-[#13131c] hover:text-[#f4f4f6] ${
+            collapsed ? "order-1 w-full" : "order-2 w-10 shrink-0"
+          }`}
         >
           {collapsed ? (
             <ChevronRight size={16} className="flex-shrink-0" />
           ) : (
             <ChevronLeft size={16} className="flex-shrink-0" />
           )}
-          {!collapsed && <span className="truncate">Thu gọn</span>}
         </button>
 
         <Link
           href="/"
           title={collapsed ? "Về trang chủ" : undefined}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[#9898aa] transition-colors duration-150 hover:bg-[#13131c] hover:text-[#f4f4f6]"
-          style={{ justifyContent: collapsed ? "center" : "flex-start" }}
+          className={`flex h-10 items-center gap-3 rounded-lg text-sm text-[#9898aa] transition-colors duration-150 hover:bg-[#13131c] hover:text-[#f4f4f6] ${
+            collapsed
+              ? "order-2 w-full justify-center"
+              : "order-1 min-w-0 flex-1 px-3"
+          }`}
         >
           <Home size={16} className="flex-shrink-0" />
           {!collapsed && <span className="truncate">Về trang chủ</span>}

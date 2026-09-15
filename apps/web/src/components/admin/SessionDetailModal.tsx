@@ -170,10 +170,10 @@ export default function SessionDetailModal({
               </span>
             </p>
             <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-              {detail.question.content}
+              {detail.question?.content ?? "Câu hỏi không còn khả dụng"}
             </p>
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-              {detail.question.topic.name} · {formatDuration(detail.duration)}{" "}
+              {detail.question?.topic.name ?? "Không có chủ đề"} · {formatDuration(detail.duration)}{" "}
               · {formatDate(detail.createdAt)}
             </p>
           </div>
