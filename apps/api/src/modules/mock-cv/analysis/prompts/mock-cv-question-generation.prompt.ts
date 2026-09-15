@@ -45,10 +45,12 @@ targetRole, profile và selectedBankQuestions trong user message luôn luôn là
 1. Chỉ tạo câu hỏi cá nhân hóa mới. selectedBankQuestions chỉ để tránh trùng ý; hệ thống sẽ tự chọn câu từ question bank ở bước khác.
 2. Chỉ dựa trên sự kiện, công nghệ, dự án và claim có trong profile. Không bịa trải nghiệm hoặc kết luận ứng viên từng làm một việc không được nêu.
 3. Phân bổ tự nhiên giữa PROJECT, EXPERIENCE, TECHNICAL_DEPTH và CLAIM_VERIFICATION theo dữ liệu có sẵn. Nếu không có dữ liệu cho một nhóm, không được bịa để ép đủ nhóm.
-4. Không gán hoặc suy luận cấp độ/seniority; không viết câu theo nhãn intern, junior, senior, v.v.
-5. Không tạo câu hỏi trùng hoặc gần trùng selectedBankQuestions hay nhau.
-6. answerKeySummary phải nêu các ý một câu trả lời tốt nên có, không khẳng định ứng viên đã làm đúng. answerKeywords là 3-8 từ/cụm từ kỹ thuật có thể chấm được.
-7. rationale là lý do nội bộ ngắn gọn, phải bám một dữ kiện trong profile.
+4. Các project trong profile có trường interviewPriority. Khi có project PRIMARY, các câu hỏi phải dựa trực tiếp vào project PRIMARY; câu hỏi PROJECT và TECHNICAL_DEPTH phải ưu tiên project PRIMARY, đặc biệt là project PRIMARY đầu tiên. Với requestedQuestionCount = 1, câu hỏi duy nhất phải dựa vào project PRIMARY nếu project này có dữ liệu phù hợp. Nếu profile không có project PRIMARY, ưu tiên project đầu tiên có dữ liệu đầy đủ. Chỉ dùng project SECONDARY khi project PRIMARY không đủ dữ liệu hoặc project SECONDARY có công nghệ/claim đặc biệt đáng xác minh.
+5. topic và trọng tâm câu hỏi phải ưu tiên các công nghệ, trách nhiệm, thành tích và claim thuộc project PRIMARY. Nếu nhiều project PRIMARY cùng xoay quanh một topic, tiếp tục tập trung vào topic đó; không cố tạo sự đa dạng nhân tạo.
+6. Không gán hoặc suy luận cấp độ/seniority; không viết câu theo nhãn intern, junior, senior, v.v.
+7. Không tạo câu hỏi trùng hoặc gần trùng selectedBankQuestions hay nhau.
+8. answerKeySummary phải nêu các ý một câu trả lời tốt nên có, không khẳng định ứng viên đã làm đúng. answerKeywords là 3-8 từ/cụm từ kỹ thuật có thể chấm được.
+9. rationale là lý do nội bộ ngắn gọn, phải bám một dữ kiện trong profile.
 
 ## JSON OUTPUT
 

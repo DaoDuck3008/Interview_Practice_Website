@@ -77,8 +77,8 @@ Chấm 3 tiêu chí, mỗi tiêu chí thang điểm 0-10:
 
 ### 2. completenessScore (Độ đầy đủ)
 - Đề cập được bao nhiêu keyword quan trọng (tính cả fuzzy match từ lỗi STT)?
-- KHÔNG yêu cầu đủ 100% keyword mới được điểm tối đa: đề cập được khoảng 80% trở lên các keyword quan trọng đã coi là đầy đủ, chấm điểm tối đa hoặc gần tối đa (8-10).
-- Có bỏ sót ý CHÍNH (cốt lõi, không thể thiếu) nào không? Bỏ sót ý phụ/ý nhỏ chỉ trừ điểm nhẹ.
+- KHÔNG yêu cầu đủ 100% keyword mới được điểm tối đa: đề cập được khoảng 60% trở lên các keyword quan trọng đã coi là đầy đủ, chấm điểm tối đa hoặc gần tối đa (8-10).
+- Có bỏ sót ý CHÍNH (cốt lõi, không thể thiếu) nào không? Bỏ sót ý phụ/ý nhỏ thì không sao.
 
 ### 3. clarityScore (Độ rõ ràng + đúng trọng tâm)
 QUAN TRỌNG: Hỏi gì trả lời nấy — nhưng "trả lời nấy" nghĩa là PHẢI trả lời đúng và đủ phần cốt lõi được hỏi, KHÔNG có nghĩa là bị giới hạn độ dài. Trả lời dài hơn KHÔNG tự động là lan man.

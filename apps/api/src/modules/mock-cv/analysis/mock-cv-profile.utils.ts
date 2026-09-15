@@ -170,6 +170,8 @@ function parseProjects(value: unknown): MockCvProjectProfile[] | null {
           typeof project.name === 'string'
             ? project.name.trim().slice(0, 300)
             : '',
+        interviewPriority:
+          project.interviewPriority === 'PRIMARY' ? 'PRIMARY' : 'SECONDARY',
         technologies: stringArray(project.technologies),
         responsibilities: stringArray(project.responsibilities),
         achievements: stringArray(project.achievements),

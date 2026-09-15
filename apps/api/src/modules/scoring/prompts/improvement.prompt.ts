@@ -64,7 +64,7 @@ Trả về JSON THUẦN (không markdown, không giải thích thêm):
   "annotations": [
     {
       "originalSegment": "đoạn TRÍCH NGUYÊN VĂN từ câu trả lời gốc cần sửa (copy chính xác)",
-      "issue": "vấn đề ngắn gọn (1 câu), giọng văn nhẹ nhàng — mô tả điểm có thể tốt hơn, không phán xét hay chê bai",
+      "issue": "vấn đề ngắn gọn (1-2 câu), giọng văn nhẹ nhàng — mô tả điểm có thể tốt hơn, không phán xét hay chê bai",
       "suggestion": "cách sửa cụ thể (1-2 câu), giọng văn mang tính xây dựng như mentor đang chỉ dẫn"
     }
   ],
