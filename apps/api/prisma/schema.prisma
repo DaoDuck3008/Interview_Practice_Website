@@ -101,6 +101,11 @@ enum MockInterviewStatus {
   ABANDONED
 }
 
+enum StorageCleanupBucket {
+  PUBLIC
+  PRIVATE
+}
+
 enum MockInterviewMode {
   TOPIC
   CUSTOM
@@ -578,6 +583,20 @@ model MockCvInterviewQuestion {
   @@unique([mockCvInterviewId, order])
   @@index([mockCvInterviewId, order])
   @@index([scoreStatus, mockCvInterviewId])
+}
+
+// Outbox dọn object R2 sau khi transaction xóa dữ liệu nguồn đã commit.
+model StorageCleanupJob {
+  id            String               @id @default(uuid())
+  bucket        StorageCleanupBucket
+  objectKey     String
+  attempts      Int                  @default(0)
+  nextAttemptAt DateTime             @default(now())
+  lastError     String?
+  createdAt     DateTime             @default(now())
+
+  @@unique([bucket, objectKey])
+  @@index([nextAttemptAt])
 }
 
 model Score {

@@ -20,9 +20,7 @@ export class StorageService {
   constructor(private config: ConfigService) {
     const accountId = this.config.getOrThrow<string>('r2.accountId');
     this.bucket = this.config.getOrThrow<string>('r2.bucketName');
-    this.privateBucket = this.config.getOrThrow<string>(
-      'r2.privateBucketName',
-    );
+    this.privateBucket = this.config.getOrThrow<string>('r2.privateBucketName');
     this.publicUrl = this.config
       .getOrThrow<string>('r2.publicUrl')
       .replace(/\/$/, '');
@@ -84,6 +82,12 @@ export class StorageService {
     return this.deleteFromBucket(this.bucket, key);
   }
 
+  async deleteOrThrow(key: string): Promise<void> {
+    await this.s3.send(
+      new DeleteObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
+  }
+
   /** Upload object không có public URL, dùng cho tài liệu chứa dữ liệu cá nhân như CV. */
   async uploadPrivate(
     key: string,
@@ -115,11 +119,15 @@ export class StorageService {
     return this.deleteFromBucket(this.privateBucket, key);
   }
 
+  async deletePrivateOrThrow(key: string): Promise<void> {
+    await this.s3.send(
+      new DeleteObjectCommand({ Bucket: this.privateBucket, Key: key }),
+    );
+  }
+
   private async deleteFromBucket(bucket: string, key: string): Promise<void> {
     try {
-      await this.s3.send(
-        new DeleteObjectCommand({ Bucket: bucket, Key: key }),
-      );
+      await this.s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
     } catch (err) {
       this.logger.warn(`Không thể xóa object ${key}: ${String(err)}`);
     }

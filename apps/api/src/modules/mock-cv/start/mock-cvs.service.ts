@@ -15,6 +15,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { MockInterviewJobsService } from '../../mock-interviews/mock-interview-jobs.service';
 import { MockCvQuestionPreparationService } from '../../ai-jobs/services/mock-cv-question-preparation.service';
 import { DEFAULT_MOCK_CV_DURATION_SECONDS } from '../analysis/mock-cv.constants';
+import { MockCvOperationLockService } from '../mock-cv-operation-lock.service';
 
 const INTERVIEW_SELECT = {
   id: true,
@@ -49,9 +50,19 @@ export class MockCvsService {
     private readonly prisma: PrismaService,
     private readonly questionPreparation: MockCvQuestionPreparationService,
     private readonly mockInterviewJobs: MockInterviewJobsService,
+    private readonly operationLock: MockCvOperationLockService,
   ) {}
 
   async start(id: string, userId: string) {
+    const lock = await this.operationLock.acquire(id);
+    try {
+      return await this.startLocked(id, userId);
+    } finally {
+      await this.operationLock.release(lock);
+    }
+  }
+
+  private async startLocked(id: string, userId: string) {
     const mockCv = await this.prisma.mockCv.findFirst({
       where: { id, userId },
       select: {

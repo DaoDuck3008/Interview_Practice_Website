@@ -11,11 +11,13 @@ import {
   MockCvAnalysisStatus,
   MockCvQuestionGenerationStatus,
   MockInterviewStatus,
+  StorageCleanupBucket,
   type Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AiJobsService } from '../../ai-jobs/ai-jobs.service';
 import { StorageService } from '../../storage/storage.service';
+import { StorageCleanupService } from '../../storage/storage-cleanup.service';
 import {
   MOCK_CV_TARGET_ROLE_LABELS,
   MOCK_CV_JOB_STALE_MS,
@@ -31,6 +33,8 @@ import {
   cvAnalysisFeature,
   mockCvTotalCreditCost,
 } from '../../ai-credits/ai-credit-pricing';
+import { MockInterviewJobsService } from '../../mock-interviews/mock-interview-jobs.service';
+import { MockCvOperationLockService } from '../mock-cv-operation-lock.service';
 
 const PUBLIC_ANALYSIS_SELECT = {
   id: true,
@@ -88,8 +92,11 @@ export class MockCvAnalysisService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
+    private readonly storageCleanup: StorageCleanupService,
     private readonly aiJobs: AiJobsService,
     private readonly aiCredits: AiCreditsService,
+    private readonly timerJobs: MockInterviewJobsService,
+    private readonly operationLock: MockCvOperationLockService,
   ) {}
 
   // Tải CV lên storage và tạo bản ghi MockCv.
@@ -218,6 +225,19 @@ export class MockCvAnalysisService {
     userId: string,
     options: { chargeUser?: boolean } = {},
   ) {
+    const lock = await this.operationLock.acquire(id);
+    try {
+      return await this.retryAnalysisLocked(id, userId, options);
+    } finally {
+      await this.operationLock.release(lock);
+    }
+  }
+
+  private async retryAnalysisLocked(
+    id: string,
+    userId: string,
+    options: { chargeUser?: boolean } = {},
+  ) {
     const mockCv = await this.prisma.mockCv.findFirst({
       where: { id, userId },
       select: {
@@ -268,13 +288,30 @@ export class MockCvAnalysisService {
   }
 
   async remove(id: string, userId: string) {
+    const lock = await this.operationLock.acquire(id);
+    try {
+      return await this.removeLocked(id, userId);
+    } finally {
+      await this.operationLock.release(lock);
+    }
+  }
+
+  private async removeLocked(id: string, userId: string) {
     const mockCv = await this.prisma.mockCv.findFirst({
       where: { id, userId },
       select: {
+        id: true,
         fileKey: true,
-        analysis: { select: { id: true } },
+        analysis: {
+          select: {
+            id: true,
+            analysisAttempt: true,
+            questionGenerationAttempt: true,
+          },
+        },
         interviews: {
           select: {
+            id: true,
             status: true,
             questions: {
               where: { sessionId: { not: null } },
@@ -307,6 +344,27 @@ export class MockCvAnalysisService {
           : [],
       ),
     );
+
+    const analysisJobIds = mockCv.analysis
+      ? [
+          ...this.attemptJobIds(
+            'mock_cv_profile',
+            mockCv.analysis.id,
+            mockCv.analysis.analysisAttempt,
+          ),
+          ...this.attemptJobIds(
+            'mock_cv_questions',
+            mockCv.analysis.id,
+            mockCv.analysis.questionGenerationAttempt,
+          ),
+        ]
+      : [];
+    await this.removeJobsOrThrow({
+      sessionIds: sessions.map((session) => session.id),
+      interviewIds: mockCv.interviews.map((interview) => interview.id),
+      extraAiJobIds: analysisJobIds,
+    });
+
     await this.prisma.$transaction(async (tx) => {
       if (sessions.length > 0) {
         await tx.session.deleteMany({
@@ -314,6 +372,19 @@ export class MockCvAnalysisService {
         });
       }
       await tx.mockCv.delete({ where: { id } });
+      await this.storageCleanup.scheduleInTransaction(tx, [
+        { bucket: StorageCleanupBucket.PRIVATE, objectKey: mockCv.fileKey },
+        ...sessions.flatMap((session) =>
+          session.audioUrl
+            ? [
+                {
+                  bucket: StorageCleanupBucket.PUBLIC,
+                  objectKey: this.storage.keyFromUrl(session.audioUrl),
+                },
+              ]
+            : [],
+        ),
+      ]);
     });
 
     if (mockCv.analysis) {
@@ -325,15 +396,40 @@ export class MockCvAnalysisService {
       );
     }
 
-    await Promise.all([
-      this.storage.deletePrivate(mockCv.fileKey),
-      ...sessions.flatMap((session) =>
-        session.audioUrl
-          ? [this.storage.delete(this.storage.keyFromUrl(session.audioUrl))]
-          : [],
-      ),
-    ]);
+    await this.storageCleanup.processDueBestEffort();
     return { deleted: true };
+  }
+
+  private async removeJobsOrThrow(input: {
+    sessionIds: string[];
+    interviewIds: string[];
+    extraAiJobIds?: string[];
+  }) {
+    const activeAiJobs = await this.aiJobs.removeJobs([
+      ...input.sessionIds.flatMap((sessionId) => [
+        `score_${sessionId}`,
+        `improve_${sessionId}`,
+      ]),
+      ...input.interviewIds.map(
+        (interviewId) => `mock_cv_overview_${interviewId}`,
+      ),
+      ...(input.extraAiJobIds ?? []),
+    ]);
+    const activeTimerJobs = await this.timerJobs.removeAutoSubmitJobs({
+      mockCvInterviewIds: input.interviewIds,
+    });
+    if (activeAiJobs.length > 0 || activeTimerJobs.length > 0) {
+      throw new ConflictException(
+        'Không thể xóa vì vẫn còn job xử lý đang chạy.',
+      );
+    }
+  }
+
+  private attemptJobIds(prefix: string, id: string, maxAttempt: number) {
+    return Array.from(
+      { length: Math.max(1, maxAttempt + 1) },
+      (_, attempt) => `${prefix}_${id}_${attempt}`,
+    );
   }
 
   // Util function: kiểm tra file có phải PDF hợp lệ hay không, dựa trên magic number của file PDF

@@ -10,11 +10,13 @@ import {
   MockOverviewStatus,
   MockQuestionScoreStatus,
   Prisma,
+  StorageCleanupBucket,
 } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AiJobsService } from '../../ai-jobs/ai-jobs.service';
 import { MockCvQuestionPreparationService } from '../../ai-jobs/services/mock-cv-question-preparation.service';
 import { StorageService } from '../../storage/storage.service';
+import { StorageCleanupService } from '../../storage/storage-cleanup.service';
 import { MockInterviewJobsService } from '../../mock-interviews/mock-interview-jobs.service';
 import { MockCvInterviewsService } from '../interviews/mock-cv-interviews.service';
 import {
@@ -28,6 +30,7 @@ import {
 } from './dto/query-admin-mock-cv.dto';
 import { MOCK_SCORING_STALE_MS } from '../../mock-core/mock-core.constants';
 import { CacheService } from '../../../cache/cache.service';
+import { MockCvOperationLockService } from '../mock-cv-operation-lock.service';
 
 const ADMIN_ANALYSIS_SELECT = {
   id: true,
@@ -121,12 +124,14 @@ export class MockCvAdminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
+    private readonly storageCleanup: StorageCleanupService,
     private readonly aiJobs: AiJobsService,
     private readonly timerJobs: MockInterviewJobsService,
     private readonly analysisService: MockCvAnalysisService,
     private readonly interviewsService: MockCvInterviewsService,
     private readonly questionPreparation: MockCvQuestionPreparationService,
     private readonly cache: CacheService,
+    private readonly operationLock: MockCvOperationLockService,
   ) {}
 
   async findAll(query: QueryAdminMockCvDto) {
@@ -329,8 +334,21 @@ export class MockCvAdminService {
         });
       }
       await tx.mockCvInterview.delete({ where: { id: interviewId } });
+      await this.storageCleanup.scheduleInTransaction(
+        tx,
+        sessions.flatMap((session) =>
+          session.audioUrl
+            ? [
+                {
+                  bucket: StorageCleanupBucket.PUBLIC,
+                  objectKey: this.storage.keyFromUrl(session.audioUrl),
+                },
+              ]
+            : [],
+        ),
+      );
     });
-    await this.deleteAudio(sessions);
+    await this.storageCleanup.processDueBestEffort();
     await this.invalidateSessionCaches(interview.userId);
     return {
       deleted: true as const,
@@ -340,6 +358,15 @@ export class MockCvAdminService {
   }
 
   async hardDelete(id: string) {
+    const lock = await this.operationLock.acquire(id);
+    try {
+      return await this.hardDeleteLocked(id);
+    } finally {
+      await this.operationLock.release(lock);
+    }
+  }
+
+  private async hardDeleteLocked(id: string) {
     const mockCv = await this.prisma.mockCv.findUnique({
       where: { id },
       select: {
@@ -409,11 +436,23 @@ export class MockCvAdminService {
         });
       }
       await tx.mockCv.delete({ where: { id } });
+      await this.storageCleanup.scheduleInTransaction(tx, [
+        { bucket: StorageCleanupBucket.PRIVATE, objectKey: mockCv.fileKey },
+        ...sessions.flatMap((session) =>
+          session.audioUrl
+            ? [
+                {
+                  bucket: StorageCleanupBucket.PUBLIC,
+                  objectKey: this.storage.keyFromUrl(session.audioUrl),
+                },
+              ]
+            : [],
+        ),
+      ]);
     });
     await Promise.all([
-      this.storage.deletePrivate(mockCv.fileKey),
-      this.deleteAudio(sessions),
       this.invalidateSessionCaches(mockCv.userId),
+      this.storageCleanup.processDueBestEffort(),
     ]);
     return { deleted: true as const, userId: mockCv.userId };
   }
@@ -634,18 +673,6 @@ export class MockCvAdminService {
     return Array.from(
       { length: Math.max(1, maxAttempt + 1) },
       (_, attempt) => `${prefix}_${id}_${attempt}`,
-    );
-  }
-
-  private async deleteAudio(
-    sessions: Array<{ id: string; audioUrl: string | undefined }>,
-  ) {
-    await Promise.all(
-      sessions.flatMap((session) =>
-        session.audioUrl
-          ? [this.storage.delete(this.storage.keyFromUrl(session.audioUrl))]
-          : [],
-      ),
     );
   }
 
