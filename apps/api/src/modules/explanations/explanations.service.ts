@@ -102,7 +102,7 @@ export class ExplanationsService {
     return { termId: term.id, status: TechnicalTermStatus.PENDING };
   }
 
-  /** Chỉ worker gọi DeepSeek; HTTP request không còn giữ kết nối trong lúc provider xử lý. */
+  /** Chỉ worker gọi DeepSeek */
   async generateInWorker(job: GenerateTechnicalTermJob) {
     const term = await this.prisma.technicalTerm.findUnique({
       where: { id: job.termId },
@@ -200,25 +200,40 @@ export class ExplanationsService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 30;
     const where = {
-      ...(query.search && { canonicalTerm: { contains: query.search, mode: 'insensitive' as const } }),
+      ...(query.search && {
+        canonicalTerm: { contains: query.search, mode: 'insensitive' as const },
+      }),
       ...(query.status && { status: query.status }),
     };
     const [items, total] = await this.prisma.$transaction([
-      this.prisma.technicalTerm.findMany({ where, include: { aliases: true }, orderBy: { updatedAt: 'desc' }, skip: (page - 1) * limit, take: limit }),
+      this.prisma.technicalTerm.findMany({
+        where,
+        include: { aliases: true },
+        orderBy: { updatedAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
       this.prisma.technicalTerm.count({ where }),
     ]);
-    return { items, total, page, limit, totalPages: Math.ceil(total / limit) || 1 };
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 1,
+    };
   }
 
   /** Tổng quan glossary luôn tính trên toàn bộ dữ liệu, không phụ thuộc filter của bảng admin. */
   async getAdminStats() {
-    const [totalTerms, totalAliases, tokenUsage] = await this.prisma.$transaction([
-      this.prisma.technicalTerm.count(),
-      this.prisma.technicalTermAlias.count(),
-      this.prisma.technicalTerm.aggregate({
-        _sum: { inputTokens: true, outputTokens: true },
-      }),
-    ]);
+    const [totalTerms, totalAliases, tokenUsage] =
+      await this.prisma.$transaction([
+        this.prisma.technicalTerm.count(),
+        this.prisma.technicalTermAlias.count(),
+        this.prisma.technicalTerm.aggregate({
+          _sum: { inputTokens: true, outputTokens: true },
+        }),
+      ]);
 
     return {
       totalTerms,
@@ -266,7 +281,9 @@ export class ExplanationsService {
     const term = await this.prisma.technicalTerm.findUnique({ where: { id } });
     if (!term) throw new NotFoundException('Không tìm thấy thuật ngữ.');
     if (term.status !== TechnicalTermStatus.DISABLED) {
-      throw new BadRequestException('Chỉ có thể xóa vĩnh viễn thuật ngữ đã tắt.');
+      throw new BadRequestException(
+        'Chỉ có thể xóa vĩnh viễn thuật ngữ đã tắt.',
+      );
     }
     await this.prisma.technicalTerm.delete({ where: { id } });
     return { id };

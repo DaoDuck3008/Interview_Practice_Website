@@ -86,7 +86,7 @@ export class DeepSeekClient {
     userPrompt,
     temperature,
     timeoutMs = DEFAULT_TIMEOUT_MS,
-    model = 'deepseek-v4-flash',
+    model = 'deepseek-flash',
     maxTokens,
     thinking,
     providerUserId,
