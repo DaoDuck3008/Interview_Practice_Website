@@ -381,9 +381,6 @@ export default function InterviewRoomSession({
                     mock={mock}
                     questionTopic={activeQuestion.question.topic}
                   />
-                  <span className="rounded-full border border-white/15 bg-white/[0.055] px-3 py-1 text-xs font-bold text-white/75 backdrop-blur-xl">
-                    Câu {activeQuestion.order}/{mock.totalQuestions}
-                  </span>
                   {activeLevelStyle && (
                     <span
                       className={[
@@ -401,11 +398,11 @@ export default function InterviewRoomSession({
             </div>
 
             <div className="px-4 py-5 md:px-5 md:py-7">
-              <div className="mx-auto max-w-3xl text-center">
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-violet-200/80">
-                  Câu hỏi hiện tại
+              <div className="max-w-4xl text-left">
+                <p className="text-xs font-bold tracking-[0.14em] text-violet-200/80">
+                  Câu {activeQuestion.order}/{mock.totalQuestions}
                 </p>
-                <h1 className="mt-3 text-balance bg-[linear-gradient(180deg,#ffffff_0%,#ddd6fe_55%,rgba(196,181,253,0.84)_100%)] bg-clip-text text-2xl font-black leading-tight text-transparent md:text-3xl">
+                <h1 className="mt-2 text-balance bg-[linear-gradient(180deg,#ffffff_0%,#ddd6fe_55%,rgba(196,181,253,0.84)_100%)] bg-clip-text text-xl font-black leading-tight text-transparent md:text-[28px]">
                   {activeQuestion.question.content}
                 </h1>
               </div>

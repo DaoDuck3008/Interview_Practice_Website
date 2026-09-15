@@ -28,9 +28,8 @@ export function ProgressSidebar({
         Quay lại
       </button>
 
-      <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 shadow-inner shadow-white/5">
-        <TopicBadge mock={mock} />
-        <h2 className="mt-4 line-clamp-3 font-black leading-snug text-white">
+      <div className="p-4">
+        <h2 className=" line-clamp-3 font-black leading-snug text-white">
           {mock.title}
         </h2>
 
