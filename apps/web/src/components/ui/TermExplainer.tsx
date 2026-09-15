@@ -203,7 +203,6 @@ export default function TermExplainer({
             </p>
             <p className="mt-2 text-[11px] text-text-muted">
               {result.cached ? "Từ glossary" : "Vừa được AI tạo"}
-              {result.isVerified ? " · Đã kiểm duyệt" : ""}
             </p>
           </span>
         )}

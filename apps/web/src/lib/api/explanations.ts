@@ -9,7 +9,6 @@ export interface TechnicalExplanation {
   canonicalTerm: string;
   explanation: string;
   cached: boolean;
-  isVerified: boolean;
 }
 export interface PendingExplanation {
   termId: string;
@@ -56,14 +55,36 @@ export interface AdminTechnicalTerm extends TechnicalExplanation {
   aliases: Array<{ id: string; originalAlias: string }>;
   updatedAt: string;
 }
+export interface PaginatedTechnicalTerms {
+  items: AdminTechnicalTerm[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface TechnicalTermStats {
+  totalTerms: number;
+  totalAliases: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+}
 
 /** Danh sách glossary cho admin review; API client tự kèm JWT hiện tại. */
 export async function getAdminTechnicalTerms(
-  search?: string,
-): Promise<AdminTechnicalTerm[]> {
-  const res = await api.get<ApiResponse<AdminTechnicalTerm[]>>(
+  params: { search?: string; status?: AdminTechnicalTerm["status"]; page?: number; limit?: number } = {},
+): Promise<PaginatedTechnicalTerms> {
+  const res = await api.get<ApiResponse<PaginatedTechnicalTerms>>(
     "/explanations/admin/terms",
-    { params: search ? { search } : undefined },
+    { params },
+  );
+  return res.data.data;
+}
+
+/** Số liệu tổng quan glossary cho card admin, độc lập với search/filter của bảng. */
+export async function getAdminTechnicalTermStats(): Promise<TechnicalTermStats> {
+  const res = await api.get<ApiResponse<TechnicalTermStats>>(
+    "/explanations/admin/terms/stats",
   );
   return res.data.data;
 }
@@ -73,7 +94,7 @@ export async function updateAdminTechnicalTerm(
   data: Partial<
     Pick<
       AdminTechnicalTerm,
-      "canonicalTerm" | "explanation" | "status" | "isVerified"
+      "canonicalTerm" | "explanation" | "status"
     >
   > & { aliases?: string[] },
 ): Promise<AdminTechnicalTerm> {
@@ -81,5 +102,10 @@ export async function updateAdminTechnicalTerm(
     `/explanations/admin/terms/${id}`,
     data,
   );
+  return res.data.data;
+}
+
+export async function deleteAdminTechnicalTerm(id: string): Promise<{ id: string }> {
+  const res = await api.delete<ApiResponse<{ id: string }>>(`/explanations/admin/terms/${id}`);
   return res.data.data;
 }

@@ -490,6 +490,8 @@ another route-level skeleton abstraction.
 
 Use `StatusModal` (`src/components/ui/StatusModal.tsx`) for confirmation and feedback dialogs. Use the `useStatusModal` hook to manage state.
 
+Với mọi hành động xóa, phá hủy hoặc không thể hoàn tác, bắt buộc dùng `StatusModal` qua `useStatusModal`. Không dùng `window.confirm` hoặc `window.alert` khi `StatusModal.tsx` có sẵn; chỉ được dùng confirm native khi không tìm thấy hoặc không thể sử dụng component/hook này.
+
 ```tsx
 'use client'
 const { modalState, showModal, closeModal } = useStatusModal()

@@ -34,6 +34,7 @@ import type { Redis } from 'ioredis';
 import { vnDayKey } from '../../common/utils/vn-time.util';
 import { ExplanationJobsService } from './explanation-jobs.service';
 import { GenerateTechnicalTermJob } from './explanation-jobs.types';
+import { QueryTechnicalTermsDto } from './dto/query-technical-terms.dto';
 
 const PENDING_MS = 90_000;
 
@@ -195,15 +196,36 @@ export class ExplanationsService {
   }
 
   /** Chỉ lộ dữ liệu review cần thiết cho admin, không lộ prompt hay token usage. */
-  async listAdmin(search?: string) {
-    return this.prisma.technicalTerm.findMany({
-      where: search
-        ? { canonicalTerm: { contains: search, mode: 'insensitive' } }
-        : undefined,
-      include: { aliases: true },
-      orderBy: { updatedAt: 'desc' },
-      take: 100,
-    });
+  async listAdmin(query: QueryTechnicalTermsDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 30;
+    const where = {
+      ...(query.search && { canonicalTerm: { contains: query.search, mode: 'insensitive' as const } }),
+      ...(query.status && { status: query.status }),
+    };
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.technicalTerm.findMany({ where, include: { aliases: true }, orderBy: { updatedAt: 'desc' }, skip: (page - 1) * limit, take: limit }),
+      this.prisma.technicalTerm.count({ where }),
+    ]);
+    return { items, total, page, limit, totalPages: Math.ceil(total / limit) || 1 };
+  }
+
+  /** Tổng quan glossary luôn tính trên toàn bộ dữ liệu, không phụ thuộc filter của bảng admin. */
+  async getAdminStats() {
+    const [totalTerms, totalAliases, tokenUsage] = await this.prisma.$transaction([
+      this.prisma.technicalTerm.count(),
+      this.prisma.technicalTermAlias.count(),
+      this.prisma.technicalTerm.aggregate({
+        _sum: { inputTokens: true, outputTokens: true },
+      }),
+    ]);
+
+    return {
+      totalTerms,
+      totalAliases,
+      totalInputTokens: tokenUsage._sum.inputTokens ?? 0,
+      totalOutputTokens: tokenUsage._sum.outputTokens ?? 0,
+    };
   }
 
   /** Sửa/verify glossary là quyền admin và chuyển nguồn nội dung sang ADMIN. */
@@ -219,7 +241,6 @@ export class ExplanationsService {
         normalizedKey,
         explanation: dto.explanation,
         status: dto.status,
-        isVerified: dto.isVerified,
         source: TechnicalTermSource.ADMIN,
       },
     });
@@ -238,6 +259,17 @@ export class ExplanationsService {
         ),
       );
     return updated;
+  }
+
+  /** Hard delete chỉ cho term đã tắt để không làm mất glossary đang phục vụ người dùng. */
+  async hardDeleteAdmin(id: string) {
+    const term = await this.prisma.technicalTerm.findUnique({ where: { id } });
+    if (!term) throw new NotFoundException('Không tìm thấy thuật ngữ.');
+    if (term.status !== TechnicalTermStatus.DISABLED) {
+      throw new BadRequestException('Chỉ có thể xóa vĩnh viễn thuật ngữ đã tắt.');
+    }
+    await this.prisma.technicalTerm.delete({ where: { id } });
+    return { id };
   }
 
   /** Thu hồi PENDING treo để không biến timeout mạng thành lock vĩnh viễn của glossary. */
@@ -462,7 +494,6 @@ export class ExplanationsService {
       canonicalTerm: term.canonicalTerm,
       explanation: term.explanation,
       cached,
-      isVerified: term.isVerified,
     };
   }
 }

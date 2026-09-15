@@ -685,7 +685,6 @@ model TechnicalTerm {
   explanation String?
   status TechnicalTermStatus @default(PENDING)
   source TechnicalTermSource @default(AI)
-  isVerified Boolean @default(false)
   promptVersion String?
   model String?
   inputTokens Int?

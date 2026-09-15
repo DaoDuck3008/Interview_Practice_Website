@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   HttpCode,
   HttpStatus,
   Get,
@@ -26,6 +27,7 @@ import {
 } from '../../common/throttling/throttle-profiles';
 import { CreateExplanationDto } from './dto/create-explanation.dto';
 import { UpdateTechnicalTermDto } from './dto/update-technical-term.dto';
+import { QueryTechnicalTermsDto } from './dto/query-technical-terms.dto';
 import { ExplanationsService } from './explanations.service';
 
 @Controller('explanations')
@@ -54,8 +56,15 @@ export class ExplanationsController {
   @Get('admin/terms')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  list(@Query('search') search?: string) {
-    return this.explanations.listAdmin(search);
+  list(@Query() query: QueryTechnicalTermsDto) {
+    return this.explanations.listAdmin(query);
+  }
+
+  @Get('admin/terms/stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  stats() {
+    return this.explanations.getAdminStats();
   }
 
   @Patch('admin/terms/:id')
@@ -64,5 +73,12 @@ export class ExplanationsController {
   @Throttle(THROTTLE_AI_ACTION)
   update(@Param('id') id: string, @Body() dto: UpdateTechnicalTermDto) {
     return this.explanations.updateAdmin(id, dto);
+  }
+
+  @Delete('admin/terms/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  remove(@Param('id') id: string) {
+    return this.explanations.hardDeleteAdmin(id);
   }
 }
