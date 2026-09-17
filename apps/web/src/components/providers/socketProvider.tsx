@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useAuthStore } from "@/stores/auth.store";
 import { connectSocket, disconnectSocket } from "@/lib/ws/socket";
+import { refreshApi } from "@/lib/api/auth";
 
 /**
  * Quản lý vòng đời kết nối WebSocket theo trạng thái đăng nhập: kết nối khi có
@@ -16,6 +17,8 @@ export default function SocketProvider({
 }) {
   const accessToken = useAuthStore((s) => s.access_token);
   const hydrated = useAuthStore((s) => s.hydrated);
+  const setAuth = useAuthStore((s) => s.setAuth);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
 
   useEffect(() => {
     if (!hydrated || !accessToken) {
@@ -23,12 +26,30 @@ export default function SocketProvider({
       return;
     }
 
-    connectSocket(accessToken);
+    const socket = connectSocket(accessToken);
+    let refreshing = false;
+
+    const refreshSocketAuth = async () => {
+      if (refreshing) return;
+      refreshing = true;
+      try {
+        const refreshed = await refreshApi();
+        setAuth(refreshed.accessToken, refreshed.user);
+      } catch {
+        clearAuth();
+      }
+    };
+    const revokeSocketAuth = () => clearAuth();
+
+    socket.on("auth:expired", refreshSocketAuth);
+    socket.on("auth:revoked", revokeSocketAuth);
 
     return () => {
+      socket.off("auth:expired", refreshSocketAuth);
+      socket.off("auth:revoked", revokeSocketAuth);
       disconnectSocket();
     };
-  }, [accessToken, hydrated]);
+  }, [accessToken, clearAuth, hydrated, setAuth]);
 
   return <>{children}</>;
 }

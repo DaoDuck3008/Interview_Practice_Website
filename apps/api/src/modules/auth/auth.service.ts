@@ -16,6 +16,7 @@ import { RefreshTokenStore } from './refresh-token.store';
 import { VerificationCodeStore } from './verification-code.store';
 import { MailService } from '../mail/mail.service';
 import { isPrismaUniqueViolation } from '../../common/utils/prisma-error.util';
+import { WebsocketGateway } from '../../websocket/websocket.gateway';
 
 // Các field an toàn để trả về client
 const authUserSelect = {
@@ -38,6 +39,7 @@ export class AuthService {
     private prisma: PrismaService,
     private codeStore: VerificationCodeStore,
     private mail: MailService,
+    private websocket: WebsocketGateway,
   ) {
     this.googleClient = new OAuth2Client(
       this.config.getOrThrow<string>('google.clientId'),
@@ -328,6 +330,7 @@ export class AuthService {
       data: { passwordHash },
     });
     await this.refreshStore.removeAll(userId);
+    await this.websocket.revokeUserSessions(userId, 'password_changed');
     return { message: 'Đổi mật khẩu thành công' };
   }
 

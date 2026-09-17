@@ -20,6 +20,7 @@ import {
   vnLastNDays,
 } from '../../common/utils/vn-time.util';
 import { isPrismaUniqueViolation } from '../../common/utils/prisma-error.util';
+import { WebsocketGateway } from '../../websocket/websocket.gateway';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const STATS_TTL = 60; // 1 phút — thẻ thống kê admin, chấp nhận trễ vài chục giây
@@ -41,6 +42,7 @@ export class UsersService {
     private refreshStore: RefreshTokenStore,
     private mail: MailService,
     private cache: CacheService,
+    private websocket: WebsocketGateway,
   ) {}
 
   // Trả về bản ghi đầy đủ (kèm passwordHash) — chỉ dùng nội bộ để xác thực/liên kết
@@ -287,7 +289,10 @@ export class UsersService {
       throw new ForbiddenException('Không thể khóa tài khoản quản trị viên');
 
     await this.prisma.user.update({ where: { id }, data: { isLock } });
-    if (isLock) await this.refreshStore.removeAll(id);
+    if (isLock) {
+      await this.refreshStore.removeAll(id);
+      await this.websocket.revokeUserSessions(id, 'account_locked');
+    }
     return { id, isLock };
   }
 
@@ -317,6 +322,7 @@ export class UsersService {
     await this.prisma.user.update({ where: { id }, data: { passwordHash } });
     // Đổi mật khẩu → thu hồi mọi phiên cũ để buộc đăng nhập lại.
     await this.refreshStore.removeAll(id);
+    await this.websocket.revokeUserSessions(id, 'password_reset');
     await this.mail.sendTempPassword(user.email, user.name, tempPassword);
     return { id, message: 'Đã gửi mật khẩu mới tới email người dùng' };
   }

@@ -10,6 +10,7 @@ import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { RefreshTokenModule } from './refresh-token.module';
 import { VerificationCodeStore } from './verification-code.store';
 import { MailModule } from '../mail/mail.module';
+import { WebsocketModule } from '../../websocket/websocket.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { MailModule } from '../mail/mail.module';
     PassportModule,
     MailModule,
     RefreshTokenModule,
+    WebsocketModule,
   ],
   providers: [
     AuthService,
