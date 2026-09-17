@@ -4,6 +4,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { DeepSeekTokenBudgetService } from '../services/deepseek-token-budget.service';
 
 const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
 const DEFAULT_TIMEOUT_MS = 60_000;
@@ -45,7 +46,10 @@ export class DeepSeekClient {
   private readonly apiKey: string;
   private readonly logger = new Logger(DeepSeekClient.name);
 
-  constructor(private config: ConfigService) {
+  constructor(
+    private config: ConfigService,
+    private readonly tokenBudget: DeepSeekTokenBudgetService,
+  ) {
     this.apiKey = this.config.getOrThrow<string>('deepseek.apiKey');
   }
 
@@ -64,6 +68,7 @@ export class DeepSeekClient {
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
+        await this.tokenBudget.assertAvailable();
         return await this.attemptCall(params);
       } catch (err) {
         if (!(err instanceof TransientDeepSeekError)) throw err;
@@ -87,10 +92,17 @@ export class DeepSeekClient {
     temperature,
     timeoutMs = DEFAULT_TIMEOUT_MS,
     model = 'deepseek-flash',
-    maxTokens,
+    maxTokens: requestedMaxTokens,
     thinking,
     providerUserId,
   }: CallParams): Promise<DeepSeekResult> {
+    const maxOutputTokens = this.config.getOrThrow<number>(
+      'deepseek.maxOutputTokensPerRequest',
+    );
+    const maxTokens = Math.max(
+      1,
+      Math.min(requestedMaxTokens ?? maxOutputTokens, maxOutputTokens),
+    );
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -104,7 +116,7 @@ export class DeepSeekClient {
         body: JSON.stringify({
           model,
           temperature,
-          ...(maxTokens ? { max_tokens: maxTokens } : {}),
+          max_tokens: maxTokens,
           ...(thinking ? { thinking: { type: thinking } } : {}),
           ...(providerUserId ? { user_id: providerUserId } : {}),
           response_format: { type: 'json_object' },
@@ -132,10 +144,17 @@ export class DeepSeekClient {
         choices?: { message?: { content?: string } }[];
         usage?: { prompt_tokens?: number; completion_tokens?: number };
       };
+      const inputTokens = data.usage?.prompt_tokens;
+      const outputTokens = data.usage?.completion_tokens;
+      await this.tokenBudget.recordUsage(
+        inputTokens ?? estimateInputTokens(systemPrompt, userPrompt),
+        outputTokens ?? maxTokens,
+      );
+
       return {
         content: data.choices?.[0]?.message?.content ?? '',
-        inputTokens: data.usage?.prompt_tokens,
-        outputTokens: data.usage?.completion_tokens,
+        inputTokens,
+        outputTokens,
       };
     } catch (err) {
       if (err instanceof TransientDeepSeekError) throw err;
@@ -169,4 +188,9 @@ export class DeepSeekClient {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Ước lượng bảo thủ khi provider không trả usage để không bỏ sót chi phí. */
+function estimateInputTokens(systemPrompt: string, userPrompt: string): number {
+  return Math.ceil((systemPrompt.length + userPrompt.length) / 2);
 }

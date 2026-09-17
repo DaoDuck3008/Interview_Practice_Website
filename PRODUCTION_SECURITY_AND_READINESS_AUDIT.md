@@ -27,6 +27,18 @@ Việc cần làm khi deploy: tạo secret ngẫu nhiên mạnh, đặt vào bi�
 - Áp dụng cho Login, Google Login, xác thực email, đăng ký và GuestGuard.
 - Giữ nguyên fallback theo role: admin về `/admin`, người dùng thông thường về `/practice`.
 
+### [x] AI-001 — Chưa có hạn mức token DeepSeek toàn hệ thống
+
+Đã hoàn thành.
+
+- Áp dụng hạn mức input và output token riêng theo ngày Việt Nam cho mọi call đi qua `DeepSeekClient`.
+- Counter Redis có ngày trong key; ngày mới bắt đầu từ 0 ở request đầu tiên sau 00:00, không cần cron reset.
+- Chỉ cộng usage thực tế sau response; hệ thống có thể vượt nhẹ trong số request đang chạy đồng thời theo quyết định vận hành.
+- Mỗi request luôn gửi `max_tokens`; call site có thể đặt thấp hơn nhưng không vượt trần cấu hình 2.000 token/request.
+- Nếu Redis không đọc được trước call, hệ thống từ chối gọi AI để tránh chi phí không kiểm soát.
+
+Cấu hình mặc định bảo thủ cho `deepseek-flash`: `3.000.000` input token và `800.000` output token/ngày; cần điều chỉnh theo ngân sách thực tế sau khi theo dõi usage.
+
 ## Trạng thái xác nhận
 
 - SEC-001: API build và test đã chạy thành công trước khi commit.
@@ -34,4 +46,5 @@ Việc cần làm khi deploy: tạo secret ngẫu nhiên mạnh, đặt vào bi�
 
 ## Hạng mục tiếp theo
 
+- [ ] DATA-001 — Chuyển audio ghi âm từ public R2 sang private bucket/presigned URL.
 - [ ] Rà soát và xử lý các mục còn lại của đợt security/readiness audit trước production.

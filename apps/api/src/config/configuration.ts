@@ -23,8 +23,25 @@ export const validationSchema = Joi.object({
   GROQ_API_KEY: Joi.string().required(),
   GROQ_TRANSCRIPTION_MODEL: Joi.string().default('whisper-large-v3-turbo'),
   DEEPSEEK_API_KEY: Joi.string().required(),
+  DEEPSEEK_DAILY_INPUT_TOKEN_LIMIT: Joi.number()
+    .integer()
+    .min(1_000)
+    .default(3_000_000),
+  DEEPSEEK_DAILY_OUTPUT_TOKEN_LIMIT: Joi.number()
+    .integer()
+    .min(1_000)
+    .default(800_000),
+  DEEPSEEK_MAX_OUTPUT_TOKENS_PER_REQUEST: Joi.number()
+    .integer()
+    .min(1)
+    .max(16_000)
+    .default(2_000),
   EXPLANATION_GLOBAL_DAILY_LIMIT: Joi.number().integer().min(1).default(500),
-  EXPLANATION_GLOBAL_CONCURRENCY: Joi.number().integer().min(1).max(20).default(5),
+  EXPLANATION_GLOBAL_CONCURRENCY: Joi.number()
+    .integer()
+    .min(1)
+    .max(20)
+    .default(5),
   SEPAY_WEBHOOK_SECRET: Joi.when('NODE_ENV', {
     is: 'production',
     then: Joi.string().min(32).required(),
@@ -79,10 +96,28 @@ export default () => ({
   },
   deepseek: {
     apiKey: process.env.DEEPSEEK_API_KEY,
+    dailyInputTokenLimit: parseInt(
+      process.env.DEEPSEEK_DAILY_INPUT_TOKEN_LIMIT ?? '3000000',
+      10,
+    ),
+    dailyOutputTokenLimit: parseInt(
+      process.env.DEEPSEEK_DAILY_OUTPUT_TOKEN_LIMIT ?? '800000',
+      10,
+    ),
+    maxOutputTokensPerRequest: parseInt(
+      process.env.DEEPSEEK_MAX_OUTPUT_TOKENS_PER_REQUEST ?? '2000',
+      10,
+    ),
   },
   explanation: {
-    globalDailyLimit: parseInt(process.env.EXPLANATION_GLOBAL_DAILY_LIMIT ?? '500', 10),
-    globalConcurrency: parseInt(process.env.EXPLANATION_GLOBAL_CONCURRENCY ?? '5', 10),
+    globalDailyLimit: parseInt(
+      process.env.EXPLANATION_GLOBAL_DAILY_LIMIT ?? '500',
+      10,
+    ),
+    globalConcurrency: parseInt(
+      process.env.EXPLANATION_GLOBAL_CONCURRENCY ?? '5',
+      10,
+    ),
   },
   sepay: {
     webhookSecret: process.env.SEPAY_WEBHOOK_SECRET ?? '',
