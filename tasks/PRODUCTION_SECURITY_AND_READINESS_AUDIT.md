@@ -91,12 +91,16 @@
 
 **Xác nhận:** cần kiểm tra log runtime trên staging sau khi cấu hình logging collector để bảo đảm collector không tự bổ sung request header/body nhạy cảm.
 
-### [ ] OPS-001 — API nuốt lỗi kết nối database và chưa có health/readiness endpoint
+### [x] OPS-001 — API nuốt lỗi kết nối database và chưa có health/readiness endpoint
 
-- **Bằng chứng:** `PrismaService.onModuleInit()` catch lỗi `$connect()` rồi chỉ log (`apps/api/src/prisma/prisma.service.ts:17-23`), vì vậy process có thể báo “đang chạy” dù DB hỏng. Không tìm thấy health/liveness/readiness endpoint.
-- **Tác động:** load balancer đưa traffic vào instance không sử dụng được; deploy/migration lỗi khó phát hiện và có thể tạo chuỗi 500.
-- **Cần làm:** fail startup nếu DB/Redis/BullMQ dependency bắt buộc không sẵn sàng; thêm `/health/live` và `/health/ready`; readiness kiểm tra DB, Redis và queue với timeout ngắn; không đưa thông tin nhạy cảm vào response.
-- **Nghiệm thu:** tắt DB/Redis làm readiness fail và instance không nhận traffic; liveness không phụ thuộc provider bên ngoài; startup lỗi trả exit code khác 0.
+Đã hoàn thành.
+
+- Startup thất bại với exit code khác 0 nếu database, Redis hoặc BullMQ queue không sẵn sàng trong thời gian cấu hình.
+- Có `GET /api/v1/health/live` chỉ xác nhận process hoạt động và `GET /api/v1/health/ready` kiểm tra DB, Redis cùng queue BullMQ bằng timeout ngắn; response không nêu chi tiết hạ tầng.
+- Khi nhận `SIGTERM`/`SIGINT`, readiness chuyển thành 503 trước; worker dừng lấy job mới và chờ job đang chạy trong tối đa `GRACEFUL_SHUTDOWN_TIMEOUT_MS` (mặc định 30 giây).
+- Biến cấu hình: `HEALTH_DEPENDENCY_TIMEOUT_MS` (mặc định 2 giây) và `GRACEFUL_SHUTDOWN_TIMEOUT_MS` (mặc định 30 giây).
+
+**Việc deploy còn lại:** cấu hình liveness/readiness probe gọi hai endpoint trên, `terminationGracePeriodSeconds` lớn hơn 30 giây và rolling deployment chỉ route traffic sau khi readiness đạt 200.
 
 ### [ ] OPS-002 — Production configuration chưa có fail-safe theo môi trường
 

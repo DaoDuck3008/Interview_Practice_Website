@@ -1,4 +1,6 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { BeforeApplicationShutdown, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { Job } from 'bullmq';
 import { WebsocketGateway } from '../../websocket/websocket.gateway';
 import { ExplanationsService } from './explanations.service';
@@ -6,14 +8,30 @@ import {
   EXPLANATION_JOBS_QUEUE,
   GenerateTechnicalTermJob,
 } from './explanation-jobs.types';
+import { pauseWorkerForShutdown } from '../../common/utils/worker-shutdown.util';
 
 @Processor(EXPLANATION_JOBS_QUEUE, { concurrency: 5 })
-export class ExplanationJobsProcessor extends WorkerHost {
+export class ExplanationJobsProcessor
+  extends WorkerHost
+  implements BeforeApplicationShutdown
+{
+  private readonly logger = new Logger(ExplanationJobsProcessor.name);
+
   constructor(
     private readonly explanations: ExplanationsService,
     private readonly websocket: WebsocketGateway,
+    private readonly config: ConfigService,
   ) {
     super();
+  }
+
+  async beforeApplicationShutdown() {
+    await pauseWorkerForShutdown(
+      this.worker,
+      EXPLANATION_JOBS_QUEUE,
+      this.config.getOrThrow<number>('health.gracefulShutdownTimeoutMs'),
+      this.logger,
+    );
   }
 
   /** Worker ghi DB trước rồi mới emit, nên client reconnect vẫn có thể poll source of truth. */
@@ -24,7 +42,7 @@ export class ExplanationJobsProcessor extends WorkerHost {
         termId: job.data.termId,
         ...result,
       });
-    } catch (error) {
+    } catch {
       const status = await this.explanations
         .getStatus(job.data.termId)
         .catch(() => null);

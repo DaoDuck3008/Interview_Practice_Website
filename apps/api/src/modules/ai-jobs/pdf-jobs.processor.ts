@@ -1,5 +1,9 @@
 import { ConfigService } from '@nestjs/config';
-import { OnModuleInit } from '@nestjs/common';
+import {
+  BeforeApplicationShutdown,
+  Logger,
+  OnModuleInit,
+} from '@nestjs/common';
 import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import type { Job } from 'bullmq';
 import {
@@ -8,10 +12,15 @@ import {
   type MockCvProfileJobData,
 } from './ai-jobs.types';
 import { MockCvProfileJobHandler } from './handlers/mock-cv-profile-job.handler';
+import { pauseWorkerForShutdown } from '../../common/utils/worker-shutdown.util';
 
 /** Queue riêng để PDF không thể chiếm worker của các tác vụ AI khác. */
 @Processor(PDF_JOBS_QUEUE)
-export class PdfJobsProcessor extends WorkerHost implements OnModuleInit {
+export class PdfJobsProcessor
+  extends WorkerHost
+  implements OnModuleInit, BeforeApplicationShutdown
+{
+  private readonly logger = new Logger(PdfJobsProcessor.name);
   constructor(
     private readonly profileHandler: MockCvProfileJobHandler,
     private readonly config: ConfigService,
@@ -23,6 +32,15 @@ export class PdfJobsProcessor extends WorkerHost implements OnModuleInit {
     this.worker.concurrency = this.config.get<number>(
       'pdfQueue.concurrency',
       2,
+    );
+  }
+
+  async beforeApplicationShutdown() {
+    await pauseWorkerForShutdown(
+      this.worker,
+      PDF_JOBS_QUEUE,
+      this.config.getOrThrow<number>('health.gracefulShutdownTimeoutMs'),
+      this.logger,
     );
   }
 

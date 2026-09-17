@@ -6,14 +6,13 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ConfigService } from '@nestjs/config';
 import { ConfiguredIoAdapter } from './websocket/websocket.adapter';
 import helmet from 'helmet';
-
-const cookieParser = require('cookie-parser');
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   // rawBody: true → giữ lại body thô (Buffer) để verify chữ ký HMAC webhook Sepay.
   const app = await NestFactory.create(AppModule, { rawBody: true });
   // Cho phép onApplicationShutdown chạy (đóng kết nối Redis khi tắt app)
-  app.enableShutdownHooks();
+  app.enableShutdownHooks(['SIGTERM', 'SIGINT']);
   app.use(cookieParser());
 
   const config = app.get(ConfigService);
@@ -86,4 +85,7 @@ async function bootstrap() {
   console.log(`Application is running on: http://localhost:${PORT}/api/v1`);
 }
 
-bootstrap();
+void bootstrap().catch(() => {
+  console.error('Application failed to start.');
+  process.exit(1);
+});

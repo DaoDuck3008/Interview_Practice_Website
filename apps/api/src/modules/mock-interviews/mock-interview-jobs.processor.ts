@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BeforeApplicationShutdown, Injectable, Logger } from '@nestjs/common';
 import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
+import { ConfigService } from '@nestjs/config';
 import type { Job } from 'bullmq';
 import {
   JOB_AUTO_SUBMIT_EXPIRED_MOCK,
@@ -13,6 +14,7 @@ import {
 import { MockInterviewJobsService } from './mock-interview-jobs.service';
 import { MockInterviewsService } from './mock-interviews.service';
 import { MockCvInterviewsService } from '../mock-cv/interviews/mock-cv-interviews.service';
+import { pauseWorkerForShutdown } from '../../common/utils/worker-shutdown.util';
 
 /*
  * Queue này tách khỏi ai-jobs để việc auto-submit không bị chậm bởi các job chấm điểm.
@@ -21,15 +23,28 @@ import { MockCvInterviewsService } from '../mock-cv/interviews/mock-cv-interview
  */
 @Processor(MOCK_INTERVIEW_JOBS_QUEUE, { concurrency: 5 })
 @Injectable()
-export class MockInterviewJobsProcessor extends WorkerHost {
+export class MockInterviewJobsProcessor
+  extends WorkerHost
+  implements BeforeApplicationShutdown
+{
   private readonly logger = new Logger(MockInterviewJobsProcessor.name);
 
   constructor(
     private readonly mockInterviews: MockInterviewsService,
     private readonly mockCvInterviews: MockCvInterviewsService,
     private readonly jobs: MockInterviewJobsService,
+    private readonly config: ConfigService,
   ) {
     super();
+  }
+
+  async beforeApplicationShutdown() {
+    await pauseWorkerForShutdown(
+      this.worker,
+      MOCK_INTERVIEW_JOBS_QUEUE,
+      this.config.getOrThrow<number>('health.gracefulShutdownTimeoutMs'),
+      this.logger,
+    );
   }
 
   async process(job: Job<MockInterviewJobData>): Promise<void> {

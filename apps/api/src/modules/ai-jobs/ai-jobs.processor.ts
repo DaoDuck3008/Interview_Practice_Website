@@ -1,4 +1,8 @@
-import { Logger, OnModuleInit } from '@nestjs/common';
+import {
+  BeforeApplicationShutdown,
+  Logger,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import type { Job } from 'bullmq';
@@ -18,13 +22,17 @@ import { ImproveJobHandler } from './handlers/improve-job.handler';
 import { MockCvQuestionGenerationJobHandler } from './handlers/mock-cv-question-generation-job.handler';
 import { ScoreJobHandler } from './handlers/score-job.handler';
 import { MockCvInterviewOverviewJobHandler } from './handlers/mock-cv-interview-overview-job.handler';
+import { pauseWorkerForShutdown } from '../../common/utils/worker-shutdown.util';
 
 /**
  * Worker mỏng của queue AI: chỉ cấu hình concurrency, log lifecycle và chuyển job
  * đến handler tương ứng. Toàn bộ nghiệp vụ nằm trong thư mục handlers/.
  */
 @Processor(AI_JOBS_QUEUE)
-export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
+export class AiJobsProcessor
+  extends WorkerHost
+  implements OnModuleInit, BeforeApplicationShutdown
+{
   private readonly logger = new Logger(AiJobsProcessor.name);
   private readonly isDev: boolean;
 
@@ -42,6 +50,15 @@ export class AiJobsProcessor extends WorkerHost implements OnModuleInit {
   onModuleInit() {
     // ConfigService chỉ sẵn sàng sau khi module khởi tạo, nên set concurrency tại đây.
     this.worker.concurrency = this.config.get<number>('aiQueue.concurrency', 5);
+  }
+
+  async beforeApplicationShutdown() {
+    await pauseWorkerForShutdown(
+      this.worker,
+      AI_JOBS_QUEUE,
+      this.config.getOrThrow<number>('health.gracefulShutdownTimeoutMs'),
+      this.logger,
+    );
   }
 
   async process(job: Job<AiJobData>): Promise<void> {

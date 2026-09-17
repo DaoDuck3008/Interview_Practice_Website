@@ -32,6 +32,7 @@ import { AuditInterceptor } from './modules/audit/audit.interceptor';
 import { AiCreditsModule } from './modules/ai-credits/ai-credits.module';
 import { ExplanationCreditsModule } from './modules/explanation-credits/explanation-credits.module';
 import { ExplanationsModule } from './modules/explanations/explanations.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -85,6 +86,7 @@ import { ExplanationsModule } from './modules/explanations/explanations.module';
     ExplanationsModule,
     MockInterviewsModule,
     MockCvModule,
+    HealthModule,
   ],
   providers: [
     {

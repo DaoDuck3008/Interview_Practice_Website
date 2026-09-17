@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { redactSensitiveLogData } from '../common/utils/log-redaction.util';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit {
@@ -19,7 +20,12 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
       await this.$connect();
       this.logger.log('Database connected successfully');
     } catch (error) {
-      this.logger.error('Database connection failed', error);
+      this.logger.error(
+        `Database connection failed: ${redactSensitiveLogData(
+          error instanceof Error ? error.message : String(error),
+        )}`,
+      );
+      throw new Error('Database không sẵn sàng khi khởi động');
     }
   }
 }

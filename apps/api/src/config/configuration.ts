@@ -12,6 +12,16 @@ export const validationSchema = Joi.object({
   JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),
   GOOGLE_CLIENT_ID: Joi.string().required(),
   REDIS_URL: Joi.string().default('redis://localhost:6380'),
+  HEALTH_DEPENDENCY_TIMEOUT_MS: Joi.number()
+    .integer()
+    .min(500)
+    .max(10_000)
+    .default(2_000),
+  GRACEFUL_SHUTDOWN_TIMEOUT_MS: Joi.number()
+    .integer()
+    .min(1_000)
+    .max(120_000)
+    .default(30_000),
   TRUST_PROXY: Joi.string().allow('').default(''),
   FRONTEND_URL: Joi.string().default('http://localhost:3000'),
   R2_ACCOUNT_ID: Joi.string().required(),
@@ -78,6 +88,16 @@ export default () => ({
   },
   redis: {
     url: process.env.REDIS_URL ?? 'redis://localhost:6380',
+  },
+  health: {
+    dependencyTimeoutMs: parseInt(
+      process.env.HEALTH_DEPENDENCY_TIMEOUT_MS ?? '2000',
+      10,
+    ),
+    gracefulShutdownTimeoutMs: parseInt(
+      process.env.GRACEFUL_SHUTDOWN_TIMEOUT_MS ?? '30000',
+      10,
+    ),
   },
   trustProxy: process.env.TRUST_PROXY ?? '',
   frontendUrl: process.env.FRONTEND_URL,
