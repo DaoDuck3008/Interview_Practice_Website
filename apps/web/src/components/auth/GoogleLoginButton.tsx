@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { useAuthStore } from "@/stores/auth.store";
 import { googleLoginApi } from "@/lib/api/auth";
+import { safeRedirectPath } from "@/lib/utils/safe-redirect";
 
 // Logo "G" chính thức của Google
 function GoogleIcon() {
@@ -47,7 +48,7 @@ export default function GoogleLoginButton({
       const { accessToken, user } = await googleLoginApi(cred.credential);
       setAuth(accessToken, user);
       const fallback = user.role === "ADMIN" ? "/admin" : "/practice";
-      router.push(redirectTo || fallback);
+      router.push(safeRedirectPath(redirectTo, fallback));
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })
         ?.response?.data?.message;

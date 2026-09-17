@@ -8,6 +8,7 @@ import AuthCardShell from "@/components/auth/AuthCardShell";
 import CodeInput from "@/components/auth/CodeInput";
 import { useAuthStore } from "@/stores/auth.store";
 import { resendVerificationApi, verifyEmailApi } from "@/lib/api/auth";
+import { safeRedirectPath } from "@/lib/utils/safe-redirect";
 
 const RESEND_COOLDOWN = 60;
 
@@ -17,7 +18,7 @@ function VerifyEmailContent() {
   const setAuth = useAuthStore((s) => s.setAuth);
 
   const email = searchParams.get("email") ?? "";
-  const redirectTo = searchParams.get("redirect") ?? undefined;
+  const redirectTo = safeRedirectPath(searchParams.get("redirect"), "");
 
   const [code, setCode] = useState("");
   const [error, setError] = useState("");

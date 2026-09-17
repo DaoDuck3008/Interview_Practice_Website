@@ -3,13 +3,14 @@
 import { Suspense, useEffect, useRef } from "react";
 import { useAuthStore } from "@/stores/auth.store";
 import { useRouter, useSearchParams } from "next/navigation";
+import { safeRedirectPath } from "@/lib/utils/safe-redirect";
 
 function GuestGuardInner({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
   const hydrated = useAuthStore((s) => s.hydrated);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/";
+  const redirect = safeRedirectPath(searchParams.get("redirect"), "/");
   const redirectedRef = useRef(false);
 
   useEffect(() => {

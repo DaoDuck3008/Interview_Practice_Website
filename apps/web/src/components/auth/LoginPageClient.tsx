@@ -9,6 +9,7 @@ import { loginApi } from "@/lib/api/auth";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
+import { safeRedirectPath } from "@/lib/utils/safe-redirect";
 
 const FEATURES = [
   "Ghi âm câu trả lời phỏng vấn thực tế",
@@ -19,7 +20,7 @@ const FEATURES = [
 function LoginContent() {
   const setAuth = useAuthStore((s) => s.setAuth);
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") ?? undefined;
+  const redirectTo = safeRedirectPath(searchParams.get("redirect"), "");
   const notice = searchParams.get("notice");
   const router = useRouter();
   const noticeShownRef = useRef(false);
