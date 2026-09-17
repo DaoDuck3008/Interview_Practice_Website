@@ -79,12 +79,17 @@
 
 **Xác nhận:** API build, lint mục tiêu và TypeScript/lint frontend đã chạy thành công. Không thêm lại file spec theo yêu cầu.
 
-### [ ] INFO-001 — Có thể trả lỗi nội bộ cho client và ghi secret Redis vào log
+### [x] INFO-001 — Có thể trả lỗi nội bộ cho client và ghi secret Redis vào log
 
-- **Bằng chứng:** production filter vẫn gán `message = exception.message` cho lỗi không phải `HttpException` tại `apps/api/src/common/filters/http-exception.filter.ts:77-78`; Redis log nguyên URL tại `apps/api/src/redis/redis.module.ts:37`, URL production thường chứa username/password.
-- **Tác động:** thông tin DB/provider/path nội bộ có thể lộ qua response; credential Redis có thể nằm trong log tập trung.
-- **Cần làm:** production luôn trả thông báo 500 chung kèm request/correlation ID; chỉ log chi tiết server-side và redaction; log Redis bằng hostname/port hoặc nhãn, không log credential/query.
-- **Nghiệm thu:** cố ý ném lỗi DB/provider không làm response lộ message/stack; quét log không thấy password, token, URL credential hoặc PII nhạy cảm.
+Đã hoàn thành.
+
+- Lỗi không thuộc `HttpException` chỉ trả thông báo 500 chung ở production, kèm `requestId` trong body và header `X-Request-Id`; stack không được trả về client.
+- Error log server-side giữ request ID để tra cứu, nhưng redaction credential URL, query token, Bearer token và các giá trị password/secret/API key phổ biến.
+- Access log bỏ query string để tránh lưu token, email hoặc dữ liệu tìm kiếm; `path` trong error response cũng không chứa query string.
+- Redis chỉ log scheme, hostname và port, không log username, password hoặc query từ `REDIS_URL`.
+- Prisma unique-constraint không còn trả tên field nội bộ cho client.
+
+**Xác nhận:** cần kiểm tra log runtime trên staging sau khi cấu hình logging collector để bảo đảm collector không tự bổ sung request header/body nhạy cảm.
 
 ### [ ] OPS-001 — API nuốt lỗi kết nối database và chưa có health/readiness endpoint
 

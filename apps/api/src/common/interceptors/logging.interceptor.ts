@@ -6,7 +6,13 @@ import {
   Logger,
   HttpException,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { Request, Response } from 'express';
 import { Observable, tap, catchError, throwError } from 'rxjs';
+import {
+  redactSensitiveLogData,
+  requestPathWithoutQuery,
+} from '../utils/log-redaction.util';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
@@ -14,15 +20,18 @@ export class LoggingInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const now = Date.now();
-    const request = context.switchToHttp().getRequest();
-    const response = context.switchToHttp().getResponse();
+    const request = context.switchToHttp().getRequest<Request>();
+    const response = context.switchToHttp().getResponse<Response>();
 
-    const { method, url, ip } = request;
+    const { method, ip } = request;
+    const path = requestPathWithoutQuery(request);
+    const requestId = randomUUID();
+    response.setHeader('X-Request-Id', requestId);
 
     return next.handle().pipe(
       tap(() => {
         this.logger.log(
-          `${method} ${url} ${response.statusCode} - ${Date.now() - now}ms - IP: ${ip}`,
+          `[${requestId}] ${method} ${path} ${response.statusCode} - ${Date.now() - now}ms - IP: ${ip}`,
         );
       }),
       catchError((err) => {
@@ -30,10 +39,12 @@ export class LoggingInterceptor implements NestInterceptor {
         // nên phải lấy status từ exception object
         const statusCode =
           err instanceof HttpException ? err.getStatus() : 500;
-        const message = err?.message ?? 'Unknown error';
+        const message = redactSensitiveLogData(
+          err instanceof Error ? err.message : String(err),
+        );
         this.logger.error(
-          `${method} ${url} ${statusCode} - ${Date.now() - now}ms - IP: ${ip} | ${message}`,
-          err?.stack,
+          `[${requestId}] ${method} ${path} ${statusCode} - ${Date.now() - now}ms - IP: ${ip} | ${message}`,
+          redactSensitiveLogData(err instanceof Error ? err.stack ?? '' : ''),
         );
         return throwError(() => err);
       }),

@@ -8,7 +8,12 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import { Request, Response } from 'express';
+import {
+  redactSensitiveLogData,
+  requestPathWithoutQuery,
+} from '../utils/log-redaction.util';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -20,6 +25,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
+    const requestId =
+      response.getHeader('X-Request-Id')?.toString() ?? randomUUID();
+    const path = requestPathWithoutQuery(request);
+    response.setHeader('X-Request-Id', requestId);
 
     const isDev =
       this.configService.get<string>('NODE_ENV') === 'development';
@@ -53,10 +62,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
       // Map các mã lỗi Prisma hay gặp sang status/errorCode rõ ràng thay vì rơi vào 500 chung chung
       switch (exception.code) {
         case 'P2002': {
-          const target = (exception.meta?.target as string[] | undefined)?.join(', ');
           status = HttpStatus.CONFLICT;
           errorCode = 'UNIQUE_CONSTRAINT_VIOLATION';
-          message = target ? `Giá trị "${target}" đã tồn tại` : 'Dữ liệu đã tồn tại';
+          message = 'Dữ liệu đã tồn tại';
           break;
         }
         case 'P2025':
@@ -74,7 +82,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
           errorCode = `PRISMA_${exception.code}`;
           message = 'Yêu cầu không hợp lệ';
       }
-    } else if (exception instanceof Error) {
+    } else if (isDev && exception instanceof Error) {
       message = exception.message;
     }
 
@@ -84,15 +92,20 @@ export class HttpExceptionFilter implements ExceptionFilter {
       errorCode: errorCode.toString().toUpperCase().replace(/\s+/g, '_'),
       message,
       errors,
+      requestId,
       timestamp: new Date().toISOString(),
-      path: request.originalUrl,
+      path,
       method: request.method,
       stack: isDev ? (exception as any)?.stack : undefined,
     };
 
     this.logger.error(
-      `${request.method} ${request.originalUrl} ${status} - ${message}`,
-      isDev ? (exception as any)?.stack : '',
+      `[${requestId}] ${request.method} ${path} ${status} - ${redactSensitiveLogData(
+        exception instanceof Error ? exception.message : String(exception),
+      )}`,
+      redactSensitiveLogData(
+        exception instanceof Error ? exception.stack ?? '' : '',
+      ),
     );
 
     response.status(status).json(responseBody);
