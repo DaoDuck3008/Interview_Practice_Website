@@ -314,7 +314,8 @@ sequenceDiagram
 │           ├── lib/            # API clients, stores, utilities, and WebSocket client
 │           └── types/          # Shared frontend types
 ├── .github/readme-assets/      # README screenshots
-├── docker-compose.yml          # PostgreSQL and Redis for local development
+├── docker-compose.dev.yml      # PostgreSQL and Redis for local development only
+├── docker-compose.production.example.yml # Private-network reference, no public DB/Redis ports
 ├── package.json                # npm-workspaces scripts
 └── README.md
 ```
@@ -345,7 +346,7 @@ npm install
 ### 2. Start PostgreSQL and Redis
 
 ```bash
-docker compose up -d
+docker compose -f docker-compose.dev.yml up -d
 ```
 
 Local defaults:
@@ -372,6 +373,12 @@ Copy-Item apps/web/.env.example apps/web/.env
 ```
 
 Fill in the required values described in [Environment Configuration](#environment-configuration). Never commit real credentials.
+
+### Production infrastructure
+
+`docker-compose.dev.yml` chỉ dành cho máy local và cố ý mở port để API chạy trên host kết nối được database/Redis. Không dùng file này cho production.
+
+`docker-compose.production.example.yml` là mẫu cho trường hợp chạy hạ tầng bằng Docker: Postgres và Redis không publish port, chỉ nằm trong network nội bộ `backend`; API/worker production phải tham gia network này hoặc dùng private network tương đương của nền tảng deploy. Dù chưa tích hợp secret manager theo quyết định hiện tại, tuyệt đối không dùng password mặc định hay commit giá trị thật vào repository.
 
 ### 4. Generate the Prisma client and prepare the database
 
@@ -462,7 +469,7 @@ Run these commands from the repository root unless noted otherwise.
 | `npm run api:test` | Run API unit tests |
 | `npm --workspace apps/web run lint` | Lint the frontend |
 | `npm --workspace apps/api run test:cov` | Run API tests with coverage |
-| `docker compose up -d` | Start PostgreSQL and Redis |
+| `docker compose -f docker-compose.dev.yml up -d` | Start local PostgreSQL and Redis |
 
 ## Security and Reliability
 

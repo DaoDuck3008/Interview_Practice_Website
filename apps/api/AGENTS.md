@@ -165,7 +165,7 @@ Access token stays **stateless** (15 min, no DB/Redis lookup). The **refresh tok
 - Each refresh token carries a unique `jti` claim. On login/refresh, `AuthService.issueTokens` stores key `refresh:<userId>:<jti>` in Redis with TTL = the token's remaining lifetime (`RefreshTokenStore`, `src/modules/auth/refresh-token.store.ts`).
 - `POST /auth/refresh`: after Passport verifies signature + expiry, `refreshTokens` checks the `jti` is still in Redis (else 401), then **rotates** — deletes the old `jti` and stores a new one.
 - `POST /auth/logout`: decodes the refresh cookie (best-effort, no verify) to read `sub` + `jti` and deletes just that key — revokes the **current device only**, other sessions stay valid.
-- Redis client is provided globally via `RedisModule` (`src/redis/redis.module.ts`) as the `REDIS_CLIENT` token (ioredis). Run it with `docker compose up -d redis`.
+- Redis client is provided globally via `RedisModule` (`src/redis/redis.module.ts`) as the `REDIS_CLIENT` token (ioredis). Run it locally with `docker compose -f docker-compose.dev.yml up -d redis`.
 
 ### Guards
 

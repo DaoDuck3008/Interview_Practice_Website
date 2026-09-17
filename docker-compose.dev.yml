@@ -1,3 +1,7 @@
+# CHỈ DÙNG CHO DEVELOPMENT LOCAL. Không dùng file này để deploy production:
+# PostgreSQL/Redis được publish port ra host và Redis không bật password để tiện lập trình.
+name: interview-practice-dev
+
 services:
   postgres:
     image: postgres:16-alpine

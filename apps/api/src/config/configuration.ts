@@ -1,17 +1,93 @@
 import * as Joi from 'joi';
 
+function requireHttpsOrigin(value: string, helpers: Joi.CustomHelpers) {
+  try {
+    const url = new URL(value);
+    if (
+      url.protocol !== 'https:' ||
+      url.hostname === 'localhost' ||
+      url.pathname !== '/' ||
+      url.search ||
+      url.hash ||
+      url.username ||
+      url.password
+    ) {
+      return helpers.message({
+        custom:
+          '{{#label}} ở production phải là HTTPS origin hợp lệ, không có path/query.',
+      });
+    }
+    return value;
+  } catch {
+    return helpers.message({ custom: '{{#label}} không phải URL hợp lệ.' });
+  }
+}
+
+function requireDatabaseTls(value: string, helpers: Joi.CustomHelpers) {
+  try {
+    const url = new URL(value);
+    const sslMode = url.searchParams.get('sslmode')?.toLowerCase();
+    if (
+      !['require', 'verify-ca', 'verify-full'].includes(sslMode ?? '') &&
+      url.searchParams.get('ssl') !== 'true'
+    ) {
+      return helpers.message({
+        custom:
+          '{{#label}} ở production phải bật TLS bằng sslmode=require (hoặc mạnh hơn).',
+      });
+    }
+    return value;
+  } catch {
+    return helpers.message({ custom: '{{#label}} không phải URL hợp lệ.' });
+  }
+}
+
+function requireRedisTlsAndPassword(value: string, helpers: Joi.CustomHelpers) {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'rediss:' || !url.password) {
+      return helpers.message({
+        custom: '{{#label}} ở production phải dùng rediss:// và có password.',
+      });
+    }
+    return value;
+  } catch {
+    return helpers.message({ custom: '{{#label}} không phải URL hợp lệ.' });
+  }
+}
+
 export const validationSchema = Joi.object({
   NODE_ENV: Joi.string()
     .valid('development', 'production', 'test')
     .default('development'),
   PORT: Joi.number().default(3001),
-  DATABASE_URL: Joi.string().required(),
-  JWT_ACCESS_SECRET: Joi.string().required(),
+  DATABASE_URL: Joi.string()
+    .required()
+    .when('NODE_ENV', {
+      is: 'production',
+      then: Joi.string().custom(requireDatabaseTls),
+    }),
+  JWT_ACCESS_SECRET: Joi.string()
+    .required()
+    .when('NODE_ENV', {
+      is: 'production',
+      then: Joi.string().min(32),
+    }),
   JWT_ACCESS_EXPIRES_IN: Joi.string().default('15m'),
-  JWT_REFRESH_SECRET: Joi.string().required(),
+  JWT_REFRESH_SECRET: Joi.string()
+    .required()
+    .when('NODE_ENV', {
+      is: 'production',
+      then: Joi.string().min(32),
+    }),
   JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),
   GOOGLE_CLIENT_ID: Joi.string().required(),
-  REDIS_URL: Joi.string().default('redis://localhost:6380'),
+  REDIS_URL: Joi.string()
+    .default('redis://localhost:6380')
+    .when('NODE_ENV', {
+      is: 'production',
+      then: Joi.string().custom(requireRedisTlsAndPassword),
+    }),
   HEALTH_DEPENDENCY_TIMEOUT_MS: Joi.number()
     .integer()
     .min(500)
@@ -23,13 +99,23 @@ export const validationSchema = Joi.object({
     .max(120_000)
     .default(30_000),
   TRUST_PROXY: Joi.string().allow('').default(''),
-  FRONTEND_URL: Joi.string().default('http://localhost:3000'),
+  FRONTEND_URL: Joi.string()
+    .default('http://localhost:3000')
+    .when('NODE_ENV', {
+      is: 'production',
+      then: Joi.string().custom(requireHttpsOrigin),
+    }),
   R2_ACCOUNT_ID: Joi.string().required(),
   R2_ACCESS_KEY_ID: Joi.string().required(),
   R2_SECRET_ACCESS_KEY: Joi.string().required(),
   R2_BUCKET_NAME: Joi.string().required(),
   R2_PRIVATE_BUCKET_NAME: Joi.string().required(),
-  R2_PUBLIC_URL: Joi.string().required(),
+  R2_PUBLIC_URL: Joi.string()
+    .required()
+    .when('NODE_ENV', {
+      is: 'production',
+      then: Joi.string().custom(requireHttpsOrigin),
+    }),
   GROQ_API_KEY: Joi.string().required(),
   GROQ_TRANSCRIPTION_MODEL: Joi.string().default('whisper-large-v3-turbo'),
   DEEPSEEK_API_KEY: Joi.string().required(),
@@ -62,16 +148,47 @@ export const validationSchema = Joi.object({
     .min(60)
     .max(900)
     .default(300),
-  SEPAY_BANK_ACCOUNT: Joi.string().default(''),
-  SEPAY_BANK_CODE: Joi.string().default(''),
-  SEPAY_ACCOUNT_NAME: Joi.string().default(''),
+  SEPAY_BANK_ACCOUNT: Joi.string().when('NODE_ENV', {
+    is: 'production',
+    then: Joi.string().min(1).required(),
+    otherwise: Joi.string().allow('').default(''),
+  }),
+  SEPAY_BANK_CODE: Joi.string().when('NODE_ENV', {
+    is: 'production',
+    then: Joi.string().min(1).required(),
+    otherwise: Joi.string().allow('').default(''),
+  }),
+  SEPAY_ACCOUNT_NAME: Joi.string().when('NODE_ENV', {
+    is: 'production',
+    then: Joi.string().min(1).required(),
+    otherwise: Joi.string().allow('').default(''),
+  }),
   SEPAY_API_KEY: Joi.string().allow('').default(''), // Userapi token để đối soát
-  RESEND_API_KEY: Joi.string().allow('').default(''),
-  MAIL_FROM: Joi.string().default('Phỏng vấn IT <onboarding@resend.dev>'),
+  RESEND_API_KEY: Joi.string().when('NODE_ENV', {
+    is: 'production',
+    then: Joi.string().min(1).required(),
+    otherwise: Joi.string().allow('').default(''),
+  }),
+  MAIL_FROM: Joi.string().when('NODE_ENV', {
+    is: 'production',
+    then: Joi.string().min(1).required(),
+    otherwise: Joi.string().default('Phỏng vấn IT <onboarding@resend.dev>'),
+  }),
   AI_QUEUE_CONCURRENCY: Joi.number().default(5),
   PDF_QUEUE_CONCURRENCY: Joi.number().min(1).max(2).default(2),
   PDF_PARSE_TIMEOUT_MS: Joi.number().min(5_000).max(120_000).default(45_000),
   PDF_PARSE_MEMORY_LIMIT_MB: Joi.number().min(96).max(512).default(192),
+}).custom((env, helpers) => {
+  if (
+    env.NODE_ENV === 'production' &&
+    env.JWT_ACCESS_SECRET === env.JWT_REFRESH_SECRET
+  ) {
+    return helpers.message({
+      custom:
+        'JWT_ACCESS_SECRET và JWT_REFRESH_SECRET ở production phải khác nhau.',
+    });
+  }
+  return env;
 });
 
 export default () => ({
@@ -145,9 +262,9 @@ export default () => ({
       process.env.SEPAY_WEBHOOK_MAX_AGE_SECONDS ?? '300',
       10,
     ),
-    bankAccount: process.env.SEPAY_BANK_ACCOUNT ?? '0353102705',
-    bankCode: process.env.SEPAY_BANK_CODE ?? 'MBBank',
-    accountName: process.env.SEPAY_ACCOUNT_NAME ?? 'DAO ANH DUC',
+    bankAccount: process.env.SEPAY_BANK_ACCOUNT ?? '',
+    bankCode: process.env.SEPAY_BANK_CODE ?? '',
+    accountName: process.env.SEPAY_ACCOUNT_NAME ?? '',
     apiToken: process.env.SEPAY_API_KEY ?? '',
   },
   resend: {

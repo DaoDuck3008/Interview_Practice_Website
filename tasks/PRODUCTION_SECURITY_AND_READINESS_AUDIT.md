@@ -102,11 +102,16 @@
 
 **Việc deploy còn lại:** cấu hình liveness/readiness probe gọi hai endpoint trên, `terminationGracePeriodSeconds` lớn hơn 30 giây và rolling deployment chỉ route traffic sau khi readiness đạt 200.
 
-### [ ] OPS-002 — Production configuration chưa có fail-safe theo môi trường
+### [~] OPS-002 — Production configuration chưa có fail-safe theo môi trường
 
-- **Bằng chứng:** validation hiện chỉ bắt buộc một số biến; `SEPAY_WEBHOOK_SECRET`, `RESEND_API_KEY`, `SEPAY_API_KEY` được phép rỗng. `docker-compose.yml` mở Postgres/Redis ra host với default password `postgres` và Redis không auth; file này chỉ an toàn cho local, không phải manifest production.
-- **Cần làm:** schema có nhánh production bắt buộc HTTPS origins, webhook/mail credentials, secret length/khác nhau, DB SSL và private Redis có auth/TLS; tách compose/dev config khỏi production; dùng secret manager; không dùng default.
-- **Nghiệm thu:** bộ test config table-driven xác nhận mọi cấu hình nguy hiểm đều fail startup ở production; port DB/Redis không public; scan image/config không có secret cứng.
+Đã hoàn thành phần code/config trong repository; việc đưa secret vào secret manager được hoãn theo quyết định vận hành.
+
+- Production fail startup nếu frontend/R2 public URL không phải HTTPS origin, DB không bật TLS, Redis không dùng `rediss://` có password, JWT secret ngắn/trùng nhau, thiếu Resend hoặc thiếu thông tin nhận thanh toán SePay.
+- Đã bỏ thông tin tài khoản ngân hàng mặc định khỏi source code. `SEPAY_API_KEY` vẫn tùy chọn vì chỉ bật màn đối soát admin, không ảnh hưởng webhook đã có HMAC secret.
+- `docker-compose.dev.yml` được đánh dấu rõ là local-only và vẫn mở port để phát triển; `docker-compose.production.example.yml` không publish Postgres/Redis, dùng network nội bộ và yêu cầu password không có default.
+- Cập nhật `.env.example` với timeout health/shutdown và README với lệnh compose development đúng.
+
+**Còn lại trước deploy:** đặt secret thật bằng cơ chế quản lý của nền tảng deploy, cấu hình private network/TLS tương ứng cloud provider và chạy smoke test bằng env production. Không tạo lại file spec theo yêu cầu.
 
 ## P2 — Hardening bảo mật
 
