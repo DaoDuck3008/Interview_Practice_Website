@@ -5,6 +5,7 @@ import {
   Logger,
   NotFoundException,
   UnauthorizedException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -30,6 +31,10 @@ import {
 import { lockBillingUser } from '../../common/utils/billing-lock.util';
 import { AuditService } from '../audit/audit.service';
 import { AiCreditsService } from '../ai-credits/ai-credits.service';
+import {
+  parseSepayWebhookPayload,
+  type SepayWebhookPayload,
+} from './sepay-webhook.payload';
 
 // Đơn hết hiệu lực (QR) sau 10 phút — chỉ để UX tạo lại; tiền về trễ vẫn được honor ở webhook.
 const ORDER_TTL_MS = 10 * 60 * 1000;
@@ -126,19 +131,20 @@ export class PaymentsService {
   ) {
     this.verifyWebhookSignature(rawBody, signature, timestamp);
 
+    const webhook = parseSepayWebhookPayload(payload);
+
     // Chỉ xử lý giao dịch tiền VÀO.
-    const transferType = payload?.transferType;
-    if (transferType && transferType !== 'in') {
+    if (webhook.transferType !== 'in') {
       return { success: true, ignored: 'not_incoming' };
     }
 
-    const amount = Number(payload?.transferAmount ?? payload?.amount ?? 0);
-    const txnId = String(payload?.id ?? payload?.referenceCode ?? '').trim();
-    const order = await this.findOrderFromPayload(payload);
+    const amount = webhook.transferAmount;
+    const txnId = String(webhook.id);
+    const order = await this.findOrderFromPayload(webhook);
 
     if (!order) {
       this.logger.warn(
-        `Sepay webhook không khớp đơn nào. content="${payload?.content ?? ''}"`,
+        `Sepay webhook không khớp đơn nào. content="${webhook.content ?? ''}"`,
       );
       await this.audit.log({
         actorType: AuditActorType.WEBHOOK,
@@ -148,7 +154,7 @@ export class PaymentsService {
           reason: 'no_matching_order',
           amount,
           txnId,
-          content: payload?.content ?? payload?.description ?? null,
+          content: webhook.content ?? webhook.description ?? null,
         },
       });
       return { success: true, ignored: 'no_matching_order' };
@@ -245,7 +251,12 @@ export class PaymentsService {
       return { success: true, ignored: 'underpaid' };
     }
 
-    const activated = await this.activateOrder(order, txnId, payload);
+    // Lưu nguyên payload đã được xác thực để vẫn có đủ dữ liệu phục vụ đối soát.
+    const activated = await this.activateOrder(
+      order,
+      txnId,
+      payload as Prisma.InputJsonValue,
+    );
     // Nếu không tìm thấy đơn PENDING (đã bị claim bởi webhook khác) → bỏ qua, ghi log vào audit
     if (!activated) {
       await this.audit.log({
@@ -615,12 +626,12 @@ export class PaymentsService {
   // ─── Helpers ───────────────────────────────────────
 
   /** Khớp đơn từ payload: ưu tiên field `code` Sepay parse, sau đó dò mã trong nội dung. */
-  private async findOrderFromPayload(payload: any) {
-    const content = String(payload?.content ?? payload?.description ?? '');
+  private async findOrderFromPayload(payload: SepayWebhookPayload) {
+    const content = payload.content ?? payload.description ?? '';
     const normalized = content.toUpperCase().replace(/\s+/g, '');
 
     const candidates: string[] = [];
-    if (payload?.code) candidates.push(String(payload.code).toUpperCase());
+    if (payload.code) candidates.push(payload.code.toUpperCase());
     // Mã đơn = CODE_PREFIX + đúng 10 ký tự hex (xem generateCode). Match chính xác
     const matched = normalized.match(new RegExp(`${CODE_PREFIX}[0-9A-F]{10}`));
     if (matched) candidates.push(matched[0]);
@@ -639,7 +650,7 @@ export class PaymentsService {
   private async activateOrder(
     order: Order & { plan: Plan },
     txnId: string,
-    payload: any,
+    payload: Prisma.InputJsonValue,
   ): Promise<OrderActivationResult> {
     const now = new Date();
     let periodEnd = now;
@@ -768,15 +779,30 @@ export class PaymentsService {
     timestamp?: string,
   ) {
     const secret = this.config.get<string>('sepay.webhookSecret');
-    // Chưa cấu hình secret → bỏ qua verify (dev). Siết lại bằng cách set SEPAY_WEBHOOK_SECRET.
     if (!secret) {
-      this.logger.warn(
-        'SEPAY_WEBHOOK_SECRET chưa được set — webhook KHÔNG được xác thực.',
+      this.logger.error(
+        'SEPAY_WEBHOOK_SECRET chưa được cấu hình; từ chối webhook để bảo vệ thanh toán.',
       );
-      return;
+      throw new ServiceUnavailableException(
+        'Webhook thanh toán chưa được cấu hình.',
+      );
     }
     if (!signature || !timestamp || !rawBody) {
       throw new UnauthorizedException('Thiếu chữ ký webhook');
+    }
+
+    const issuedAtSeconds = Number(timestamp);
+    const maxAgeSeconds = this.config.get<number>(
+      'sepay.webhookMaxAgeSeconds',
+      300,
+    );
+    if (
+      !/^\d{10}$/.test(timestamp) ||
+      !Number.isSafeInteger(issuedAtSeconds) ||
+      Math.abs(Math.floor(Date.now() / 1000) - issuedAtSeconds) >
+        maxAgeSeconds
+    ) {
+      throw new UnauthorizedException('Webhook đã hết hạn');
     }
 
     const expected =
@@ -786,7 +812,11 @@ export class PaymentsService {
         .update(rawBody)
         .digest('hex');
 
-    const sigBuf = Buffer.from(signature);
+    if (!/^sha256=[a-f0-9]{64}$/.test(signature)) {
+      throw new UnauthorizedException('Chữ ký webhook không hợp lệ');
+    }
+
+    const sigBuf = Buffer.from(signature, 'utf8');
     const expBuf = Buffer.from(expected);
     if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) {
       throw new UnauthorizedException('Chữ ký webhook không hợp lệ');

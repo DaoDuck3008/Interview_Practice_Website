@@ -25,7 +25,16 @@ export const validationSchema = Joi.object({
   DEEPSEEK_API_KEY: Joi.string().required(),
   EXPLANATION_GLOBAL_DAILY_LIMIT: Joi.number().integer().min(1).default(500),
   EXPLANATION_GLOBAL_CONCURRENCY: Joi.number().integer().min(1).max(20).default(5),
-  SEPAY_WEBHOOK_SECRET: Joi.string().allow('').default(''),
+  SEPAY_WEBHOOK_SECRET: Joi.when('NODE_ENV', {
+    is: 'production',
+    then: Joi.string().min(32).required(),
+    otherwise: Joi.string().allow('').default(''),
+  }),
+  SEPAY_WEBHOOK_MAX_AGE_SECONDS: Joi.number()
+    .integer()
+    .min(60)
+    .max(900)
+    .default(300),
   SEPAY_BANK_ACCOUNT: Joi.string().default(''),
   SEPAY_BANK_CODE: Joi.string().default(''),
   SEPAY_ACCOUNT_NAME: Joi.string().default(''),
@@ -77,6 +86,10 @@ export default () => ({
   },
   sepay: {
     webhookSecret: process.env.SEPAY_WEBHOOK_SECRET ?? '',
+    webhookMaxAgeSeconds: parseInt(
+      process.env.SEPAY_WEBHOOK_MAX_AGE_SECONDS ?? '300',
+      10,
+    ),
     bankAccount: process.env.SEPAY_BANK_ACCOUNT ?? '0353102705',
     bankCode: process.env.SEPAY_BANK_CODE ?? 'MBBank',
     accountName: process.env.SEPAY_ACCOUNT_NAME ?? 'DAO ANH DUC',

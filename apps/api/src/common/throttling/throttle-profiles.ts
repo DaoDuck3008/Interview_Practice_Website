@@ -163,6 +163,13 @@ export const THROTTLE_CHECKOUT = throttleProfile(
   { limit: 10, ttl: 10 * MINUTE_MS, blockDuration: 2 * MINUTE_MS },
 );
 
+// Webhook Sepay có thể retry tự động, nên nới hơn endpoint người dùng
+export const THROTTLE_PAYMENT_WEBHOOK = throttleProfile(
+  'payment-webhook',
+  { limit: 30, ttl: MINUTE_MS, blockDuration: MINUTE_MS },
+  { limit: 300, ttl: 10 * MINUTE_MS, blockDuration: 5 * MINUTE_MS },
+);
+
 // Admin mutation đã có auth, nhưng vẫn cần lớp chắn vừa phải cho click nhầm liên tục hoặc phiên admin bị lạm dụng.
 export const THROTTLE_ADMIN_MUTATION = throttleProfile(
   'admin-mutation',

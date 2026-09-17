@@ -10,7 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { SkipThrottle, Throttle } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { PaymentsService } from './payments.service';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
@@ -22,7 +22,10 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuditAction, Role } from '@prisma/client';
-import { THROTTLE_CHECKOUT } from '../../common/throttling/throttle-profiles';
+import {
+  THROTTLE_CHECKOUT,
+  THROTTLE_PAYMENT_WEBHOOK,
+} from '../../common/throttling/throttle-profiles';
 import { Audit } from '../audit/audit.decorator';
 
 @Controller('payments')
@@ -126,7 +129,7 @@ export class PaymentsController {
 
   // Public — Sepay gọi tới. URL: /api/v1/payments/hooks/sepay-payment
   @Post('hooks/sepay-payment')
-  @SkipThrottle({ burst: true, sustained: true })
+  @Throttle(THROTTLE_PAYMENT_WEBHOOK)
   sepayWebhook(
     @Req() req: RawBodyRequest<Request>,
     @Body() payload: any,
